@@ -235,6 +235,7 @@ void Sys_Init_Task(void *argument)
   /* USER CODE BEGIN Sys_Init_Task */
   (void)argument;
 
+
   // 初始化用户shell
   extern void userShellInit(void);
   userShellInit();
@@ -251,4 +252,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-
