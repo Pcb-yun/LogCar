@@ -1,0 +1,9 @@
+build/
+
+MDK-ARM/LogCar_Code/
+MDK-ARM/DebugConfig/
+MDK-ARM/LogCar_Code.uvguix.*
+
+keilkilll.bat
+.trae/
+.cmsis/
