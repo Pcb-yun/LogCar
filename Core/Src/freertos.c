@@ -54,7 +54,7 @@
 osThreadId_t Sys_InitHandle;
 const osThreadAttr_t Sys_Init_attributes = {
   .name = "Sys_Init",
-  .stack_size = 64 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityRealtime7,
 };
 /* Definitions for Shell */
@@ -62,12 +62,24 @@ osThreadId_t ShellHandle;
 const osThreadAttr_t Shell_attributes = {
   .name = "Shell",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityRealtime1,
+  .priority = (osPriority_t) osPriorityAboveNormal1,
+};
+/* Definitions for Track_Get */
+osThreadId_t Track_GetHandle;
+const osThreadAttr_t Track_Get_attributes = {
+  .name = "Track_Get",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityHigh1,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
   .name = "Usart1_Rx_Data"
+};
+/* Definitions for Usart2_Rx_Data */
+osMessageQueueId_t Usart2_Rx_DataHandle;
+const osMessageQueueAttr_t Usart2_Rx_Data_attributes = {
+  .name = "Usart2_Rx_Data"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -82,6 +94,7 @@ const osEventFlagsAttr_t System_Status_attributes = {
 
 void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
+extern void Track_Get_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -198,6 +211,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Usart1_Rx_Data */
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
+  /* creation of Usart2_Rx_Data */
+  Usart2_Rx_DataHandle = osMessageQueueNew (69, sizeof(uint8_t), &Usart2_Rx_Data_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -208,6 +224,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Shell */
   ShellHandle = osThreadNew(Shell_Task, NULL, &Shell_attributes);
+
+  /* creation of Track_Get */
+  Track_GetHandle = osThreadNew(Track_Get_Task, NULL, &Track_Get_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -252,3 +271,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

@@ -12,6 +12,10 @@
 #ifndef __SHELL_CFG_H__
 #define __SHELL_CFG_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -33,7 +37,7 @@
  * @brief 是否使用shell伴生对象
  *        一些扩展的组件(文件系统支持，日志工具等)需要使用伴生对象
  */
-#define     SHELL_USING_COMPANION       1
+#define     SHELL_USING_COMPANION       0
 
 /**
  * @brief 支持shell尾行模式
@@ -124,7 +128,7 @@
  * @brief shell格式化输出的缓冲大小
  *        为0时不使用shell格式化输出
  */
-#define     SHELL_PRINT_BUFFER          128
+#define     SHELL_PRINT_BUFFER          512
 
 /**
  * @brief shell格式化输入的缓冲大小
@@ -200,5 +204,9 @@
  *        需要使能 `SHELL_USING_FUNC_SIGNATURE` 宏，并且配置 `SHELL_MALLOC`, `SHELL_FREE`
  */
 #define     SHELL_SUPPORT_ARRAY_PARAM   0
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif

@@ -13,7 +13,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /**< defined __cplusplus */
+#endif /* __cplusplus */
 
 #include "shell.h"
 #include "main.h"
@@ -23,7 +23,7 @@ extern "C" {
 #define     SHELL_COMPANION_ID_LOG          -2
 
 #define     LOG_USING_LOCK     0
-#define     LOG_BUFFER_SIZE    256              /**< log输出缓冲大小 */
+#define     LOG_BUFFER_SIZE    512              /**< log输出缓冲大小 */
 #define     LOG_USING_COLOR    0                /**< 是否使用颜色 */
 #define     LOG_TXT_STYLE      2                /**< 设置日志级别文本样式 */
 #define     LOG_MAX_NUMBER     1                /**< 允许注册的最大log对象数量 */
@@ -248,12 +248,12 @@ void logUnRegister(Log *log);
 void logSetLevel(Log *log, LogLevel level);
 void logWrite(Log *log, LogLevel level, const char *fmt, ...);
 void logHexDump(Log *log, LogLevel level, void *base, unsigned int length);
-void logInit();
+void logInit(void);
 void uartLogWrite(char *buffer, short len);
 int my_printf(const char *fmt, ...);
 
 #ifdef __cplusplus
 }
-#endif /**< defined __cplusplus */
+#endif /* __cplusplus */
 
 #endif

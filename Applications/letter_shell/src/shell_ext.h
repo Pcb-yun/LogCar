@@ -4,19 +4,23 @@
  * @brief shell extensions
  * @version 3.0.0
  * @date 2019-12-31
- * 
+ *
  * @copyright (c) 2019 Letter
- * 
+ *
  */
 
 #ifndef __SHELL_EXT_H__
 #define __SHELL_EXT_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "shell.h"
 
 /**
  * @brief 数字类型
- * 
+ *
  */
 typedef enum
 {
@@ -43,5 +47,10 @@ int shellExtCleanerPara(Shell *shell, char *type, size_t param);
 int shellGetArrayParamSize(void *param);
 #endif /** SHELL_SUPPORT_ARRAY_PARAM == 1 */
 int shellExtRun(Shell *shell, ShellCommand *command, int argc, char *argv[]);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif

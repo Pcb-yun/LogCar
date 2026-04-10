@@ -15,7 +15,6 @@
 #include "usart.h"
 #include "stdbool.h"
 
-//定义日志对象
 Log uartLog = {
     .write = uartLogWrite,
     .active = true,
@@ -90,7 +89,6 @@ static void logUnlock(Log *log)
 
 /**
  * @brief 注册log对象
- *
  * @param log log对象
  */
 void logRegister(Log *log, Shell *shell)
@@ -115,7 +113,6 @@ void logRegister(Log *log, Shell *shell)
 
 /**
  * @brief 注销log对象
- *
  * @param log log对象
  */
 void logUnRegister(Log *log)
@@ -133,14 +130,13 @@ void logUnRegister(Log *log)
 
 /**
  * @brief 设置log日志级别
- *
  * @param log log对象
  * @param level 日志级别
  */
 void logSetLevel(Log *log, LogLevel level)
 {
-    logAssert(log, return);
-    log->level = level;
+   logAssert(log, return);
+   log->level = level;
 }
 #if SHELL_USING_COMPANION == 1
 SHELL_EXPORT_CMD_AGENCY(
@@ -155,7 +151,6 @@ logSetLevel, logSetLevel, set log level\r\n logSetLevel [log] [level]);
 
 /**
  * @brief log写buffer
- *
  * @param log log对象
  * @param level 日志级别
  * @param buffer buffer
@@ -189,7 +184,6 @@ static void logWriteBuffer(Log *log, LogLevel level, char *buffer, short len)
 
 /**
  * @brief log格式化写入数据
- *
  * @param log log对象
  * @param level log级别
  * @param fmt 格式
@@ -218,98 +212,97 @@ void logWrite(Log *log, LogLevel level, const char *fmt, ...)
 #endif /* LOG_USING_LOCK == 1 */
 }
 
-/**
- * @brief 16进制输出
- *
- * @param log log对象
- * @param level 日志级别
- * @param base 内存基址
- * @param length 长度
- */
-void logHexDump(Log *log, LogLevel level, void *base, unsigned int length)
-{
-    unsigned char *address;
-    unsigned int len;
-    unsigned int printLen = 0;
-
-    if (length == 0 || (log != LOG_ALL_OBJ && log->level < level))
-    {
-        return;
-    }
-#if LOG_USING_LOCK == 1
-    logLock(log);
-#endif /* LOG_USING_LOCK == 1 */
-    len = snprintf(logBuffer, LOG_BUFFER_SIZE - 1, "memory of 0x%08x, size: %d:\r\n%s",
-                   (unsigned int)base, length, memPrintHead);
-    logWriteBuffer(log, level, logBuffer, len);
-
-    len = length;
-
-    address = (unsigned char *)((unsigned int)base & (~0x0000000F));
-    length += (unsigned int)base - (unsigned int)address;
-    length = (length + 15) & (~0x0000000F);
-
-    while (length)
-    {
-        printLen += sprintf(logBuffer + printLen, memPrintAddr, (unsigned int)address);
-        for (int i = 0; i < 16; i++)
-        {
-            if ((unsigned int)(address + i) < (unsigned int)base
-                || (unsigned int)(address + i) >= (unsigned int)base + len)
-            {
-                logBuffer[printLen ++] = ' ';
-                logBuffer[printLen ++] = ' ';
-                logBuffer[printLen ++] = ' ';
-            }
-            else
-            {
-                printLen += sprintf(logBuffer + printLen, "%02x ", *(address + i));
-            }
-        }
-        logBuffer[printLen ++] = '|';
-        logBuffer[printLen ++] = ' ';
-        for (int i = 0; i < 16; i++)
-        {
-            if ((unsigned int)(address + i) < (unsigned int)base
-                || (unsigned int)(address + i) >= (unsigned int)base + len)
-            {
-                logBuffer[printLen ++] = ' ';
-            }
-            else
-            {
-                if (*(address + i) >= 32 && *(address + i) <= 126)
-                {
-                    printLen += sprintf(logBuffer + printLen, "%c", *(address + i));
-                }
-                else
-                {
-                    logBuffer[printLen ++] = '.';
-                }
-            }
-        }
-        logBuffer[printLen ++] = ' ';
-        logBuffer[printLen ++] = '|';
-        logBuffer[printLen ++] = '\r';
-        logBuffer[printLen ++] = '\n';
-        logWriteBuffer(log, level, logBuffer, printLen);
-        address += 16;
-        length -= 16;
-        printLen = 0;
-    }
-#if LOG_USING_LOCK == 1
-    logUnlock(log);
-#endif /* LOG_USING_LOCK == 1 */
-}
-#if SHELL_USING_COMPANION == 1
-SHELL_EXPORT_CMD_AGENCY(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-hexdump, logHexDump, hex dump\r\n hexdump [base] [len],
-(void *)shellCompanionGet(shellGetCurrent(), SHELL_COMPANION_ID_LOG), LOG_NONE, (void *)p1, (unsigned int)p2);
-#else
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-hexdump, logHexDump, hex dump\r\n hexdump [log] [level] [base] [len]);
-#endif /** SHELL_USING_COMPANION == 1 */
+// /**
+//  * @brief 16进制输出
+//  * @param log log对象
+//  * @param level 日志级别
+//  * @param base 内存基址
+//  * @param length 长度
+//  */
+// void logHexDump(Log *log, LogLevel level, void *base, unsigned int length)
+// {
+//     unsigned char *address;
+//     unsigned int len;
+//     unsigned int printLen = 0;
+//
+//     if (length == 0 || (log != LOG_ALL_OBJ && log->level < level))
+//     {
+//         return;
+//     }
+// #if LOG_USING_LOCK == 1
+//     logLock(log);
+// #endif /* LOG_USING_LOCK == 1 */
+//     len = snprintf(logBuffer, LOG_BUFFER_SIZE - 1, "memory of 0x%08x, size: %d:\r\n%s",
+//                    (unsigned int)base, length, memPrintHead);
+//     logWriteBuffer(log, level, logBuffer, len);
+//
+//     len = length;
+//
+//     address = (unsigned char *)((unsigned int)base & (~0x0000000F));
+//     length += (unsigned int)base - (unsigned int)address;
+//     length = (length + 15) & (~0x0000000F);
+//
+//     while (length)
+//     {
+//         printLen += sprintf(logBuffer + printLen, memPrintAddr, (unsigned int)address);
+//         for (int i = 0; i < 16; i++)
+//         {
+//             if ((unsigned int)(address + i) < (unsigned int)base
+//                 || (unsigned int)(address + i) >= (unsigned int)base + len)
+//             {
+//                 logBuffer[printLen ++] = ' ';
+//                 logBuffer[printLen ++] = ' ';
+//                 logBuffer[printLen ++] = ' ';
+//             }
+//             else
+//             {
+//                 printLen += sprintf(logBuffer + printLen, "%02x ", *(address + i));
+//             }
+//         }
+//         logBuffer[printLen ++] = '|';
+//         logBuffer[printLen ++] = ' ';
+//         for (int i = 0; i < 16; i++)
+//         {
+//             if ((unsigned int)(address + i) < (unsigned int)base
+//                 || (unsigned int)(address + i) >= (unsigned int)base + len)
+//             {
+//                 logBuffer[printLen ++] = ' ';
+//             }
+//             else
+//             {
+//                 if (*(address + i) >= 32 && *(address + i) <= 126)
+//                 {
+//                     printLen += sprintf(logBuffer + printLen, "%c", *(address + i));
+//                 }
+//                 else
+//                 {
+//                     logBuffer[printLen ++] = '.';
+//                 }
+//             }
+//         }
+//         logBuffer[printLen ++] = ' ';
+//         logBuffer[printLen ++] = '|';
+//         logBuffer[printLen ++] = '\r';
+//         logBuffer[printLen ++] = '\n';
+//         logWriteBuffer(log, level, logBuffer, printLen);
+//         address += 16;
+//         length -= 16;
+//         printLen = 0;
+//     }
+// #if LOG_USING_LOCK == 1
+//     logUnlock(log);
+// #endif /* LOG_USING_LOCK == 1 */
+// }
+// #if SHELL_USING_COMPANION == 1
+// SHELL_EXPORT_CMD_AGENCY(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// hexdump, logHexDump, hex dump\r\n hexdump [base] [len],
+// (void *)shellCompanionGet(shellGetCurrent(), SHELL_COMPANION_ID_LOG), LOG_NONE, (void *)p1, (unsigned int)p2);
+// #else
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// hexdump, logHexDump, hex dump\r\n hexdump [log] [level] [base] [len]);
+// #endif /** SHELL_USING_COMPANION == 1 */
 
 #if SHELL_USING_COMPANION == 1
 void logSwitchLevel(Shell *shell)
@@ -325,7 +318,7 @@ SHELL_EXPORT_KEY(SHELL_CMD_PERMISSION(0), 0x04000000, logSwitchLevel, switch log
 /**
  * @brief 初始化日志系统
  */
-void logInit() {
+void logInit(void) {
     extern Shell shell;
     logRegister(&uartLog, &shell);
 }
@@ -338,57 +331,34 @@ void logInit() {
 void uartLogWrite(char *buffer, short len) {
     // 检查是否在中断上下文中
     if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0) {
-        // 在中断上下文中，直接写入UART，不使用shell
-        HAL_UART_Transmit(&huart1, (uint8_t *)buffer, len, 0x100);
+        // 在中断上下文中，直接写入UART
+        HAL_UART_Transmit(&huart1, (uint8_t *)buffer, len, 500);
     } else {
-        // 不在中断上下文中
-        if (uartLog.shell) {
-            shellWriteEndLine(uartLog.shell, buffer, len);
-        } else {
-            // 直接写入UART
-            HAL_UART_Transmit(&huart1, (uint8_t *)buffer, len, 0x100);
-        }
+        shellWriteEndLine(uartLog.shell, buffer, len);
     }
 }
 
 /**
  * @brief 自定义printf函数，支持shell尾行模式
  *
- * 此函数是标准printf函数的替代品，它将输出重定向到shell，并支持尾行模式。
- * 当shell处于活动状态时，会使用shellWriteEndLine函数，确保不影响用户输入。
- * 当shell不活动或在中断上下文中时，会直接输出到UART。
+ * @note 此函数为保险用，为了确保输出的原子性，会使用阻塞方式等待UART1完成发送。
+ *       一般输出建议使用logPrintln函数。
  *
  * @param fmt 格式字符串
  * @param ... 可变参数
  * @return 写入的字符数
  */
 int my_printf(const char *fmt, ...) {
-    static char buffer[USART1_TX_BUF_SIZE];
+    char buffer[512];
     va_list ap;
     int len, actual_len;
-    Shell *shell = NULL;
 
     va_start(ap, fmt);
-    len = vsnprintf(buffer, USART1_TX_BUF_SIZE - 1, fmt, ap);
+    len = vsnprintf(buffer, 511, fmt, ap);
     va_end(ap);
 
     // 处理字符串超长情况
-    actual_len = (len > USART1_TX_BUF_SIZE - 1) ? (USART1_TX_BUF_SIZE - 1) : len;
-
-    // 检查是否在中断上下文中
-    if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0) {
-        // 在中断上下文中，直接写入UART
-        HAL_UART_Transmit(&huart1, (uint8_t *)buffer, actual_len, 0x100);
-    } else {
-        // 不在中断上下文中，尝试使用shell
-        shell = shellGetCurrent();
-        if (shell != NULL) {
-            shellWriteEndLine(shell, buffer, actual_len);
-        } else {
-            // 没有活动的shell，直接写入UART
-            HAL_UART_Transmit(&huart1, (uint8_t *)buffer, actual_len, 0x100);
-        }
-    }
-
+    actual_len = (len > 511) ? (511) : len;
+    HAL_UART_Transmit(&huart1, (uint8_t *)buffer, actual_len, 500);
     return actual_len;
 }

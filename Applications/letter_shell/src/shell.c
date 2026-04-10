@@ -1735,28 +1735,28 @@ static void shellWriteCommandHelp(Shell *shell, char *cmd)
     }
 }
 
-/**
- * @brief shell help
- *
- * @param argc 参数个数
- * @param argv 参数
- */
-void shellHelp(int argc, char *argv[])
-{
-    Shell *shell = shellGetCurrent();
-    SHELL_ASSERT(shell, return);
-    if (argc == 1)
-    {
-        shellListAll(shell);
-    }
-    else if (argc > 1)
-    {
-        shellWriteCommandHelp(shell, argv[1]);
-    }
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-help, shellHelp, show command info\r\nhelp [cmd]);
+// /**
+//  * @brief shell help
+//  *
+//  * @param argc 参数个数
+//  * @param argv 参数
+//  */
+// void shellHelp(int argc, char *argv[])
+// {
+//     Shell *shell = shellGetCurrent();
+//     SHELL_ASSERT(shell, return);
+//     if (argc == 1)
+//     {
+//         shellListAll(shell);
+//     }
+//     else if (argc > 1)
+//     {
+//         shellWriteCommandHelp(shell, argv[1]);
+//     }
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+// help, shellHelp, show command info\r\nhelp [cmd]);
 
 /**
  * @brief shell 输入处理
@@ -1895,36 +1895,36 @@ void shellTask(void *param)
 }
 
 
-/**
- * @brief shell 输出用户列表(shell调用)
- */
-void shellUsers(void)
-{
-    Shell *shell = shellGetCurrent();
-    if (shell)
-    {
-        shellListUser(shell);
-    }
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-users, shellUsers, list all user);
+// /**
+//  * @brief shell 输出用户列表(shell调用)
+//  */
+// void shellUsers(void)
+// {
+//     Shell *shell = shellGetCurrent();
+//     if (shell)
+//     {
+//         shellListUser(shell);
+//     }
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// users, shellUsers, list all user);
 
 
-/**
- * @brief shell 输出命令列表(shell调用)
- */
-void shellCmds(void)
-{
-    Shell *shell = shellGetCurrent();
-    if (shell)
-    {
-        shellListCommand(shell);
-    }
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-cmds, shellCmds, list all cmd);
+// /**
+//  * @brief shell 输出命令列表(shell调用)
+//  */
+// void shellCmds(void)
+// {
+//     Shell *shell = shellGetCurrent();
+//     if (shell)
+//     {
+//         shellListCommand(shell);
+//     }
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// cmds, shellCmds, list all cmd);
 
 
 /**
@@ -1943,20 +1943,20 @@ SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RE
 vars, shellVars, list all var);
 
 
-/**
- * @brief shell 输出按键列表(shell调用)
- */
-void shellKeys(void)
-{
-    Shell *shell = shellGetCurrent();
-    if (shell)
-    {
-        shellListKey(shell);
-    }
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-keys, shellKeys, list all key);
+// /**
+//  * @brief shell 输出按键列表(shell调用)
+//  */
+// void shellKeys(void)
+// {
+//     Shell *shell = shellGetCurrent();
+//     if (shell)
+//     {
+//         shellListKey(shell);
+//     }
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// keys, shellKeys, list all key);
 
 
 /**

@@ -18,4 +18,5 @@ options:
     LogCar_Code:
         files: {}
         virtualPathFiles:
+            <virtual_root>/Application/User/Core/dma.c: ""
             <virtual_root>/Application/User/Core/tim.c: ""

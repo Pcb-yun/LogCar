@@ -81,6 +81,11 @@ virtualFolder:
         - path: Applications/letter_shell/src/shell_companion.c
         - path: Applications/letter_shell/src/shell_ext.c
         - path: Applications/letter_shell/log/log.c
+        - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
+      folders: []
+    - name: track
+      files:
+        - path: Drivers/User/TRACK/track.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -108,13 +113,14 @@ targets:
         - Applications/letter_shell
         - Applications/letter_shell/src
         - Applications/letter_shell/log
+        - Applications/letter_shell/shell_enhance
         - Drivers/User/RTOS
+        - Drivers/User/TRACK
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings:
-      debugger: cortex-debug
+    settings: {}
     toolchain: AC5
     toolchainConfigMap:
       AC5:
