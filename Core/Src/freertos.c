@@ -27,7 +27,10 @@
 /* USER CODE BEGIN Includes */
 #include "Events.h"
 #include "tim.h"
-#include "log.h"
+#include "shell.h"
+#include "message.h"
+#include "track.h"
+#include "usart.h"
 
 /* USER CODE END Includes */
 
@@ -80,6 +83,11 @@ const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
 osMessageQueueId_t Usart2_Rx_DataHandle;
 const osMessageQueueAttr_t Usart2_Rx_Data_attributes = {
   .name = "Usart2_Rx_Data"
+};
+/* Definitions for Track_Data */
+osMessageQueueId_t Track_DataHandle;
+const osMessageQueueAttr_t Track_Data_attributes = {
+  .name = "Track_Data"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -214,6 +222,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Usart2_Rx_Data */
   Usart2_Rx_DataHandle = osMessageQueueNew (69, sizeof(uint8_t), &Usart2_Rx_Data_attributes);
 
+  /* creation of Track_Data */
+  Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -254,14 +265,24 @@ void Sys_Init_Task(void *argument)
   /* USER CODE BEGIN Sys_Init_Task */
   (void)argument;
 
+  SHOW_DMESG(dmesg_wait, "Initialize Tracking Module");
+  extern void Track_Init(void);
+  Track_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
 
-  // 初始化用户shell
+  SHOW_DMESG(dmesg_wait, "Initialize Shell");
   extern void userShellInit(void);
   userShellInit();
+  SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize shell log.");
+  extern void logInit(void);
   logInit();
+  SHOW_DMESG(dmesg_ok, NULL);
 
-  // 设置系统初始化完成事件并删除当前任务
+  extern Shell shell;
+  Shell_New_Convo(&shell);
+
   osEventFlagsSet(System_StatusHandle, SYS_INIT_COMPLETE);
 	vTaskDelete(NULL);
   /* USER CODE END Sys_Init_Task */
@@ -271,4 +292,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

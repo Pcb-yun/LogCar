@@ -538,6 +538,7 @@ void shellHandler(Shell *shell, char data);
 void shellWriteEndLine(Shell *shell, char *buffer, int len);
 void shellTask(void *param);
 int shellRun(Shell *shell, const char *cmd);
+void Shell_New_Convo(Shell *shell);
 
 
 

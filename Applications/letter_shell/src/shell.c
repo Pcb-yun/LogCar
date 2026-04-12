@@ -230,9 +230,18 @@ void shellInit(Shell *shell, char *buffer, unsigned short size)
                                          SHELL_DEFAULT_USER,
                                          shell->commandList.base,
                                          0));
-    shellWritePrompt(shell, 1);
+    // shellWritePrompt(shell, 1);
 }
 
+/**
+ * @brief 显示新的对话
+ * @param shell shell对象
+ */
+void Shell_New_Convo(Shell *shell) {
+    shellWriteString(shell, shellText[SHELL_TEXT_CLEAR_CONSOLE]);
+    shellWriteString(shell, shellText[SHELL_TEXT_INFO]);
+    shellWritePrompt(shell, 1);
+}
 
 /**
  * @brief 添加shell
@@ -1316,15 +1325,15 @@ void shellSetUser(Shell *shell, const ShellCommand *user)
                 || strcmp(user->data.user.password, shell->parser.param[1]) != 0))
          ? 0 : 1;
 
-#if SHELL_CLS_WHEN_LOGIN == 1
-    shellWriteString(shell, shellText[SHELL_TEXT_CLEAR_CONSOLE]);
-#endif
-#if SHELL_SHOW_INFO == 1
-    if (shell->status.isChecked)
-    {
-        shellWriteString(shell, shellText[SHELL_TEXT_INFO]);
-    }
-#endif
+// #if SHELL_CLS_WHEN_LOGIN == 1
+//     shellWriteString(shell, shellText[SHELL_TEXT_CLEAR_CONSOLE]);
+// #endif
+// #if SHELL_SHOW_INFO == 1
+//     if (shell->status.isChecked)
+//     {
+//         shellWriteString(shell, shellText[SHELL_TEXT_INFO]);
+//     }
+// #endif
 }
 
 

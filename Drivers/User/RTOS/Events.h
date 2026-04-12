@@ -1,3 +1,9 @@
+/**
+ * @file Events.h
+ * @brief 事件定义
+ * @author Pcb-yun (pcbyinyun@163.com)
+ */
+
 #ifndef __EVENTS_H__
 #define __EVENTS_H__
 

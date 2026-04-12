@@ -36,6 +36,10 @@ extern UART_HandleTypeDef huart1;
 
 extern UART_HandleTypeDef huart2;
 
+extern UART_HandleTypeDef huart3;
+
+extern UART_HandleTypeDef huart6;
+
 /* USER CODE BEGIN Private defines */
 #define USART1_RX_BUF_SIZE 32
 
@@ -43,8 +47,11 @@ extern UART_HandleTypeDef huart2;
 
 void MX_USART1_UART_Init(void);
 void MX_USART2_UART_Init(void);
+void MX_USART3_UART_Init(void);
+void MX_USART6_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+void my_printf(const char *fmt, ...);
 
 /* USER CODE END Prototypes */
 

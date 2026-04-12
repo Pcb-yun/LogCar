@@ -337,28 +337,3 @@ void uartLogWrite(char *buffer, short len) {
         shellWriteEndLine(uartLog.shell, buffer, len);
     }
 }
-
-/**
- * @brief 自定义printf函数，支持shell尾行模式
- *
- * @note 此函数为保险用，为了确保输出的原子性，会使用阻塞方式等待UART1完成发送。
- *       一般输出建议使用logPrintln函数。
- *
- * @param fmt 格式字符串
- * @param ... 可变参数
- * @return 写入的字符数
- */
-int my_printf(const char *fmt, ...) {
-    char buffer[512];
-    va_list ap;
-    int len, actual_len;
-
-    va_start(ap, fmt);
-    len = vsnprintf(buffer, 511, fmt, ap);
-    va_end(ap);
-
-    // 处理字符串超长情况
-    actual_len = (len > 511) ? (511) : len;
-    HAL_UART_Transmit(&huart1, (uint8_t *)buffer, actual_len, 500);
-    return actual_len;
-}

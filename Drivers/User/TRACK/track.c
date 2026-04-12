@@ -16,23 +16,14 @@
 #include <stdlib.h>
 #include "Events.h"
 
-Track_t track;
-uint8_t trackBuffer[ALL_LEN];
+static Track_t track;
+static uint8_t trackBuffer[TRACK_ALL_LEN];
 
+static void Track_Reset(void);
 static void Track_Key(void);
+static uint8_t Track_Get_Size(void);
+static void Track_Parse(uint8_t *buffer, TrackData_t *data);
 
-
-
-/**
- * @brief 初始化巡线模块
- */
-static void Track_Init(void) {
-    MX_USART2_UART_Init();
-    osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
-
-    track.mode = TRACK_STOP;
-    track.time = 1000;
-}
 
 /**
  * @brief 巡线模块获取任务
@@ -40,45 +31,33 @@ static void Track_Init(void) {
  */
 void Track_Get_Task(void *argument) {
     (void)argument;
+    extern osMessageQueueId_t Track_DataHandle;
+    TrackData_t trackData;
 
-    // 等待系统初始化完成
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    Track_Init();
 
     for(;;) {
         osDelay(track.time);
         switch(track.mode) {
             case TRACK_STOP:
-                HAL_UART_Transmit(&huart2, CMD_STOP, 7, 500); continue;
+                HAL_UART_Transmit(&huart2, TRACK_CMD_STOP, 7, TRACK_TIMEOUT); continue;
             case TRACK_DIGITAL:
-                HAL_UART_Transmit(&huart2, CMD_DIGITAL, 7, 500); break;
+                HAL_UART_Transmit(&huart2, TRACK_CMD_DIGITAL, 7, TRACK_TIMEOUT); break;
             case TRACK_ANALOG:
-                HAL_UART_Transmit(&huart2, CMD_ANALOG, 7, 500); break;
+                HAL_UART_Transmit(&huart2, TRACK_CMD_ANALOG, 7, TRACK_TIMEOUT); break;
             case TRACK_ALL:
-                HAL_UART_Transmit(&huart2, CMD_ALL, 7, 500); break;
+                HAL_UART_Transmit(&huart2, TRACK_CMD_ALL, 7, TRACK_TIMEOUT); break;
             default: continue;
         }
 
         HAL_UART_Receive_DMA(&huart2, trackBuffer, Track_Get_Size());
         osEventFlagsWait(System_StatusHandle, UART2_RX_CPLT, osFlagsWaitAny, osWaitForever);
-        HAL_UART_Transmit(&huart2, CMD_STOP, 7, 500);
+        HAL_UART_Transmit(&huart2, TRACK_CMD_STOP, 7, TRACK_TIMEOUT);
         osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
 
-        // 临时调试用输出
-       logPrintln("\033[1A\033[2K\r%s", trackBuffer);
-    }
-}
-
-/**
- * @brief 获取巡线模块当前模式的发送数据长度
- * @return 发送数据长度
- */
-uint8_t Track_Get_Size(void) {
-    switch(track.mode) {
-        case TRACK_DIGITAL: return DIGITAL_LEN;
-        case TRACK_ANALOG: return ANALOG_LEN;
-        case TRACK_ALL: return ALL_LEN;
-        default: return DIGITAL_LEN;
+        Track_Parse(trackBuffer, &trackData);
+        osMessageQueueReset(Track_DataHandle);
+        osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
     }
 }
 
@@ -86,16 +65,14 @@ uint8_t Track_Get_Size(void) {
  * @brief 设置巡线模块模式
  * @param mode 巡线模块模式枚举值
  */
-void Track_Set_Mode(TrackSet_t mode) {
+static void Track_Set_Mode(TrackSet_t mode) {
     char ch;
     extern Shell shell;
     track.mode = mode;
 
     if(mode == TRACK_CAL) {
-        HAL_UART_Transmit(&huart2, CMD_CAL, strlen(CMD_CAL), 500);
-
-        logPrintln("Calibration Mode Started\r\n" \
-                    "1. When red light is on, place all sensors on black line for 3s, then press Enter");
+        HAL_UART_Transmit(&huart2, TRACK_CMD_CAL, 7, TRACK_TIMEOUT);
+        logPrintln(TRACK_CAL_HELP_1);
 
         do {
             while (shell.read(&ch, 1) == 0) {
@@ -104,8 +81,7 @@ void Track_Set_Mode(TrackSet_t mode) {
         } while(ch != '\r');
 
         Track_Key();
-
-        logPrintln("2. Place all sensors on white line for 3s, then press Enter");
+        logPrintln(TRACK_CAL_HELP_2);
 
         do {
             while (shell.read(&ch, 1) == 0) {
@@ -114,19 +90,157 @@ void Track_Set_Mode(TrackSet_t mode) {
         } while(ch != '\r');
 
         Track_Key();
+        logPrintln(TRACK_CAL_HELP_3);
+    }
+}
 
-        logPrintln("Calibration completed! Check red light status:\r\n" \
-                    "- Red light off: Calibration success\r\n" \
-                    "- Red light slow blink: Need recalibration");
+/**
+ * @brief 设置巡线模块模式
+ * @param argc 参数数量
+ * @param argv 参数列表
+ */
+static void Track_Mode_Shell(int argc, char *argv[]) {
+    if(argc != 2) {
+        logPrintln(TRACK_MODE_HELP);
+        return;
+    }
+
+    if(strcmp(argv[1], "cal") == 0) {
+        Track_Set_Mode(TRACK_CAL);
+    } else if(strcmp(argv[1], "d") == 0) {
+        Track_Set_Mode(TRACK_DIGITAL);
+    } else if(strcmp(argv[1], "a") == 0) {
+        Track_Set_Mode(TRACK_ANALOG);
+    } else if(strcmp(argv[1], "all") == 0) {
+        Track_Set_Mode(TRACK_ALL);
+    } else if(strcmp(argv[1], "stop") == 0) {
+        Track_Set_Mode(TRACK_STOP);
+    } else if(strcmp(argv[1], "rst") == 0) {
+        Track_Reset();
+    } else {
+        logPrintln("invalid choice: %s", argv[1]);
+        logPrintln(TRACK_MODE_HELP);
     }
 }
 
 /**
  * @brief 设置巡线模块发送时间间隔
- * @param time 时间间隔(ms)
+ * @param argc 参数数量
+ * @param argv 参数列表
  */
-static void Track_Set_Time(uint16_t time) {
-    track.time = time;
+static void Track_Time_Sell(int argc, char *argv[]) {
+    if(argc != 2) {
+        logPrintln(TRACK_TIME_HELP);
+        return;
+    }
+
+    // 判断参数是否为数字
+    char *endptr;
+    long val = strtol(argv[1], &endptr, 10);
+    if(*endptr != '\0') {
+        logPrintln("invalid time value: %s", argv[1]);
+        logPrintln(TRACK_TIME_HELP);
+        return;
+    } else {
+        track.time = (uint16_t)val;
+    }
+}
+
+/**
+ * @brief 实时刷新巡线模块数据
+ */
+static void Track_View_Sell(void) {
+    extern osMessageQueueId_t Track_DataHandle;
+    TrackData_t trackData;
+    char ch;
+    extern Shell shell;
+
+    logPrintln("Track Data Viewer - Press ^C to exit");
+    logPrintln("Analog : - - - - - - - -\r\nDigital: - - - - - - - -");
+
+    for(;;) {
+        if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 0) == osOK) {
+            switch(trackData.mode) {
+                case TRACK_DIGITAL:
+                    logPrintln("\033[1A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
+                            (trackData.digitalData & 0x80) ? 1 : 0,
+                            (trackData.digitalData & 0x40) ? 1 : 0,
+                            (trackData.digitalData & 0x20) ? 1 : 0,
+                            (trackData.digitalData & 0x10) ? 1 : 0,
+                            (trackData.digitalData & 0x08) ? 1 : 0,
+                            (trackData.digitalData & 0x04) ? 1 : 0,
+                            (trackData.digitalData & 0x02) ? 1 : 0,
+                            (trackData.digitalData & 0x01) ? 1 : 0);
+                    break;
+                case TRACK_ANALOG:
+                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d\r\n",
+                            trackData.analogData[0], trackData.analogData[1],
+                            trackData.analogData[2], trackData.analogData[3],
+                            trackData.analogData[4], trackData.analogData[5],
+                            trackData.analogData[6], trackData.analogData[7]);
+                    break;
+                case TRACK_ALL:
+                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d",
+                        trackData.analogData[0], trackData.analogData[1],
+                        trackData.analogData[2], trackData.analogData[3],
+                        trackData.analogData[4], trackData.analogData[5],
+                        trackData.analogData[6], trackData.analogData[7]);
+                    logPrintln("\033[2K\rDigital: %d %d %d %d %d %d %d %d",
+                        (trackData.digitalData & 0x80) ? 1 : 0,
+                        (trackData.digitalData & 0x40) ? 1 : 0,
+                        (trackData.digitalData & 0x20) ? 1 : 0,
+                        (trackData.digitalData & 0x10) ? 1 : 0,
+                        (trackData.digitalData & 0x08) ? 1 : 0,
+                        (trackData.digitalData & 0x04) ? 1 : 0,
+                        (trackData.digitalData & 0x02) ? 1 : 0,
+                        (trackData.digitalData & 0x01) ? 1 : 0);
+                    break;
+            }
+        }
+
+        if (shell.read(&ch, 1) == 1) {
+            if (ch == 0x03) { // ^C
+                break;
+            }
+        }
+
+        osDelay(50);
+    }
+    logPrintln("\033[3A\033[J\033[2A");
+}
+
+ShellCommand TrackGroup[] =
+{
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, set track mode),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Sell, set track time),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Sell, view track data),
+    SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+track, TrackGroup, command group track);
+
+/**
+ * @brief 初始化巡线模块
+ */
+void Track_Init(void) {
+    MX_USART2_UART_Init();
+    osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
+
+    track.mode = TRACK_STOP;
+    track.time = 500;
+}
+
+/**
+ * @brief 获取巡线模块当前模式的发送数据长度
+ * @return 发送数据长度
+ */
+static uint8_t Track_Get_Size(void) {
+    switch(track.mode) {
+        case TRACK_DIGITAL: return TRACK_DIGITAL_LEN;
+        case TRACK_ANALOG: return TRACK_ANALOG_LEN;
+        case TRACK_ALL: return TRACK_ALL_LEN;
+        default: return TRACK_DIGITAL_LEN;
+    }
 }
 
 /**
@@ -148,58 +262,67 @@ static void Track_Key(void) {
 }
 
 /**
- * @brief 设置巡线模块模式
- * @param argc 参数数量
- * @param argv 参数列表
+ * @brief 解析巡线模块数据
+ * @param buffer 接收缓冲区
+ * @param data 解析后的数据结构体
  */
-static void Track_Set_Sell(int argc, char *argv[]) {
-    if(argc != 3) {
-        logPrintln(TRACK_SET_HELP);
-        return;
-    }
+static void Track_Parse(uint8_t *buffer, TrackData_t *data) {
+    char *ptr = (char *)buffer;
+    uint8_t index;
+    data->mode = track.mode;
 
-    if(strcmp(argv[1], "mode") == 0) {
-        if(strcmp(argv[2], "cal") == 0) {
-            Track_Set_Mode(TRACK_CAL);
-        } else if(strcmp(argv[2], "d") == 0) {
-            Track_Set_Mode(TRACK_DIGITAL);
-        } else if(strcmp(argv[2], "a") == 0) {
-            Track_Set_Mode(TRACK_ANALOG);
-        } else if(strcmp(argv[2], "all") == 0) {
-            Track_Set_Mode(TRACK_ALL);
-        } else if(strcmp(argv[2], "stop") == 0) {
-            Track_Set_Mode(TRACK_STOP);
-        } else if(strcmp(argv[2], "rst") == 0) {
-            Track_Reset();
-        } else {
-            logPrintln("invalid choice: %s", argv[2]);
-            logPrintln(TRACK_SET_HELP);
-        }
-    } else if(strcmp(argv[1], "time") == 0) {
-        // 判断第二个值是否为数字
-        char *endptr;
-        long val = strtol(argv[2], &endptr, 10);
-        if(*endptr != '\0') {
-            logPrintln("invalid time value: %s", argv[2]);
-            logPrintln(TRACK_SET_HELP);
-        } else {
-            Track_Set_Time((uint16_t)val);
-        }
+    switch(track.mode) {
+        case TRACK_DIGITAL:
+            if (ptr[0] == '$' && ptr[1] == 'D') {
+                data->digitalData = 0;
+                if (ptr[6 ] == '1') data->digitalData |= (1 << 7);
+                if (ptr[11] == '1') data->digitalData |= (1 << 6);
+                if (ptr[16] == '1') data->digitalData |= (1 << 5);
+                if (ptr[21] == '1') data->digitalData |= (1 << 4);
+                if (ptr[26] == '1') data->digitalData |= (1 << 3);
+                if (ptr[31] == '1') data->digitalData |= (1 << 2);
+                if (ptr[36] == '1') data->digitalData |= (1 << 1);
+                if (ptr[41] == '1') data->digitalData |= (1 << 0);
+            } break;
+        case TRACK_ANALOG:
+            if (ptr[0] == '$' && ptr[1] == 'A') {
+                ptr += 3;
+                for (index = 0; index < 8; index++) {
+                    while (*ptr != ':') ptr++;
+                    ptr++;
+                    data->analogData[index] = 0;
+                    while (*ptr >= '0' && *ptr <= '9') {
+                        data->analogData[index] = data->analogData[index] * 10 + (*ptr - '0');
+                        ptr++;
+                    }
+                    if (*ptr == ',') ptr++;
+                }
+            } break;
+        case TRACK_ALL:
+            if (ptr[0] == '$' && ptr[1] == 'A') {
+                ptr += 3;
+                for (index = 0; index < 8; index++) {
+                    while (*ptr != ':') ptr++;
+                    ptr++;
+                    data->analogData[index] = 0;
+                    while (*ptr >= '0' && *ptr <= '9') {
+                        data->analogData[index] = data->analogData[index] * 10 + (*ptr - '0');
+                        ptr++;
+                    }
+                    if (*ptr == ',') ptr++;
+                }
+                while (*ptr != '$' && *ptr != '\0') ptr++;
+            }
+            if (*ptr == '$' && *(ptr + 1) == 'D') {
+                data->digitalData = 0;
+                if (ptr[6 ] == '1') data->digitalData |= (1 << 7);
+                if (ptr[11] == '1') data->digitalData |= (1 << 6);
+                if (ptr[16] == '1') data->digitalData |= (1 << 5);
+                if (ptr[21] == '1') data->digitalData |= (1 << 4);
+                if (ptr[26] == '1') data->digitalData |= (1 << 3);
+                if (ptr[31] == '1') data->digitalData |= (1 << 2);
+                if (ptr[36] == '1') data->digitalData |= (1 << 1);
+                if (ptr[41] == '1') data->digitalData |= (1 << 0);
+            } break;
     }
 }
-
-/**
- * @brief 实时刷新巡线模块数据
- */
-static void Track_View_Sell(void) {
-    logPrintln("Not implemented yet");
-}
-
-ShellCommand TrackGroup[] =
-{
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Sell, view track data),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, set, Track_Set_Sell, set track mode or time),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-track, TrackGroup, command group track);

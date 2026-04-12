@@ -83,6 +83,22 @@ virtualFolder:
         - path: Applications/letter_shell/log/log.c
         - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
       folders: []
+    - name: misc
+      files:
+        - path: Drivers/User/MISC/message.c
+      folders: []
+    - name: servo
+      files:
+        - path: Drivers/User/SERVO/fashion_star_uart_servo.c
+        - path: Drivers/User/SERVO/ring_buffer.c
+        - path: Drivers/User/SERVO/servo_port.c
+        - path: Drivers/User/SERVO/user_uart.c
+      folders: []
+    - name: step
+      files:
+        - path: Drivers/User/STEP/Emm_V5_Driver.c
+        - path: Drivers/User/STEP/step_port.c
+      folders: []
     - name: track
       files:
         - path: Drivers/User/TRACK/track.c
@@ -114,7 +130,10 @@ targets:
         - Applications/letter_shell/src
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
+        - Drivers/User/MISC
         - Drivers/User/RTOS
+        - Drivers/User/SERVO
+        - Drivers/User/STEP
         - Drivers/User/TRACK
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code

@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "log.h"
+#include "message.h"
 
 /* USER CODE END Includes */
 
@@ -95,7 +95,13 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(500); // 等待调试器初始化
+
+  my_printf("\033[2J\033[H");
+  my_printf("\033[1;1H\033[2J==================== LogCar Terminal System ====================\r\n");
+
+  SHOW_DMESG(dmesg_wait, "Configure Timer for Run Time Stats.");
   configureTimerForRunTimeStats();
+  SHOW_DMESG(dmesg_ok, NULL);
 
   /* USER CODE END 2 */
 

@@ -15,7 +15,10 @@
                 "Applications/letter_shell/src",
                 "Applications/letter_shell/log",
                 "Applications/letter_shell/shell_enhance",
+                "Drivers/User/MISC",
                 "Drivers/User/RTOS",
+                "Drivers/User/SERVO",
+                "Drivers/User/STEP",
                 "Drivers/User/TRACK",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"

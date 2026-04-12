@@ -250,7 +250,6 @@ void logWrite(Log *log, LogLevel level, const char *fmt, ...);
 void logHexDump(Log *log, LogLevel level, void *base, unsigned int length);
 void logInit(void);
 void uartLogWrite(char *buffer, short len);
-int my_printf(const char *fmt, ...);
 
 #ifdef __cplusplus
 }

@@ -17,7 +17,7 @@
 #include "usart.h"
 #include "string.h"
 
-#define SHELL_BUFFER_SIZE 1024  // shell缓冲区大小
+#define SHELL_BUFFER_SIZE 1024
 
 Shell shell;
 char shellBuffer[SHELL_BUFFER_SIZE];
@@ -91,7 +91,6 @@ void Shell_Task(void *argument) {
 static void Sys_Reset(int argc, char *argv[]) {
     char ch = 0;
 
-    // 检查是否有-y参数，如果有则直接执行重置
     if (argc > 1 && strcmp(argv[1], "-y") == 0) {
         logPrintln("system will reset after 1 seconds");
         osDelay(1000);

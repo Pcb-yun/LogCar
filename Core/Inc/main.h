@@ -69,6 +69,14 @@ void Error_Handler(void);
 #define Tracking_TX_GPIO_Port GPIOA
 #define Tracking_RX_Pin GPIO_PIN_3
 #define Tracking_RX_GPIO_Port GPIOA
+#define SERVO_TX_Pin GPIO_PIN_10
+#define SERVO_TX_GPIO_Port GPIOB
+#define SERVO_RX_Pin GPIO_PIN_11
+#define SERVO_RX_GPIO_Port GPIOB
+#define STEP_TX_Pin GPIO_PIN_6
+#define STEP_TX_GPIO_Port GPIOC
+#define STEP_RX_Pin GPIO_PIN_7
+#define STEP_RX_GPIO_Port GPIOC
 #define Terminal_TX_Pin GPIO_PIN_9
 #define Terminal_TX_GPIO_Port GPIOA
 #define Terminal_RX_Pin GPIO_PIN_10
