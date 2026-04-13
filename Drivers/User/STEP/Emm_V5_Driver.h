@@ -25,7 +25,6 @@ extern "C" {
 
 #define					ABS(x)							((x) > 0 ? (x) : -(x))
 
-
 /**
  * @brief 电机指令枚举
  * @note 后缀有(Y42)的为Y42新增指令，X42不支持
@@ -51,7 +50,7 @@ typedef enum {
 	S_PIN   = 22,	// 读取引脚状态（Y42）
 }SysParams_t;
 
-#define		MMCL_LEN		512
+#define MMCL_LEN 512
 extern __IO uint16_t MMCL_count, MMCL_cmd[MMCL_LEN];
 
 /******************** 触发动作指令 **********************/
@@ -116,10 +115,39 @@ void Emm_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il);
 void Emm_V5_Read_System_State_Params(uint8_t addr);
 void Emm_V5_Read_Motor_Conf_Params(uint8_t addr);
 
+/************************************************/
+/*	以下是把相应命令加载到Y42多电机命令上的函数（Y42） */
+/************************************************/
 
+/******************** 触发动作命令 **********************/
 
+void Emm_V5_MMCL_Trig_Encoder_Cal(uint8_t addr);
+void Emm_V5_MMCL_Reset_Motor(uint8_t addr);
+void Emm_V5_MMCL_Reset_CurPos_To_Zero(uint8_t addr);
+void Emm_V5_MMCL_Reset_Clog_Pro(uint8_t addr);
+void Emm_V5_MMCL_Restore_Motor(uint8_t addr);
 
+/******************** 运动控制命令 **********************/
 
+void Emm_V5_MMCL_En_Control(uint8_t addr, bool state, bool snF);
+void Emm_V5_MMCL_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, bool snF);
+void Emm_V5_MMCL_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF);
+void Emm_V5_MMCL_Stop_Now(uint8_t addr, bool snF);
+void Emm_V5_MMCL_Synchronous_motion(uint8_t addr);
+
+/******************** 原点回零命令 **********************/
+
+void Emm_V5_MMCL_Origin_Set_O(uint8_t addr, bool svF);
+void Emm_V5_MMCL_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF);
+void Emm_V5_MMCL_Origin_Interrupt(uint8_t addr);
+void Emm_V5_MMCL_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF);
+
+/******************** 读取系统参数命令 **********************/
+
+void Emm_V5_MMCL_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
+void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s);
+
+/******************** 读写驱动参数命令 **********************/
 
 #ifdef __cplusplus
 }
