@@ -11,6 +11,8 @@
  extern "C" {
  #endif /* __cplusplus */
 
+#define EMM_V5_SEND_CMD(cmd, len)
+
 
 
 

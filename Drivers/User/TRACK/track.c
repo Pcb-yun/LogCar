@@ -159,7 +159,7 @@ static void Track_View_Sell(void) {
     logPrintln("Analog : - - - - - - - -\r\nDigital: - - - - - - - -");
 
     for(;;) {
-        if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 0) == osOK) {
+        if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 50) == osOK) {
             switch(trackData.mode) {
                 case TRACK_DIGITAL:
                     logPrintln("\033[1A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
@@ -199,12 +199,8 @@ static void Track_View_Sell(void) {
         }
 
         if (shell.read(&ch, 1) == 1) {
-            if (ch == 0x03) { // ^C
-                break;
-            }
+            if (ch == 0x03) break; // ^C
         }
-
-        osDelay(50);
     }
     logPrintln("\033[3A\033[J\033[2A");
 }
