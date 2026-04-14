@@ -6,6 +6,8 @@
 
 #include "Emm_V5_Driver.h"
 
+__IO uint16_t MMCL_count, MMCL_cmd[MMCL_LEN];
+
 /******************** 触发动作指令 **********************/
 
 /**
@@ -872,4 +874,3 @@ void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s) {
 }
 
 /******************** 读写驱动参数命令 **********************/
-
