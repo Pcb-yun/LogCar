@@ -6,6 +6,8 @@
 
 #include "Emm_V5_Driver.h"
 
+__IO uint16_t MMCL_count = 0, MMCL_cmd[MMCL_LEN] = {0};
+
 /******************** 触发动作指令 **********************/
 
 /**
