@@ -74,6 +74,20 @@ const osThreadAttr_t Track_Get_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh1,
 };
+/* Definitions for Motor_Get_Sta */
+osThreadId_t Motor_Get_StaHandle;
+const osThreadAttr_t Motor_Get_Sta_attributes = {
+  .name = "Motor_Get_Sta",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
+/* Definitions for Motor_Ctrl */
+osThreadId_t Motor_CtrlHandle;
+const osThreadAttr_t Motor_Ctrl_attributes = {
+  .name = "Motor_Ctrl",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -89,6 +103,16 @@ osMessageQueueId_t Track_DataHandle;
 const osMessageQueueAttr_t Track_Data_attributes = {
   .name = "Track_Data"
 };
+/* Definitions for MotorStatus */
+osMessageQueueId_t MotorStatusHandle;
+const osMessageQueueAttr_t MotorStatus_attributes = {
+  .name = "MotorStatus"
+};
+/* Definitions for MotorCmds */
+osMessageQueueId_t MotorCmdsHandle;
+const osMessageQueueAttr_t MotorCmds_attributes = {
+  .name = "MotorCmds"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -103,6 +127,8 @@ const osEventFlagsAttr_t System_Status_attributes = {
 void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
 extern void Track_Get_Task(void *argument);
+extern void Motor_Get_Sta_Task(void *argument);
+extern void Motor_Ctrl_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -225,6 +251,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of Track_Data */
   Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
 
+  /* creation of MotorStatus */
+  MotorStatusHandle = osMessageQueueNew (1, sizeof(MotorStatus_t), &MotorStatus_attributes);
+
+  /* creation of MotorCmds */
+  MotorCmdsHandle = osMessageQueueNew (1, sizeof(uint16_t), &MotorCmds_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -238,6 +270,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Track_Get */
   Track_GetHandle = osThreadNew(Track_Get_Task, NULL, &Track_Get_attributes);
+
+  /* creation of Motor_Get_Sta */
+  Motor_Get_StaHandle = osThreadNew(Motor_Get_Sta_Task, NULL, &Motor_Get_Sta_attributes);
+
+  /* creation of Motor_Ctrl */
+  Motor_CtrlHandle = osThreadNew(Motor_Ctrl_Task, NULL, &Motor_Ctrl_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

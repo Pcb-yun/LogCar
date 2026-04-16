@@ -20,6 +20,7 @@ void Emm_V5_Trig_Encoder_Cal(uint8_t addr) {
     EMM_V5_SEND_CMD(cmd, 4);
 }
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 /**
   * @brief 重启电机（Y42）
   * @param addr 电机地址
@@ -29,6 +30,7 @@ void Emm_V5_Reset_Motor(uint8_t addr) {
     cmd[0] = addr; cmd[1] = 0x08; cmd[2] = 0x97; cmd[3] = 0x6B;
     EMM_V5_SEND_CMD(cmd, 4);
 }
+#endif
 /**
   * @brief 将当前位置清零
   * @param addr 电机地址
@@ -61,6 +63,7 @@ void Emm_V5_Restore_Motor(uint8_t addr) {
 
 /******************** 运动控制指令 **********************/
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 /**
   * @brief 多电机命令（Y42）
   * @param addr 电机地址
@@ -80,6 +83,7 @@ void Emm_V5_Multi_Motor_Cmd(uint8_t addr) {
 		MMCL_count = 0;
 	}
 }
+#endif
 
 /**
   * @brief 使能信号控制
@@ -217,6 +221,7 @@ void Emm_V5_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t
 
 /******************** 读取系统参数命令 **********************/
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 /**
   * @brief 定时返回信息命令（Y42）
   * @param addr 电机地址
@@ -254,6 +259,7 @@ void Emm_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t t
     cmd[i] = 0x6B; ++i;
     EMM_V5_SEND_CMD(cmd, i);
 }
+#endif
 
 /**
   * @brief 读取系统参数
@@ -276,12 +282,16 @@ void Emm_V5_Read_Sys_Params(uint8_t addr, SysParams_t s) {
         case S_VEL  : cmd[i] = 0x35; ++i; break;
         case S_CPOS : cmd[i] = 0x36; ++i; break;
         case S_PERR : cmd[i] = 0x37; ++i; break;
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
         case S_VBAT : cmd[i] = 0x38; ++i; break;
         case S_TEMP : cmd[i] = 0x39; ++i; break;
+#endif
         case S_FLAG : cmd[i] = 0x3A; ++i; break;
         case S_OFLAG: cmd[i] = 0x3B; ++i; break;
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
         case S_OAF  : cmd[i] = 0x3C; ++i; break;
         case S_PIN  : cmd[i] = 0x3D; ++i; break;
+#endif
         default: break;
     }
     cmd[i] = 0x6B; ++i;
@@ -325,6 +335,7 @@ void Emm_V5_Modify_PDFlag(uint8_t addr, bool pdf) {
     EMM_V5_SEND_CMD(cmd, 4);
 }
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 /**
   * @brief 读取选项参数状态（Y42）
   * @param addr 电机地址
@@ -407,6 +418,7 @@ void Emm_V5_Modify_S_Vel(uint8_t addr, bool svF, bool s_vel) {
     cmd[0] = addr; cmd[1] = 0x4F; cmd[2] = 0x71; cmd[3] = svF; cmd[4] = s_vel; cmd[5] = 0x6B;
     EMM_V5_SEND_CMD(cmd, 6);
 }
+#endif
 
 /**
   * @brief 修改开环模式工作电流
@@ -460,6 +472,7 @@ void Emm_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, 
     EMM_V5_SEND_CMD(cmd, 17);
 }
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 /**
   * @brief 读取DMX512协议参数（Y42）
   * @param addr 电机地址
@@ -593,6 +606,7 @@ void Emm_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il) {
     cmd[8] = 0x6B;
     EMM_V5_SEND_CMD(cmd, 9);
 }
+#endif
 
 /******************** 读取所有驱动参数命令 **********************/
 
@@ -619,6 +633,8 @@ void Emm_V5_Read_Motor_Conf_Params(uint8_t addr) {
 /************************************************/
 /*	以下是把相应命令加载到Y42多电机命令上的函数（Y42） */
 /************************************************/
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 
 /******************** 触发动作命令 **********************/
 
@@ -872,5 +888,7 @@ void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s) {
     cmd[i] = 0x6B; ++i;
     for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
 }
+
+#endif
 
 /******************** 读写驱动参数命令 **********************/

@@ -42,12 +42,16 @@ typedef enum {
 	S_VEL   = 14,	// 读取电机实时转速
 	S_CPOS  = 15,	// 读取电机实时位置
 	S_PERR  = 16,	// 读取电机位置误差
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 	S_VBAT  = 17,	// 读取多圈编码器电池电压（Y42）
 	S_TEMP  = 18,	// 读取电机实时温度（Y42）
+#endif
 	S_FLAG  = 19,	// 读取电机状态标志位
 	S_OFLAG = 20,   // 读取回零状态标志位
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 	S_OAF   = 21,	// 读取电机状态标志位 + 回零状态标志位（Y42）
 	S_PIN   = 22,	// 读取引脚状态（Y42）
+#endif
 }SysParams_t;
 
 #define MMCL_LEN 512
@@ -63,7 +67,9 @@ void Emm_V5_Restore_Motor(uint8_t addr);
 
 /******************** 运动控制指令 **********************/
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 void Emm_V5_Multi_Motor_Cmd(uint8_t addr);
+#endif
 void Emm_V5_En_Control(uint8_t addr, bool state, bool snF);
 void Emm_V5_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, bool snF);
 void Emm_V5_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint8_t acc, uint32_t clk, bool raF, bool snF);
@@ -80,7 +86,9 @@ void Emm_V5_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t
 
 /******************** 读取系统参数命令 **********************/
 
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 void Emm_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
+#endif
 void Emm_V5_Read_Sys_Params(uint8_t addr, SysParams_t s);
 
 /******************** 读写驱动参数命令 **********************/
@@ -88,8 +96,10 @@ void Emm_V5_Read_Sys_Params(uint8_t addr, SysParams_t s);
 void Emm_V5_Modify_Motor_ID(uint8_t addr, bool svF, uint8_t id);
 void Emm_V5_Modify_MicroStep(uint8_t addr, bool svF, uint8_t mstep);
 void Emm_V5_Modify_PDFlag(uint8_t addr, bool pdf);
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 void Emm_V5_Read_Opt_Param_Sta(uint8_t addr);
 void Emm_V5_Modify_Motor_Type(uint8_t addr, bool svF, bool mottype);
+#endif
 void Emm_V5_Modify_Firmware_Type(uint8_t addr, bool svF, bool fwtype);
 void Emm_V5_Modify_Ctrl_Mode(uint8_t addr, bool svF, bool ctrl_mode);
 void Emm_V5_Modify_Motor_Dir(uint8_t addr, bool svF, bool dir);
@@ -99,6 +109,7 @@ void Emm_V5_Modify_OM_ma(uint8_t addr, bool svF, uint16_t om_ma);
 void Emm_V5_Modify_FOC_mA(uint8_t addr, bool svF, uint16_t foc_mA);
 void Emm_V5_Read_PID_Params(uint8_t addr);
 void Emm_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, uint32_t kd);
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 void Emm_V5_Read_DMX512_Params(uint8_t addr);
 void Emm_V5_Modify_DMX512_Params(uint8_t addr, bool svF, uint16_t tch, uint8_t nch, uint8_t mode, uint16_t vel, uint16_t acc, uint16_t vel_step, uint32_t pos_step);
 void Emm_V5_Read_Pos_Window(uint8_t addr);
@@ -109,6 +120,7 @@ void Emm_V5_Read_Heart_Protect(uint8_t addr);
 void Emm_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp);
 void Emm_V5_Read_Integral_Limit(uint8_t addr);
 void Emm_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il);
+#endif
 
 /******************** 读取所有驱动参数命令 **********************/
 
@@ -118,6 +130,8 @@ void Emm_V5_Read_Motor_Conf_Params(uint8_t addr);
 /************************************************/
 /*	以下是把相应命令加载到Y42多电机命令上的函数（Y42） */
 /************************************************/
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 
 /******************** 触发动作命令 **********************/
 
@@ -147,7 +161,7 @@ void Emm_V5_MMCL_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, ui
 void Emm_V5_MMCL_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
 void Emm_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s);
 
-/******************** 读写驱动参数命令 **********************/
+#endif
 
 #ifdef __cplusplus
 }
