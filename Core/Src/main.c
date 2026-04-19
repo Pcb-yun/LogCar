@@ -94,7 +94,7 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_Delay(500); // 等待调试器初始化
+  // HAL_Delay(500); // 等待调试器初始化
 
   my_printf("\033[2J\033[H");
   my_printf("\033[1;1H\033[2J==================== LogCar Terminal System ====================\r\n");

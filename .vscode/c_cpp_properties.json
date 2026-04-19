@@ -19,6 +19,8 @@
                 "Drivers/User/RTOS",
                 "Drivers/User/SERVO",
                 "Drivers/User/STEP",
+                "Drivers/User/STEP/driver",
+                "Drivers/User/STEP/motion",
                 "Drivers/User/TRACK",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"

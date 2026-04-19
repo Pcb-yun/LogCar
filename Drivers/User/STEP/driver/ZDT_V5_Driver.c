@@ -1,0 +1,1322 @@
+/**
+ * @file ZDT_V5_Driver.c
+ * @author Pcb-yun (pcbyinyun@163.com)
+ * @brief 张大头V5步进电机驱动层源文件
+ */
+
+#include "ZDT_V5_Driver.h"
+
+__IO uint16_t MMCL_count, MMCL_cmd[MMCL_LEN];
+
+/******************** 触发动作指令 **********************/
+
+/**
+  * @brief 触发编码器校准
+  * @param addr 电机地址
+  */
+void ZDT_V5_Trig_Encoder_Cal(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x06; cmd[2] = 0x45; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+/**
+  * @brief 重启电机（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Reset_Motor(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x08; cmd[2] = 0x97; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+#endif
+
+/**
+  * @brief 将当前位置清零
+  * @param addr 电机地址
+  */
+void ZDT_V5_Reset_CurPos_To_Zero(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0A; cmd[2] = 0x6D; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 解除堵转保护
+  * @param addr 电机地址
+  */
+void ZDT_V5_Reset_Clog_Pro(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0E; cmd[2] = 0x52; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 恢复出厂设置
+  * @param addr 电机地址
+  */
+void ZDT_V5_Restore_Motor(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0F; cmd[2] = 0x5F; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/******************** 运动控制指令 **********************/
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+/**
+  * @brief 多电机命令（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Multi_Motor_Cmd(uint8_t addr) {
+    static uint8_t cmd[MMCL_LEN] = {0};
+    uint16_t i = 0, j = 0, len = 0;
+
+  if(MMCL_count > 0) {
+    len = MMCL_count + 5;
+        cmd[0] = addr; cmd[1] = 0xAA; cmd[2] = (uint8_t)(len >> 8); cmd[3] = (uint8_t)(len);
+    for(i=0,j=4; i < MMCL_count; i++,j++) { cmd[j] = MMCL_cmd[i]; }
+    cmd[j] = 0x6B; ++j;
+        ZDT_V5_SEND_CMD(cmd, j);
+    MMCL_count = 0;
+  } else {
+    MMCL_count = 0;
+  }
+}
+#endif
+
+/**
+  * @brief 使能信号控制
+  * @param addr 电机地址
+  * @param state 使能状态,true为使能电机,false为关闭电机
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_En_Control(uint8_t addr, bool state, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF3; cmd[2] = 0xAB; cmd[3] = (uint8_t)state; cmd[4] = snF; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 速度模式
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-5000
+  * @param acc 加速度(RPM/S或档位)
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF6;
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(vel >> 8); cmd[6] = (uint8_t)(vel >> 0);
+    cmd[7] = snF; cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
+#else
+    cmd[2] = dir; cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)acc; cmd[6] = snF; cmd[7] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 8);
+#endif
+}
+
+/**
+  * @brief 位置模式
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-5000
+  * @param acc 加速度(RPM/S或档位)
+  * @param dec 减速度(仅X固件)
+  * @param clk 脉冲数/角度 0- (2^32 - 1)
+  * @param raF 相位/绝对标志,false为相对运动,true为绝对值运动
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, uint16_t dec, uint32_t clk, bool raF, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFD;
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(dec >> 8); cmd[6] = (uint8_t)(dec >> 0);
+    cmd[7] = (uint8_t)(vel >> 8); cmd[8] = (uint8_t)(vel >> 0);
+    cmd[9] = (uint8_t)(clk >> 24); cmd[10] = (uint8_t)(clk >> 16); cmd[11] = (uint8_t)(clk >> 8); cmd[12] = (uint8_t)(clk >> 0);
+    cmd[13] = (uint8_t)raF; cmd[14] = snF; cmd[15] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 16);
+#else
+    cmd[2] = dir; cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)acc;
+    cmd[6] = (uint8_t)(clk >> 24); cmd[7] = (uint8_t)(clk >> 16); cmd[8] = (uint8_t)(clk >> 8); cmd[9] = (uint8_t)(clk >> 0);
+    cmd[10] = raF; cmd[11] = snF; cmd[12] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 13);
+#endif
+}
+
+/**
+  * @brief 力矩模式控制
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param slope 电流斜率(mA/S) 0-65535
+  * @param current 目标电流(mA) 0-5000
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Torque_Control(uint8_t addr, uint8_t dir, uint16_t slope, uint16_t current, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF5; cmd[2] = dir;
+    cmd[3] = (uint8_t)(slope >> 8); cmd[4] = (uint8_t)(slope >> 0);
+    cmd[5] = (uint8_t)(current >> 8); cmd[6] = (uint8_t)(current >> 0);
+    cmd[7] = snF; cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
+}
+
+/**
+  * @brief 力矩模式限速控制
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param slope 电流斜率(mA/S) 0-65535
+  * @param current 目标电流(mA) 0-5000
+  * @param max_vel 最大速度(0.1RPM) 0-30000
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Torque_Control_With_Limit(uint8_t addr, uint8_t dir, uint16_t slope, uint16_t current, uint16_t max_vel, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xC5; cmd[2] = dir;
+    cmd[3] = (uint8_t)(slope >> 8); cmd[4] = (uint8_t)(slope >> 0);
+    cmd[5] = (uint8_t)(current >> 8); cmd[6] = (uint8_t)(current >> 0);
+    cmd[7] = snF;
+    cmd[8] = (uint8_t)(max_vel >> 8); cmd[9] = (uint8_t)(max_vel >> 0);
+    cmd[10] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 11);
+}
+
+/**
+  * @brief 立即停止
+  * @param addr 电机地址
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Stop_Now(uint8_t addr, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFE; cmd[2] = 0x98; cmd[3] = snF; cmd[4] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 5);
+}
+
+/**
+  * @brief 多机同步运动
+  * @param addr 电机地址
+  */
+void ZDT_V5_Synchronous_motion(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFF; cmd[2] = 0x66; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+#if CURRENT_FIRMWARE == FIRMWARE_X
+/**
+  * @brief 速度模式限电流控制（X固件）
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-3000.0
+  * @param acc 加速度(RPM/S) 0-65535
+  * @param snF 多机同步标志,false为不启用,true为启用
+  * @param max_current 最大电流(mA) 0-5000
+  */
+void ZDT_V5_Vel_Control_With_Limit(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, bool snF, uint16_t max_current) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xC6; cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(vel >> 8); cmd[6] = (uint8_t)(vel >> 0);
+    cmd[7] = snF;
+    cmd[8] = (uint8_t)(max_current >> 8); cmd[9] = (uint8_t)(max_current >> 0);
+    cmd[10] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 11);
+}
+
+/**
+  * @brief 直通限速位置模式控制（X固件）
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-3000.0
+  * @param pos 位置角度(0.1°) 0- (2^32 - 1)
+  * @param mode 运动模式:0-相对上一目标,1-绝对位置,2-相对当前位置
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Pos_Control_Direct(uint8_t addr, uint8_t dir, uint16_t vel, uint32_t pos, uint8_t mode, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFB; cmd[2] = dir;
+    cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)(pos >> 24); cmd[6] = (uint8_t)(pos >> 16); cmd[7] = (uint8_t)(pos >> 8); cmd[8] = (uint8_t)(pos >> 0);
+    cmd[9] = mode; cmd[10] = snF; cmd[11] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 12);
+}
+
+/**
+  * @brief 直通限速位置模式限电流控制（X固件）
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-3000.0
+  * @param pos 位置角度(0.1°) 0- (2^32 - 1)
+  * @param mode 运动模式:0-相对上一目标,1-绝对位置,2-相对当前位置
+  * @param snF 多机同步标志,false为不启用,true为启用
+  * @param max_current 最大电流(mA) 0-5000
+  */
+void ZDT_V5_Pos_Control_Direct_With_Limit(uint8_t addr, uint8_t dir, uint16_t vel, uint32_t pos, uint8_t mode, bool snF, uint16_t max_current) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xCB; cmd[2] = dir;
+    cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)(pos >> 24); cmd[6] = (uint8_t)(pos >> 16); cmd[7] = (uint8_t)(pos >> 8); cmd[8] = (uint8_t)(pos >> 0);
+    cmd[9] = mode; cmd[10] = snF;
+    cmd[11] = (uint8_t)(max_current >> 8); cmd[12] = (uint8_t)(max_current >> 0);
+    cmd[13] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 14);
+}
+
+/**
+  * @brief 梯形曲线位置模式限电流控制（X固件）
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-3000.0
+  * @param acc 加速度(RPM/S) 0-65535
+  * @param dec 减速度(RPM/S) 0-65535
+  * @param pos 位置角度(0.1°) 0- (2^32 - 1)
+  * @param mode 运动模式:0-相对上一目标,1-绝对位置,2-相对当前位置
+  * @param snF 多机同步标志,false为不启用,true为启用
+  * @param max_current 最大电流(mA) 0-5000
+  */
+void ZDT_V5_Pos_Control_Trapezoidal_With_Limit(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, uint16_t dec, uint32_t pos, uint8_t mode, bool snF, uint16_t max_current) {
+    static uint8_t cmd[24] = {0};
+    cmd[0] = addr; cmd[1] = 0xCD; cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(dec >> 8); cmd[6] = (uint8_t)(dec >> 0);
+    cmd[7] = (uint8_t)(vel >> 8); cmd[8] = (uint8_t)(vel >> 0);
+    cmd[9] = (uint8_t)(pos >> 24); cmd[10] = (uint8_t)(pos >> 16); cmd[11] = (uint8_t)(pos >> 8); cmd[12] = (uint8_t)(pos >> 0);
+    cmd[13] = mode; cmd[14] = snF;
+    cmd[15] = (uint8_t)(max_current >> 8); cmd[16] = (uint8_t)(max_current >> 0);
+    cmd[17] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 18);
+}
+#endif
+
+/******************** 快速位置模式(User) **********************/
+
+/**
+  * @brief 快速位置模式 - 设定参数
+  * @param addr 电机地址
+  * @param vel 速度（RPM）
+  * @param acc 加速度（Emm：档位，X：加速加速度）
+  * @param dec 减速度（仅X固件）
+  * @param max_current 最大电流（仅X固件）
+  * @param mode 运动模式：0-相对上一目标，1-绝对位置，2-相对当前位置
+  * @param sync 同步标志：0-立即执行，1-等待同步触发
+  */
+void ZDT_V5_Fast_Set_Param(uint8_t addr, uint16_t vel, uint16_t acc, uint16_t dec, uint16_t max_current, uint8_t mode, uint8_t sync) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF1;
+#if CURRENT_FIRMWARE == FIRMWARE_EMM
+    // Emm固件：速度(2) + 加速度(1) + 运动模式(1) + 同步标志(1)
+    cmd[2] = (uint8_t)(vel >> 8); cmd[3] = (uint8_t)(vel >> 0);
+    cmd[4] = (uint8_t)acc;
+    cmd[5] = mode;
+    cmd[6] = sync;
+    cmd[7] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 8);
+#else
+    // X固件：加速加速度(2) + 减速加速度(2) + 最大速度(2) + 运动模式(1) + 同步标志(1) + 最大电流(2)
+    cmd[2] = (uint8_t)(acc >> 8); cmd[3] = (uint8_t)(acc >> 0);
+    cmd[4] = (uint8_t)(dec >> 8); cmd[5] = (uint8_t)(dec >> 0);
+    cmd[6] = (uint8_t)(vel >> 8); cmd[7] = (uint8_t)(vel >> 0);
+    cmd[8] = mode;
+    cmd[9] = sync;
+    cmd[10] = (uint8_t)(max_current >> 8); cmd[11] = (uint8_t)(max_current >> 0);
+    cmd[12] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 13);
+#endif
+}
+
+/**
+  * @brief 快速位置模式 - 发送位置
+  * @param addr 电机地址
+  * @param pos 目标位置（Emm：脉冲数，X：角度）
+  */
+void ZDT_V5_Fast_Send_Pos(uint8_t addr, int32_t pos) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFC;
+    cmd[2] = (uint8_t)(pos >> 24); cmd[3] = (uint8_t)(pos >> 16);
+    cmd[4] = (uint8_t)(pos >> 8); cmd[5] = (uint8_t)(pos >> 0);
+    cmd[6] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 7);
+}
+
+/******************** 回零点指令 **********************/
+
+/**
+  * @brief 设置单圈回零的零点位置
+  * @param addr 电机地址
+  * @param svF 存储标志,false为不存储,true为存储
+  */
+void ZDT_V5_Origin_Set_O(uint8_t addr, bool svF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x93; cmd[2] = 0x88; cmd[3] = svF; cmd[4] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 5);
+}
+
+/**
+  * @brief 触发回零
+  * @param addr 电机地址
+  * @param o_mode 回零模式,0为单圈就近回零,1为单圈方向回零,2为多圈无限位碰撞回零,3为多圈有限位开关回零
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x9A; cmd[2] = o_mode; cmd[3] = snF; cmd[4] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 5);
+}
+
+/**
+  * @brief 强制中断并退出回零
+  * @param addr 电机地址
+  */
+void ZDT_V5_Origin_Interrupt(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x9C; cmd[2] = 0x48; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 读取回零参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Origin_Read_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x22; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改回零参数
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param o_mode 回零模式,0为单圈就近回零,1为单圈方向回零,2为多圈无限位碰撞回零,3为多圈有限位开关回零
+  * @param o_dir 回零方向,0为CW，其余值为CCW
+  * @param o_vel 回零速度,单位：RPM（转/分钟）
+  * @param o_tm 回零超时时间,单位：毫秒
+  * @param sl_vel 无限位碰撞回零检测转速,单位：RPM（转/分钟）
+  * @param sl_ma 无限位碰撞回零检测电流,单位：Ma（毫安）
+  * @param sl_ms 无限位碰撞回零检测时间,单位：Ms（毫秒）
+  * @param potF 上电自动触发回零,false为不使能,true为使能
+  */
+void ZDT_V5_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF) {
+    static uint8_t cmd[32] = {0};
+    cmd[0] = addr; cmd[1] = 0x4C; cmd[2] = 0xAE; cmd[3] = svF; cmd[4] = o_mode; cmd[5] = o_dir;
+    cmd[6] = (uint8_t)(o_vel >> 8); cmd[7] = (uint8_t)(o_vel >> 0);
+    cmd[8] = (uint8_t)(o_tm >> 24); cmd[9] = (uint8_t)(o_tm >> 16); cmd[10] = (uint8_t)(o_tm >> 8); cmd[11] = (uint8_t)(o_tm >> 0);
+    cmd[12] = (uint8_t)(sl_vel >> 8); cmd[13] = (uint8_t)(sl_vel >> 0);
+    cmd[14] = (uint8_t)(sl_ma >> 8); cmd[15] = (uint8_t)(sl_ma >> 0);
+    cmd[16] = (uint8_t)(sl_ms >> 8); cmd[17] = (uint8_t)(sl_ms >> 0);
+    cmd[18] = potF; cmd[19] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 20);
+}
+
+/******************** 读取系统参数命令 **********************/
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+/**
+  * @brief 定时返回信息命令（Y42）
+  * @param addr 电机地址
+  * @param s 系统参数类型
+  * @param time_ms 定时时间
+  */
+void ZDT_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms) {
+    uint8_t i = 0; static uint8_t cmd[16] = {0};
+    cmd[i] = addr; ++i;
+    cmd[i] = 0x11; ++i;
+    cmd[i] = 0x18; ++i;
+    switch(s) {
+        case S_VBUS : cmd[i] = 0x24; ++i; break;
+        case S_CBUS : cmd[i] = 0x26; ++i; break;
+        case S_CPHA : cmd[i] = 0x27; ++i; break;
+        case S_ENCO : cmd[i] = 0x29; ++i; break;
+        case S_CLKC : cmd[i] = 0x30; ++i; break;
+        case S_ENCL : cmd[i] = 0x31; ++i; break;
+        case S_CLKI : cmd[i] = 0x32; ++i; break;
+        case S_TPOS : cmd[i] = 0x33; ++i; break;
+        case S_SPOS : cmd[i] = 0x34; ++i; break;
+        case S_VEL  : cmd[i] = 0x35; ++i; break;
+        case S_CPOS : cmd[i] = 0x36; ++i; break;
+        case S_PERR : cmd[i] = 0x37; ++i; break;
+        case S_VBAT : cmd[i] = 0x38; ++i; break;
+        case S_TEMP : cmd[i] = 0x39; ++i; break;
+        case S_FLAG : cmd[i] = 0x3A; ++i; break;
+        case S_OFLAG: cmd[i] = 0x3B; ++i; break;
+        case S_OAF  : cmd[i] = 0x3C; ++i; break;
+        case S_PIN  : cmd[i] = 0x3D; ++i; break;
+        default: break;
+    }
+    cmd[i] = (uint8_t)(time_ms >> 8); ++i;
+    cmd[i] = (uint8_t)(time_ms >> 0); ++i;
+    cmd[i] = 0x6B; ++i;
+    ZDT_V5_SEND_CMD(cmd, i);
+}
+#endif
+
+/**
+  * @brief 读取系统参数
+  * @param addr 电机地址
+  * @param s 系统参数类型
+  */
+void ZDT_V5_Read_Sys_Params(uint8_t addr, SysParams_t s) {
+    uint8_t i = 0; static uint8_t cmd[16] = {0};
+    cmd[i] = addr; ++i;
+    switch(s) {
+        case S_VBUS : cmd[i] = 0x24; ++i; break;
+        case S_CBUS : cmd[i] = 0x26; ++i; break;
+        case S_CPHA : cmd[i] = 0x27; ++i; break;
+        case S_ENCO : cmd[i] = 0x29; ++i; break;
+        case S_CLKC : cmd[i] = 0x30; ++i; break;
+        case S_ENCL : cmd[i] = 0x31; ++i; break;
+        case S_CLKI : cmd[i] = 0x32; ++i; break;
+        case S_TPOS : cmd[i] = 0x33; ++i; break;
+        case S_SPOS : cmd[i] = 0x34; ++i; break;
+        case S_VEL  : cmd[i] = 0x35; ++i; break;
+        case S_CPOS : cmd[i] = 0x36; ++i; break;
+        case S_PERR : cmd[i] = 0x37; ++i; break;
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+        case S_VBAT : cmd[i] = 0x38; ++i; break;
+        case S_TEMP : cmd[i] = 0x39; ++i; break;
+#endif
+        case S_FLAG : cmd[i] = 0x3A; ++i; break;
+        case S_OFLAG: cmd[i] = 0x3B; ++i; break;
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+        case S_OAF  : cmd[i] = 0x3C; ++i; break;
+        case S_PIN  : cmd[i] = 0x3D; ++i; break;
+#endif
+        default: break;
+    }
+    cmd[i] = 0x6B; ++i;
+    ZDT_V5_SEND_CMD(cmd, i);
+}
+
+/**
+  * @brief 批量读取系统状态参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Batch_Status(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x43; cmd[2] = 0x7A; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 批量读取驱动配置参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Batch_Config(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x42; cmd[2] = 0x6C; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 读取通讯参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Comm_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x42; cmd[2] = 0x6C; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+/******************** 读写驱动参数命令 **********************/
+
+/**
+  * @brief 修改电机ID地址
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param id 默认电机ID为1,可修改为1-255,0为广播地址
+  */
+void ZDT_V5_Modify_Motor_ID(uint8_t addr, bool svF, uint8_t id) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xAE; cmd[2] = 0x4B; cmd[3] = svF; cmd[4] = id; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改细分值
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param mstep 默认细分为16,可修改为1-2556,0为256细分
+  */
+void ZDT_V5_Modify_MicroStep(uint8_t addr, bool svF, uint8_t mstep) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x84; cmd[2] = 0x8A; cmd[3] = svF; cmd[4] = mstep; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改掉电标志
+  * @param addr 电机地址
+  * @param pdf 掉电标志
+  */
+void ZDT_V5_Modify_PDFlag(uint8_t addr, bool pdf) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x50; cmd[2] = pdf; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+/**
+  * @brief 读取选项参数状态（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Opt_Param_Sta(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x1A; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改电机类型（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param mottype 电机类型,默认为0,0表示1.8°步进电机,1表示0.9°步进电机
+  */
+void ZDT_V5_Modify_Motor_Type(uint8_t addr, bool svF, bool mottype) {
+    static uint8_t cmd[16] = {0}; uint8_t MotType = 0;
+    if(mottype) { MotType = 25; } else { MotType = 50; }
+    cmd[0] = addr; cmd[1] = 0xD7; cmd[2] = 0x35; cmd[3] = svF; cmd[4] = MotType; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改固件类型（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param fwtype 固件类型,默认为0,0为X固件,1为Emm固件
+  */
+void ZDT_V5_Modify_Firmware_Type(uint8_t addr, bool svF, bool fwtype) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD5; cmd[2] = 0x69; cmd[3] = svF; cmd[4] = fwtype; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改开环/闭环控制模式（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param ctrl_mode 控制模式,默认为1,0为开环模式,1为闭环FOC模式
+  */
+void ZDT_V5_Modify_Ctrl_Mode(uint8_t addr, bool svF, bool ctrl_mode) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x46; cmd[2] = 0x69; cmd[3] = svF; cmd[4] = ctrl_mode; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改电机运动正方向（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param dir 电机运动正方向,默认为CW,0为CW（顺时针方向,1为CCW
+  */
+void ZDT_V5_Modify_Motor_Dir(uint8_t addr, bool svF, bool dir) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD4; cmd[2] = 0x60; cmd[3] = svF; cmd[4] = dir; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改锁定按键功能（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param lock 锁定按键功能,默认为Disable,0为Disable,1为Enable
+  */
+void ZDT_V5_Modify_Lock_Btn(uint8_t addr, bool svF, bool lock) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD0; cmd[2] = 0xB3; cmd[3] = svF; cmd[4] = lock; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改命令速度值是否缩小10倍输入（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param s_vel 命令速度值是否缩小10倍输入,默认为Disable,0为Disable,1为Enable
+  */
+void ZDT_V5_Modify_S_Vel(uint8_t addr, bool svF, bool s_vel) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x4F; cmd[2] = 0x71; cmd[3] = svF; cmd[4] = s_vel; cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+#endif
+
+/**
+  * @brief 修改开环模式工作电流
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param om_ma 开环模式工作电流，单位mA
+  */
+void ZDT_V5_Modify_OM_mA(uint8_t addr, bool svF, uint16_t om_ma) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x44; cmd[2] = 0x66; cmd[3] = svF; cmd[4] = (uint8_t)(om_ma >> 8); cmd[5] = (uint8_t)(om_ma >> 0); cmd[6] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 7);
+}
+
+/**
+  * @brief 修改闭环模式最大电流
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param foc_mA 闭环模式最大电流,单位mA
+  */
+void ZDT_V5_Modify_FOC_mA(uint8_t addr, bool svF, uint16_t foc_mA) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x45; cmd[2] = 0x66; cmd[3] = svF; cmd[4] = (uint8_t)(foc_mA >> 8); cmd[5] = (uint8_t)(foc_mA >> 0); cmd[6] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 7);
+}
+
+/**
+  * @brief 读取PID参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_PID_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x21; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改PID参数
+  * @param addr 电机地址
+  * @param svF 是否存储标志，false为不存储，true为存储
+  * @param kp 比例系数
+  * @param ki 积分系数
+  * @param kd 微分系数
+  */
+void ZDT_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, uint32_t kd) {
+    static uint8_t cmd[24] = {0};
+    uint8_t len = 0;
+
+    cmd[0] = addr; cmd[1] = 0x4A; cmd[2] = 0xC3; cmd[3] = svF;
+
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    // X固件: 梯形Kp(4) + 直通Kp(4) + 速度Kp(4) + 速度Ki(4)
+    cmd[4] = (uint8_t)(kp >> 24); cmd[5] = (uint8_t)(kp >> 16); cmd[6] = (uint8_t)(kp >> 8); cmd[7] = (uint8_t)(kp >> 0);  // 梯形Kp
+    cmd[8] = (uint8_t)(kp >> 24); cmd[9] = (uint8_t)(kp >> 16); cmd[10] = (uint8_t)(kp >> 8); cmd[11] = (uint8_t)(kp >> 0);  // 直通Kp
+    cmd[12] = (uint8_t)(kp >> 24); cmd[13] = (uint8_t)(kp >> 16); cmd[14] = (uint8_t)(kp >> 8); cmd[15] = (uint8_t)(kp >> 0);  // 速度Kp
+    cmd[16] = (uint8_t)(ki >> 24); cmd[17] = (uint8_t)(ki >> 16); cmd[18] = (uint8_t)(ki >> 8); cmd[19] = (uint8_t)(ki >> 0);  // 速度Ki
+    cmd[20] = 0x6B;
+    len = 21;
+#else
+    // Emm固件: Kp(4) + Ki(4) + Kd(4)
+    cmd[4] = (uint8_t)(kp >> 24); cmd[5] = (uint8_t)(kp >> 16); cmd[6] = (uint8_t)(kp >> 8); cmd[7] = (uint8_t)(kp >> 0);  // Kp
+    cmd[8] = (uint8_t)(ki >> 24); cmd[9] = (uint8_t)(ki >> 16); cmd[10] = (uint8_t)(ki >> 8); cmd[11] = (uint8_t)(ki >> 0);  // Ki
+    cmd[12] = (uint8_t)(kd >> 24); cmd[13] = (uint8_t)(kd >> 16); cmd[14] = (uint8_t)(kd >> 8); cmd[15] = (uint8_t)(kd >> 0);  // Kd
+    cmd[16] = 0x6B;
+    len = 17;
+#endif
+
+    ZDT_V5_SEND_CMD(cmd, len);
+}
+
+/**
+  * @brief 读取固件版本和硬件版本
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Version_Info(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x1F; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 读取相电阻和相电感
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Phase_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x20; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 广播读取ID地址
+  * @param addr 电机地址（使用0作为广播地址）
+  */
+void ZDT_V5_Broadcast_Read_ID(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x15; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改碰撞回零返回角度
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param angle 碰撞回零返回角度(0.1°)，0=基于电流检测返回
+  */
+void ZDT_V5_Modify_Collision_Angle(uint8_t addr, bool svF, uint16_t angle) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x5C; cmd[2] = 0xAC; cmd[3] = svF;
+    cmd[4] = (uint8_t)(angle >> 8); cmd[5] = (uint8_t)(angle >> 0);
+    cmd[6] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 7);
+}
+
+/**
+  * @brief 修改锁定参数功能
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param lock_level 锁定等级:0-解锁,1-禁止修改基本参数,2-禁止修改所有参数+校准,3-禁止修改所有参数+校准
+  */
+void ZDT_V5_Modify_Lock_Params(uint8_t addr, bool svF, uint8_t lock_level) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD6; cmd[2] = 0x4B; cmd[3] = svF;
+    cmd[4] = lock_level;
+    cmd[5] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 6);
+}
+
+/**
+  * @brief 修改驱动配置参数（一次性）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param params 配置参数数组（根据固件类型不同，参数长度不同）
+  */
+void ZDT_V5_Modify_Driver_Config(uint8_t addr, bool svF, uint8_t *params) {
+    static uint8_t cmd[48] = {0};
+    uint8_t len = 4;
+
+    cmd[0] = addr; cmd[1] = 0x48; cmd[2] = 0xD1; cmd[3] = svF;
+
+    // 根据固件类型复制不同长度的参数
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    // X固件: 24个参数
+    for(uint8_t i=0; i<24; i++) {
+        cmd[len++] = params[i];
+    }
+#else
+    // Emm固件: 21个参数
+    for(uint8_t i=0; i<21; i++) {
+        cmd[len++] = params[i];
+    }
+#endif
+
+    cmd[len++] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, len);
+}
+
+/**
+  * @brief 修改通讯参数
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param uart_baudrate 串口波特率编码
+  * @param can_baudrate CAN波特率编码
+  * @param verify_mode 校验方式
+  * @param response_mode 应答方式
+  */
+void ZDT_V5_Modify_Comm_Params(uint8_t addr, bool svF, uint8_t uart_baudrate, uint8_t can_baudrate, uint8_t verify_mode, uint8_t response_mode) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x48; cmd[2] = 0xD1; cmd[3] = svF;
+    cmd[4] = uart_baudrate; cmd[5] = can_baudrate; cmd[6] = verify_mode; cmd[7] = response_mode; cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
+}
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+/**
+  * @brief 读取DMX512协议参数（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_DMX512_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x49; cmd[2] = 0x78; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 修改DMX512协议参数（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param tch 总通道数,默认为192,该值要与自身 DMX512 控制器的总通道数一样
+  * @param nch 每个电机占用的通道数,默认为1,1为单通道模式,2为双通道模式
+  * @param mode 运动模式,默认为1,0表示相对位置模式运动,1表示绝对坐标式位置运动
+  * @param vel 单通道模式的运动速度,默认值为1000, 单位RPM， 即1000RPM
+  * @param acc 加速度,acc=加速数值/8=125,加速时间见说明书“5.3.12 位置模式控制（Emm）”
+  * @param vel_step 双通道模式速度步长,默认值为 10, 即电机运动速度为(通道值 * 10)RPM
+  * @param pos_step 双通道模式运动步长,默认值为 100, 即电机转动角度为(通道值 * 10.0)°
+  */
+void ZDT_V5_Modify_DMX512_Params(uint8_t addr, bool svF, uint16_t tch, uint8_t nch, uint8_t mode, uint16_t vel, uint16_t acc, uint16_t vel_step, uint32_t pos_step) {
+    static uint8_t cmd[32] = {0};
+    cmd[0] = addr; cmd[1] = 0xD9; cmd[2] = 0x90; cmd[3] = svF;
+    cmd[4] = (uint8_t)(tch >> 8); cmd[5] = (uint8_t)(tch >> 0);
+    cmd[6] = nch; cmd[7] = mode;
+    cmd[8] = (uint8_t)(vel >> 8); cmd[9] = (uint8_t)(vel >> 0);
+    cmd[10] = (uint8_t)(acc >> 8); cmd[11] = (uint8_t)(acc >> 0);
+    cmd[12] = (uint8_t)(vel_step >> 8); cmd[13] = (uint8_t)(vel_step >> 0);
+    cmd[14] = (uint8_t)(pos_step >> 24); cmd[15] = (uint8_t)(pos_step >> 16);
+    cmd[16] = (uint8_t)(pos_step >> 8); cmd[17] = (uint8_t)(pos_step >> 0);
+    cmd[18] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 19);
+}
+
+/**
+  * @brief 读取位置到达窗口（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Pos_Window(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x41; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改位置到达窗口（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param prw 位置到达窗口,默认值为8,即0.8°
+  */
+void ZDT_V5_Modify_Pos_Window(uint8_t addr, bool svF, uint16_t prw) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD1; cmd[2] = 0x07; cmd[3] = svF; cmd[4] = (uint8_t)(prw >> 8); cmd[5] = (uint8_t)(prw >> 0); cmd[6] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 7);
+}
+
+/**
+  * @brief 读取过热过流保护检测阈值（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Otocp(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x13; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改过热过流保护检测阈值（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param otp 过热保护检测阈值,默认100℃
+  * @param ocp 过流保护检测阈值,默认6600mA
+  * @param time_ms 过热过流检测时间,默认1000ms
+  */
+void ZDT_V5_Modify_Otocp(uint8_t addr, bool svF, uint16_t otp, uint16_t ocp, uint16_t time_ms) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xD3; cmd[2] = 0x56; cmd[3] = svF;
+    cmd[4] = (uint8_t)(otp >> 8); cmd[5] = (uint8_t)(otp >> 0);
+    cmd[6] = (uint8_t)(ocp >> 8); cmd[7] = (uint8_t)(ocp >> 0);
+    cmd[8] = (uint8_t)(time_ms >> 8); cmd[9] = (uint8_t)(time_ms >> 0);
+    cmd[10] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 11);
+}
+
+/**
+  * @brief 读取心跳保护功能时间（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Heart_Protect(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x16; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改心跳保护功能时间（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param hp 心跳保护时间,单位：ms
+  */
+void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x68; cmd[2] = 0x38; cmd[3] = svF;
+    cmd[4] = (uint8_t)(hp >> 24); cmd[5] = (uint8_t)(hp >> 16); cmd[6] = (uint8_t)(hp >> 8); cmd[7] = (uint8_t)(hp >> 0);
+    cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
+}
+
+/**
+  * @brief 读取积分限幅/刚性系数（Y42）
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Integral_Limit(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x23; cmd[2] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 3);
+}
+
+/**
+  * @brief 修改积分限幅/刚性系数（Y42）
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param il 积分限幅,默认值为65535
+  */
+void ZDT_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x4B; cmd[2] = 0x57; cmd[3] = svF;
+    cmd[4] = (uint8_t)(il >> 24); cmd[5] = (uint8_t)(il >> 16); cmd[6] = (uint8_t)(il >> 8); cmd[7] = (uint8_t)(il >> 0);
+    cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
+}
+#endif
+
+/******************** 读取所有驱动参数命令 **********************/
+
+/**
+  * @brief 读取系统状态参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_System_State_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x43; cmd[2] = 0x7A; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/**
+  * @brief 读取驱动配置参数
+  * @param addr 电机地址
+  */
+void ZDT_V5_Read_Motor_Conf_Params(uint8_t addr) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x42; cmd[2] = 0x6C; cmd[3] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 4);
+}
+
+/************************************************/
+/*	以下是把相应命令加载到Y42多电机命令上的函数（Y42） */
+/************************************************/
+
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+
+/******************** 触发动作命令 **********************/
+
+/**
+  * @brief 触发编码器校准 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Trig_Encoder_Cal(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x06; cmd[2] = 0x45; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 重启电机（Y42） - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Reset_Motor(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x08; cmd[2] = 0x97; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 将当前位置清零 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Reset_CurPos_To_Zero(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0A; cmd[2] = 0x6D; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 解除堵转保护 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Reset_Clog_Pro(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0E; cmd[2] = 0x52; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 恢复出厂设置 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Restore_Motor(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x0F; cmd[2] = 0x5F; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/******************** 运动控制命令 **********************/
+
+/**
+  * @brief 使能信号控制 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param state 使能状态,true为使能电机,false为关闭电机
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_En_Control(uint8_t addr, bool state, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF3; cmd[2] = 0xAB; cmd[3] = (uint8_t)state; cmd[4] = snF; cmd[5] = 0x6B;
+    for(j=0; j < 6; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 速度模式 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-5000
+  * @param acc 加速度 0-255, 0为直接启动
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_Vel_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF6;
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(vel >> 8); cmd[6] = (uint8_t)(vel >> 0);
+    cmd[7] = snF; cmd[8] = 0x6B;
+    for(j=0; j < 9; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+#else
+    cmd[2] = dir; cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)(acc); cmd[6] = snF; cmd[7] = 0x6B;
+    for(j=0; j < 8; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+#endif
+}
+
+/**
+  * @brief 位置模式 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param vel 速度(RPM) 0-5000
+  * @param acc 加速度 0-255, 0为直接启动
+  * @param dec 减速度 0-255, 0为直接停止
+  * @param clk 脉冲数 0- (2^32 - 1)个
+  * @param raF 相位/绝对标志,false为相对运动,true为绝对值运动
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_Pos_Control(uint8_t addr, uint8_t dir, uint16_t vel, uint16_t acc, uint16_t dec, uint32_t clk, bool raF, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFD;
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    cmd[2] = dir;
+    cmd[3] = (uint8_t)(acc >> 8); cmd[4] = (uint8_t)(acc >> 0);
+    cmd[5] = (uint8_t)(dec >> 8); cmd[6] = (uint8_t)(dec >> 0);
+    cmd[7] = (uint8_t)(vel >> 8); cmd[8] = (uint8_t)(vel >> 0);
+    cmd[9] = (uint8_t)(clk >> 24); cmd[10] = (uint8_t)(clk >> 16); cmd[11] = (uint8_t)(clk >> 8); cmd[12] = (uint8_t)(clk >> 0);
+    cmd[13] = raF; cmd[14] = snF; cmd[15] = 0x6B;
+    for(j=0; j < 16; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+#else
+    cmd[2] = dir; cmd[3] = (uint8_t)(vel >> 8); cmd[4] = (uint8_t)(vel >> 0);
+    cmd[5] = (uint8_t)(acc); cmd[6] = (uint8_t)(clk >> 24); cmd[7] = (uint8_t)(clk >> 16);
+    cmd[8] = (uint8_t)(clk >> 8); cmd[9] = (uint8_t)(clk >> 0); cmd[10] = raF; cmd[11] = snF; cmd[12] = 0x6B;
+    for(j=0; j < 13; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+#endif
+}
+
+/**
+  * @brief 力矩模式控制 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param slope 电流斜率(mA/S) 0-65535
+  * @param current 目标电流(mA) 0-5000
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_Torque_Control(uint8_t addr, uint8_t dir, uint16_t slope, uint16_t current, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xF5; cmd[2] = dir;
+    cmd[3] = (uint8_t)(slope >> 8); cmd[4] = (uint8_t)(slope >> 0);
+    cmd[5] = (uint8_t)(current >> 8); cmd[6] = (uint8_t)(current >> 0);
+    cmd[7] = snF; cmd[8] = 0x6B;
+    for(j=0; j < 9; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 力矩模式限速控制 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param dir 方向,0为CW，其余值为CCW
+  * @param slope 电流斜率(mA/S) 0-65535
+  * @param current 目标电流(mA) 0-5000
+  * @param max_vel 最大速度(0.1RPM) 0-30000
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_Torque_Control_With_Limit(uint8_t addr, uint8_t dir, uint16_t slope, uint16_t current, uint16_t max_vel, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xC5; cmd[2] = dir;
+    cmd[3] = (uint8_t)(slope >> 8); cmd[4] = (uint8_t)(slope >> 0);
+    cmd[5] = (uint8_t)(current >> 8); cmd[6] = (uint8_t)(current >> 0);
+    cmd[7] = snF;
+    cmd[8] = (uint8_t)(max_vel >> 8); cmd[9] = (uint8_t)(max_vel >> 0);
+    cmd[10] = 0x6B;
+    for(j=0; j < 11; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 立即停止 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param snF 多机同步标志,false为不启用,true为启用
+  */
+void ZDT_V5_MMCL_Stop_Now(uint8_t addr, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFE; cmd[2] = 0x98; cmd[3] = snF; cmd[4] = 0x6B;
+    for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 多机同步运动 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Synchronous_motion(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0xFF; cmd[2] = 0x66; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/******************** 原点回零命令 **********************/
+
+/**
+  * @brief 设置单圈回零的零点位置 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  */
+void ZDT_V5_MMCL_Origin_Set_O(uint8_t addr, bool svF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x93; cmd[2] = 0x88; cmd[3] = svF; cmd[4] = 0x6B;
+    for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 触发回零 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param o_mode 回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  * @param snF 多机同步标志，false为不启用，true为启用
+  */
+void ZDT_V5_MMCL_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x9A; cmd[2] = o_mode; cmd[3] = snF; cmd[4] = 0x6B;
+    for(j=0; j < 5; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 强制中断并退出回零 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Origin_Interrupt(uint8_t addr) {
+    uint8_t j = 0, cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x9C; cmd[2] = 0x48; cmd[3] = 0x6B;
+    for(j=0; j < 4; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 修改回零参数 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param svF 是否存储标志，false为不存储，true为存储
+  * @param o_mode 回零模式，0为单圈就近回零，1为单圈方向回零，2为多圈无限位碰撞回零，3为多圈有限位开关回零
+  * @param o_dir 回零方向，0为CW，其余值为CCW
+  * @param o_vel 回零速度，单位：RPM（转/分钟）
+  * @param o_tm 回零超时时间，单位：毫秒
+  * @param sl_vel 无限位碰撞回零检测转速，单位：RPM（转/分钟）
+  * @param sl_ma 无限位碰撞回零检测电流，单位：Ma（毫安）
+  * @param sl_ms 无限位碰撞回零检测时间，单位：Ms（毫秒）
+  * @param potF 上电自动触发回零，false为不使能，true为使能
+  */
+void ZDT_V5_MMCL_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF) {
+    uint8_t j = 0, cmd[32] = {0};
+    cmd[0] = addr; cmd[1] = 0x4C; cmd[2] = 0xAE; cmd[3] = svF;
+    cmd[4] = o_mode; cmd[5] = o_dir;
+    cmd[6] = (uint8_t)(o_vel >> 8); cmd[7] = (uint8_t)(o_vel >> 0);
+    cmd[8] = (uint8_t)(o_tm >> 24); cmd[9] = (uint8_t)(o_tm >> 16);
+    cmd[10] = (uint8_t)(o_tm >> 8); cmd[11] = (uint8_t)(o_tm >> 0);
+    cmd[12] = (uint8_t)(sl_vel >> 8); cmd[13] = (uint8_t)(sl_vel >> 0);
+    cmd[14] = (uint8_t)(sl_ma >> 8); cmd[15] = (uint8_t)(sl_ma >> 0);
+    cmd[16] = (uint8_t)(sl_ms >> 8); cmd[17] = (uint8_t)(sl_ms >> 0);
+    cmd[18] = potF; cmd[19] = 0x6B;
+    for(j=0; j < 20; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/******************** 读取系统参数命令 **********************/
+
+/**
+  * @brief 定时返回信息命令（Y42）
+  * @param addr 电机地址
+  * @param s 系统参数类型
+  * @param time_ms 定时时间
+  */
+void ZDT_V5_MMCL_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms) {
+    uint8_t i = 0, j = 0, cmd[16] = {0};
+    cmd[i] = addr; ++i; cmd[i] = 0x11; ++i; cmd[i] = 0x18; ++i;
+    switch(s) {
+        case S_VBUS : cmd[i] = 0x24; ++i; break;
+        case S_CBUS : cmd[i] = 0x26; ++i; break;
+        case S_CPHA : cmd[i] = 0x27; ++i; break;
+        case S_ENCO : cmd[i] = 0x29; ++i; break;
+        case S_CLKC : cmd[i] = 0x30; ++i; break;
+        case S_ENCL : cmd[i] = 0x31; ++i; break;
+        case S_CLKI : cmd[i] = 0x32; ++i; break;
+        case S_TPOS : cmd[i] = 0x33; ++i; break;
+        case S_SPOS : cmd[i] = 0x34; ++i; break;
+        case S_VEL  : cmd[i] = 0x35; ++i; break;
+        case S_CPOS : cmd[i] = 0x36; ++i; break;
+        case S_PERR : cmd[i] = 0x37; ++i; break;
+        case S_VBAT : cmd[i] = 0x38; ++i; break;
+        case S_TEMP : cmd[i] = 0x39; ++i; break;
+        case S_FLAG : cmd[i] = 0x3A; ++i; break;
+        case S_OFLAG: cmd[i] = 0x3B; ++i; break;
+        case S_OAF  : cmd[i] = 0x3C; ++i; break;
+        case S_PIN  : cmd[i] = 0x3D; ++i; break;
+        default: break;
+    }
+    cmd[i] = (uint8_t)(time_ms >> 8);  ++i;
+    cmd[i] = (uint8_t)(time_ms >> 0);  ++i;
+    cmd[i] = 0x6B; ++i;
+    for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 读取系统参数 - 加载到多电机指令上
+  * @param addr 电机地址
+  * @param s 系统参数类型
+  */
+void ZDT_V5_MMCL_Read_Sys_Params(uint8_t addr, SysParams_t s) {
+    uint8_t i = 0, j = 0, cmd[16] = {0};
+    cmd[i] = addr; ++i;
+    switch(s) {
+        case S_VBUS : cmd[i] = 0x24; ++i; break;
+        case S_CBUS : cmd[i] = 0x26; ++i; break;
+        case S_CPHA : cmd[i] = 0x27; ++i; break;
+        case S_ENCO : cmd[i] = 0x29; ++i; break;
+        case S_CLKC : cmd[i] = 0x30; ++i; break;
+        case S_ENCL : cmd[i] = 0x31; ++i; break;
+        case S_CLKI : cmd[i] = 0x32; ++i; break;
+        case S_TPOS : cmd[i] = 0x33; ++i; break;
+        case S_SPOS : cmd[i] = 0x34; ++i; break;
+        case S_VEL  : cmd[i] = 0x35; ++i; break;
+        case S_CPOS : cmd[i] = 0x36; ++i; break;
+        case S_PERR : cmd[i] = 0x37; ++i; break;
+        case S_VBAT : cmd[i] = 0x38; ++i; break;
+        case S_TEMP : cmd[i] = 0x39; ++i; break;
+        case S_FLAG : cmd[i] = 0x3A; ++i; break;
+        case S_OFLAG: cmd[i] = 0x3B; ++i; break;
+        case S_OAF  : cmd[i] = 0x3C; ++i; break;
+        case S_PIN  : cmd[i] = 0x3D; ++i; break;
+        default: break;
+    }
+    cmd[i] = 0x6B; ++i;
+    for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 批量读取系统状态参数 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Read_Batch_Status(uint8_t addr) {
+    uint8_t i = 0, j = 0, cmd[16] = {0};
+    cmd[i] = addr; ++i;
+    cmd[i] = 0x43; ++i;  // 功能码
+    cmd[i] = 0x7A; ++i;  // 辅助码
+    cmd[i] = 0x6B; ++i;
+    for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+/**
+  * @brief 批量读取驱动配置参数 - 加载到多电机指令上
+  * @param addr 电机地址
+  */
+void ZDT_V5_MMCL_Read_Batch_Config(uint8_t addr) {
+    uint8_t i = 0, j = 0, cmd[16] = {0};
+    cmd[i] = addr; ++i;
+    cmd[i] = 0x42; ++i;  // 功能码
+    cmd[i] = 0x6C; ++i;  // 辅助码
+    cmd[i] = 0x6B; ++i;
+    for(j=0; j < i; j++) { MMCL_cmd[MMCL_count] = cmd[j]; ++MMCL_count; }
+}
+
+#endif

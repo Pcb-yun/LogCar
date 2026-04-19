@@ -98,7 +98,8 @@ virtualFolder:
       folders: []
     - name: step
       files:
-        - path: Drivers/User/STEP/Emm_V5_Driver.c
+        - path: Drivers/User/STEP/driver/step_can.c
+        - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
       folders: []
     - name: track
@@ -136,6 +137,8 @@ targets:
         - Drivers/User/RTOS
         - Drivers/User/SERVO
         - Drivers/User/STEP
+        - Drivers/User/STEP/driver
+        - Drivers/User/STEP/motion
         - Drivers/User/TRACK
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code

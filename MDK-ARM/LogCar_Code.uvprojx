@@ -337,7 +337,7 @@
               <MiscControls />
               <Define>USE_HAL_DRIVER,STM32F407xx,STM32_THREAD_SAFE_STRATEGY=4</Define>
               <Undefine />
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/TRACK</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/STEP/motion;../Drivers/User/TRACK</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -854,9 +854,14 @@
           <GroupName>step</GroupName>
           <Files>
             <File>
-              <FileName>Emm_V5_Driver.c</FileName>
+              <FileName>step_can.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Drivers\User\STEP\Emm_V5_Driver.c</FilePath>
+              <FilePath>..\Drivers\User\STEP\driver\step_can.c</FilePath>
+            </File>
+            <File>
+              <FileName>ZDT_V5_Driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\STEP\driver\ZDT_V5_Driver.c</FilePath>
             </File>
             <File>
               <FileName>step_port.c</FileName>

@@ -21,6 +21,9 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
+#include "cmsis_os.h"
+#include "step_port.h"
+#include "log.h"
 
 /* USER CODE END 0 */
 
@@ -127,6 +130,25 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+ * @brief CAN接收FIFO0消息待处理回调函数
+ * @param hcan CAN句柄指针
+ */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
+    CAN_Rx_Message_t msg;
+    CAN_RxHeaderTypeDef rx_header;
+
+    extern osMessageQueueId_t Can1_Rx_DataHandle;
+
+    if (hcan == &hcan1) {
+        if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, msg.data) == HAL_OK) {
+            msg.ExtId = rx_header.ExtId;
+            msg.DLC = rx_header.DLC;
+            osMessageQueuePut(Can1_Rx_DataHandle, &msg, 0, 0);
+        }
+    }
+}
 
 /* USER CODE END 1 */
 

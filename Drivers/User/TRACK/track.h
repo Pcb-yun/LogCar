@@ -43,6 +43,10 @@ typedef struct {
 
 #define TRACK_TIMEOUT 300                                       // 串口发送超时时间(ms)
 
+void Track_Init(void);
+
+
+
 #define TRACK_DIGITAL_LEN 43                                    // 数字量数据长度
 #define TRACK_ANALOG_LEN 67                                     // 模拟量数据长度
 #define TRACK_ALL_LEN TRACK_DIGITAL_LEN + TRACK_ANALOG_LEN      // 所有数据长度

@@ -29,6 +29,14 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
+/**
+ * @brief CAN接收消息结构体
+ */
+typedef struct {
+    uint32_t ExtId;          // 扩展帧ID
+    uint8_t DLC;             // 数据长度
+    uint8_t data[8];         // CAN数据
+} CAN_Rx_Message_t;
 
 /* USER CODE END Includes */
 
