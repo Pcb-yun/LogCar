@@ -861,6 +861,16 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>rtos</GroupName>
+          <Files>
+            <File>
+              <FileName>rtos_utils.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\RTOS\rtos_utils.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>servo</GroupName>
           <Files>
             <File>

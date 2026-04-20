@@ -89,6 +89,10 @@ virtualFolder:
       files:
         - path: Drivers/User/MISC/message.c
       folders: []
+    - name: rtos
+      files:
+        - path: Drivers/User/RTOS/rtos_utils.c
+      folders: []
     - name: servo
       files:
         - path: Drivers/User/SERVO/fashion_star_uart_servo.c
@@ -141,7 +145,8 @@ targets:
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings: {}
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:
