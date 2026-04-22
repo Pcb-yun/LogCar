@@ -31,6 +31,7 @@
 #include "message.h"
 #include "track.h"
 #include "usart.h"
+#include "servo_port.h"
 
 /* USER CODE END Includes */
 
@@ -74,6 +75,20 @@ const osThreadAttr_t Track_Get_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh1,
 };
+/* Definitions for Servo_Ctrl */
+osThreadId_t Servo_CtrlHandle;
+const osThreadAttr_t Servo_Ctrl_attributes = {
+  .name = "Servo_Ctrl",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for Servo_Mon */
+osThreadId_t Servo_MonHandle;
+const osThreadAttr_t Servo_Mon_attributes = {
+  .name = "Servo_Mon",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal1,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -89,6 +104,16 @@ osMessageQueueId_t Track_DataHandle;
 const osMessageQueueAttr_t Track_Data_attributes = {
   .name = "Track_Data"
 };
+/* Definitions for Servo_Data */
+osMessageQueueId_t Servo_DataHandle;
+const osMessageQueueAttr_t Servo_Data_attributes = {
+  .name = "Servo_Data"
+};
+/* Definitions for Servo_Cmd */
+osMessageQueueId_t Servo_CmdHandle;
+const osMessageQueueAttr_t Servo_Cmd_attributes = {
+  .name = "Servo_Cmd"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -103,6 +128,8 @@ const osEventFlagsAttr_t System_Status_attributes = {
 void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
 extern void Track_Get_Task(void *argument);
+extern void Servo_Ctrl_Task(void *argument);
+extern void Servo_Mon_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -225,6 +252,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of Track_Data */
   Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
 
+  /* creation of Servo_Data */
+  Servo_DataHandle = osMessageQueueNew (10, sizeof(ServoData_t), &Servo_Data_attributes);
+
+  /* creation of Servo_Cmd */
+  Servo_CmdHandle = osMessageQueueNew (20, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -238,6 +271,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Track_Get */
   Track_GetHandle = osThreadNew(Track_Get_Task, NULL, &Track_Get_attributes);
+
+  /* creation of Servo_Ctrl */
+  Servo_CtrlHandle = osThreadNew(Servo_Ctrl_Task, NULL, &Servo_Ctrl_attributes);
+
+  /* creation of Servo_Mon */
+  Servo_MonHandle = osThreadNew(Servo_Mon_Task, NULL, &Servo_Mon_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

@@ -1,38 +1,39 @@
 {
-    "configurations": [
-        {
-            "name": "Win32",
-            "includePath": [
-                "Core/Inc",
-                "Drivers/STM32F4xx_HAL_Driver/Inc",
-                "Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
-                "Middlewares/Third_Party/FreeRTOS/Source/include",
-                "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
-                "Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
-                "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
-                "Drivers/CMSIS/Include",
-                "Applications/letter_shell",
-                "Applications/letter_shell/src",
-                "Applications/letter_shell/log",
-                "Applications/letter_shell/shell_enhance",
-                "Drivers/User/MISC",
-                "Drivers/User/RTOS",
-                "Drivers/User/SERVO",
-                "Drivers/User/STEP",
-                "Drivers/User/TRACK",
-                ".cmsis/include",
-                "MDK-ARM/RTE/_LogCar_Code"
-            ],
-            "compilerPath": "D:\\path\\c_c++\\mingw64\\bin\\gcc.exe",
-            "cStandard": "c99",
-            "cppStandard": "gnu++17",
-            "intelliSenseMode": "${default}",
-            "defines": [
-                "USE_HAL_DRIVER",
-                "STM32F407xx",
-                "STM32_THREAD_SAFE_STRATEGY=4"
-            ]
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "windows-gcc-x64",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "Core/Inc",
+        "Drivers/STM32F4xx_HAL_Driver/Inc",
+        "Drivers/STM32F4xx_HAL_Driver/Inc/Legacy",
+        "Middlewares/Third_Party/FreeRTOS/Source/include",
+        "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+        "Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+        "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
+        "Drivers/CMSIS/Include",
+        "Applications/letter_shell",
+        "Applications/letter_shell/src",
+        "Applications/letter_shell/log",
+        "Applications/letter_shell/shell_enhance",
+        "Drivers/User/MISC",
+        "Drivers/User/RTOS",
+        "Drivers/User/SERVO",
+        "Drivers/User/STEP",
+        "Drivers/User/TRACK",
+        ".cmsis/include",
+        "MDK-ARM/RTE/_LogCar_Code"
+      ],
+      "compilerPath": "D:\\path\\c_c++\\mingw64\\bin\\gcc.exe",
+      "cStandard": "c99",
+      "cppStandard": "gnu++17",
+      "intelliSenseMode": "windows-gcc-x64",
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32F407xx",
+        "STM32_THREAD_SAFE_STRATEGY=4"
+      ]
+    }
+  ],
+  "version": 4
 }
