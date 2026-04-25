@@ -79,15 +79,8 @@ const osThreadAttr_t Track_Get_attributes = {
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
-  .stack_size = 512 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for Servo_Mon */
-osThreadId_t Servo_MonHandle;
-const osThreadAttr_t Servo_Mon_attributes = {
-  .name = "Servo_Mon",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityBelowNormal1,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -129,7 +122,6 @@ void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
 extern void Track_Get_Task(void *argument);
 extern void Servo_Ctrl_Task(void *argument);
-extern void Servo_Mon_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -253,10 +245,10 @@ void MX_FREERTOS_Init(void) {
   Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
 
   /* creation of Servo_Data */
-  Servo_DataHandle = osMessageQueueNew (10, sizeof(ServoData_t), &Servo_Data_attributes);
+  Servo_DataHandle = osMessageQueueNew (5, sizeof(ServoData_t), &Servo_Data_attributes);
 
   /* creation of Servo_Cmd */
-  Servo_CmdHandle = osMessageQueueNew (20, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+  Servo_CmdHandle = osMessageQueueNew (8, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -274,9 +266,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Servo_Ctrl */
   Servo_CtrlHandle = osThreadNew(Servo_Ctrl_Task, NULL, &Servo_Ctrl_attributes);
-
-  /* creation of Servo_Mon */
-  Servo_MonHandle = osThreadNew(Servo_Mon_Task, NULL, &Servo_Mon_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -317,6 +306,11 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_wait, "Initialize shell log.");
   extern void logInit(void);
   logInit();
+  SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Servo Module");
+  extern void Servo_Init(void);
+  Servo_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 
   extern Shell shell;

@@ -29,14 +29,14 @@ void Usart_SendAll(Usart_DataTypeDef *usart)
 		HAL_UART_Transmit(usart->huartX, &value, 1, 1);
 	}
 }
-////中断接收
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//	uint8_t ucTemp;
-//	if (huart->Instance == FSUS_Usart.huartX->Instance)
-//	{
-//		ucTemp = rc1;
-//		RingBuffer_Push(FSUS_Usart.recvBuf, ucTemp);// 接收到数据放入缓冲区，不在中断具体处理数据
-//		HAL_UART_Receive_IT(FSUS_Usart.huartX, (uint8_t *)&rc1, 1);
-//	}
-//}
+// //中断接收
+// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+// {
+// 	uint8_t ucTemp;
+// 	if (huart->Instance == FSUS_Usart.huartX->Instance)
+// 	{
+// 		ucTemp = rc1;
+// 		RingBuffer_Push(FSUS_Usart.recvBuf, ucTemp);// 接收到数据放入缓冲区，不在中断具体处理数据
+// 		HAL_UART_Receive_IT(FSUS_Usart.huartX, (uint8_t *)&rc1, 1);
+// 	}
+// }

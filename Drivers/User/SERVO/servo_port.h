@@ -16,28 +16,21 @@ extern "C" {
 #include "fashion_star_uart_servo.h"
 #include "cmsis_os.h"
 
+/* 舵机串口配置 */
+#define ServoUsart huart3
+
 /* 舵机数量配置 */
 #define SERVO_COUNT         6       // 实际使用的舵机数量
-#define SERVO_MONITOR_PERIOD 50     // 监控任务周期 (ms)
 
 /* 舵机 ID 列表 (用户可根据实际修改) */
 extern const uint8_t ServoIDList[SERVO_COUNT];
-
-/* 串口对象 */
-extern UART_HandleTypeDef huart2;
-#define ServoUsart huart2
 
 /**
  * @brief 舵机控制命令类型
  */
 typedef enum {
     SERVO_CMD_SET_ANGLE = 0,        // 设置单圈角度
-    SERVO_CMD_SET_ANGLE_MTURN,      // 设置多圈角度
-    SERVO_CMD_SET_ANGLE_BY_VELOCITY,// 指定转速设置角度
-    SERVO_CMD_DAMPING,              // 阻尼模式
     SERVO_CMD_STOP,                 // 停止
-    SERVO_CMD_RESET_ORIGIN,         // 设置零点
-    SERVO_CMD_RESET_ANGLE,          // 重置多圈圈数
 } ServoCmdType_t;
 
 /**
@@ -68,7 +61,7 @@ typedef struct {
     int16_t circleCount;            // 当前圈数 (多圈模式)
 } ServoData_t;
 
-/* 队列句柄 (外部可用) */
+/* 队列句柄 */
 extern osMessageQueueId_t Servo_DataHandle;
 extern osMessageQueueId_t Servo_CmdHandle;
 
@@ -76,24 +69,13 @@ extern osMessageQueueId_t Servo_CmdHandle;
 void Servo_Init(void);
 
 /* 任务函数 */
-void Servo_Control_Task(void *argument);
-void Servo_Monitor_Task(void *argument);
+void Servo_Ctrl_Task(void *argument);
 
 /* 舵机控制接口 */
 bool Servo_SetAngle(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_SetAngleMultiTurn(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_SetAngleByVelocity(uint8_t id, float angle, int16_t velocity_rpm, uint16_t t_acc_ms, uint16_t t_dec_ms, uint16_t power_mW);
-bool Servo_SetDampingMode(uint8_t id, uint16_t power_mW);
 bool Servo_Stop(uint8_t id);
-bool Servo_SetOrigin(uint8_t id);
-bool Servo_ResetMultiTurnAngle(uint8_t id);
-bool Servo_GetMonitorData(uint8_t id, ServoData_t *outData);
-bool Servo_GetAllMonitorData(ServoData_t *outArray, uint8_t maxCount);
-void Servo_SetMultiAngles(const uint8_t *ids, const float *angles, uint8_t count, uint16_t interval_ms, uint16_t power_mW);
 void Servo_StopAll(void);
-void Servo_WaitForStop(uint8_t id, uint32_t timeout_ms);
-void Servo_SmoothMove(uint8_t id, float targetAngle, uint16_t totalTimeMs, uint8_t segments, uint16_t power_mW);
-bool Servo_IsAlive(uint8_t id);
+
 
 #ifdef __cplusplus
 }

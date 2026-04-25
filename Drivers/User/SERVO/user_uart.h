@@ -16,6 +16,7 @@ typedef struct
 } Usart_DataTypeDef;
 
 extern Usart_DataTypeDef FSUS_Usart;
+extern uint8_t rc1;
 
 void User_Uart_Init(UART_HandleTypeDef *huartx);
 void Usart_SendAll(Usart_DataTypeDef *usart);

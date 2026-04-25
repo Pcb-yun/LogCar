@@ -25,6 +25,7 @@
 #include "log.h"
 #include "Events.h"
 #include "track.h"
+#include "user_uart.h"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -405,6 +406,11 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
     osEventFlagsSet(System_StatusHandle, UART2_RX_CPLT);
+  }
+  if (huart->Instance == FSUS_Usart.huartX->Instance)
+  {
+     RingBuffer_Push(FSUS_Usart.recvBuf, rc1);// 接收到数据放入缓冲区，不在中断具体处理数据
+     HAL_UART_Receive_IT(FSUS_Usart.huartX, (uint8_t *)&rc1, 1);
   }
 }
 
