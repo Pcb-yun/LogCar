@@ -1,6 +1,5 @@
 /**
  * @file servo_port.h
- * @author (your name)
  * @brief 总线舵机驱动 FreeRTOS 适配层头文件
  */
 
@@ -9,76 +8,68 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "fashion_star_uart_servo.h"
+#include "servo_driver.h"
 #include "cmsis_os.h"
 
-/* 舵机串口配置 */
-#define ServoUsart huart3
+// OS命令帮助信息
+#define SERVO_CMD_HELP \
+    "Usage: servo COMMAND\r\n" \
+    "\r\n" \
+    "commands:\r\n" \
+    "  angle      Set servo angle\r\n" \
+    "  stop       Stop servo\r\n" \
+    "  stopall    Stop all servos\r\n" \
+    "  ping       Ping servo"
 
 /* 舵机数量配置 */
-#define SERVO_COUNT         6       // 实际使用的舵机数量
+#define SERVO_COUNT         6
 
-/* 舵机 ID 列表 (用户可根据实际修改) */
+/* 舵机 ID 列表 */
 extern const uint8_t ServoIDList[SERVO_COUNT];
 
-/**
- * @brief 舵机控制命令类型
- */
 typedef enum {
-    SERVO_CMD_SET_ANGLE = 0,        // 设置单圈角度
-    SERVO_CMD_STOP,                 // 停止
+    SERVO_CMD_SET_ANGLE = 0,
+    SERVO_CMD_STOP,
 } ServoCmdType_t;
 
-/**
- * @brief 舵机控制命令结构体
- */
 typedef struct {
-    ServoCmdType_t cmdType;         // 命令类型
-    uint8_t servoId;                // 目标舵机 ID
-    float angle;                    // 角度值 (单圈: -180~180, 多圈: -368640~368640)
-    float velocity;                 // 转速 (°/s)
-    uint16_t interval;              // 运动时间 (ms) 或周期
-    uint16_t t_acc;                 // 加速时间 (ms)
-    uint16_t t_dec;                 // 减速时间 (ms)
-    uint16_t power;                 // 功率 (mW) 或阻尼功率
+    ServoCmdType_t cmdType;
+    uint8_t servoId;
+    float angle;
+    float velocity;
+    uint16_t interval;
+    uint16_t t_acc;
+    uint16_t t_dec;
+    uint16_t power;
 } ServoCmd_t;
 
-/**
- * @brief 舵机监控数据结构体
- */
 typedef struct {
-    uint8_t id;                     // 舵机 ID
-    float angle;                    // 当前角度 (°)
-    int16_t voltage;                // 电压 (mV)
-    int16_t current;                // 电流 (mA)
-    int16_t power;                  // 功率 (mW)
-    float temperature;              // 温度 (°C)
-    uint8_t status;                 // 状态标志
-    int16_t circleCount;            // 当前圈数 (多圈模式)
+    uint8_t id;
+    float angle;
+    int16_t voltage;
+    int16_t current;
+    int16_t power;
+    float temperature;
+    uint8_t status;
+    int16_t circleCount;
 } ServoData_t;
 
-/* 队列句柄 */
 extern osMessageQueueId_t Servo_DataHandle;
 extern osMessageQueueId_t Servo_CmdHandle;
 
-/* 初始化函数 */
 void Servo_Init(void);
-
-/* 任务函数 */
 void Servo_Ctrl_Task(void *argument);
 
-/* 舵机控制接口 */
 bool Servo_SetAngle(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
 bool Servo_Stop(uint8_t id);
 void Servo_StopAll(void);
 
-
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __SERVO_PORT_H__ */
+#endif

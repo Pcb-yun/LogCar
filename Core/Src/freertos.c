@@ -107,6 +107,11 @@ osMessageQueueId_t Servo_CmdHandle;
 const osMessageQueueAttr_t Servo_Cmd_attributes = {
   .name = "Servo_Cmd"
 };
+/* Definitions for ServoUartRxSemHandle */
+osSemaphoreId_t ServoUartRxSemHandleHandle;
+const osSemaphoreAttr_t ServoUartRxSemHandle_attributes = {
+  .name = "ServoUartRxSemHandle"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -225,6 +230,10 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of ServoUartRxSemHandle */
+  ServoUartRxSemHandleHandle = osSemaphoreNew(1, 1, &ServoUartRxSemHandle_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */

@@ -183,7 +183,6 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -857,6 +856,11 @@
               <FileName>user_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\SERVO\user_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>servo_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\SERVO\servo_driver.c</FilePath>
             </File>
           </Files>
         </Group>

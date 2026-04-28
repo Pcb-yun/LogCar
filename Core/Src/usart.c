@@ -25,9 +25,9 @@
 #include "log.h"
 #include "Events.h"
 #include "track.h"
-#include "user_uart.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include "servo_driver.h"
 
 uint8_t rx1Buffer[USART1_RX_BUF_SIZE];
 
@@ -397,6 +397,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
       osEventFlagsSet(System_StatusHandle, UART1_TX_IDLE);
   }
+  else if (huart->Instance == USART3) {
+    osEventFlagsSet(System_StatusHandle, UART3_TX_IDLE);
+  }
 }
 
 /**
@@ -407,10 +410,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
     osEventFlagsSet(System_StatusHandle, UART2_RX_CPLT);
   }
-  if (huart->Instance == FSUS_Usart.huartX->Instance)
-  {
-     RingBuffer_Push(FSUS_Usart.recvBuf, rc1);// 接收到数据放入缓冲区，不在中断具体处理数据
-     HAL_UART_Receive_IT(FSUS_Usart.huartX, (uint8_t *)&rc1, 1);
+  else if (huart->Instance == USART3) {
+    osEventFlagsSet(System_StatusHandle, UART3_RX_CPLT);
+    Servo_Uart_RxCpltCallback();
   }
 }
 

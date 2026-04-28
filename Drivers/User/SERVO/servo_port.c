@@ -16,18 +16,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* 舵机 ID 列表  */
 const uint8_t ServoIDList[SERVO_COUNT] = {1, 2, 3, 4, 5, 6};
 
-/* 串口对象 */
-extern Usart_DataTypeDef FSUS_Usart;
-
-/**
- * @brief 初始化舵机串口及环形缓冲区
- * @note 初始化发送和接收环形缓冲区，并使能DMA接收
- */
 static void Servo_Usart_Init(void) {
-    User_Uart_Init(&ServoUsart);
+    ServoDriver_Init();
 }
 
 /**
@@ -135,7 +127,7 @@ static void Servo_Ping_Shell(int argc, char *argv[]) {
         return;
     }
     uint8_t id = (uint8_t)atoi(argv[1]);
-    FSUS_STATUS ret = FSUS_Ping(&FSUS_Usart, id);
+    FSUS_STATUS ret = FSUS_Ping(id);
     if (ret == FSUS_STATUS_SUCCESS) {
         logPrintln("Servo %d responded", id);
     } else {
@@ -143,15 +135,33 @@ static void Servo_Ping_Shell(int argc, char *argv[]) {
     }
 }
 
-ShellCommand ServoGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN, angle, Servo_Angle_Shell, set servo angle),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN, stop, Servo_Stop_Shell, stop servo),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN, stopall, Servo_StopAll_Shell, stop all servos),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN, ping, Servo_Ping_Shell, ping servo),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-servo, ServoGroup, servo control commands);
+/**
+ * @brief 舵机模块Shell命令
+ * @param argc 参数个数，必须为2
+ * @param argv 参数数组，argv[1]为命令
+ */
+static void Servo_Shell(int argc, char *argv[]){
+    if(argc < 2) {
+        logPrintln(SERVO_CMD_HELP);
+        return;
+    }
+    if(strcmp(argv[1], "angle") == 0) {
+        Servo_Angle_Shell(argc, argv);
+    } else if(strcmp(argv[1], "stop") == 0) {
+        Servo_Stop_Shell(argc, argv);
+    } else if(strcmp(argv[1], "stopall") == 0) {
+        Servo_StopAll_Shell();
+    } else if(strcmp(argv[1], "ping") == 0) {
+        Servo_Ping_Shell(argc, argv);
+    } else {
+        logPrintln("Invalid command: %s", argv[1]);
+        logPrintln(SERVO_CMD_HELP);
+    }
+}
+
+SHELL_EXPORT_CMD(
+SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+servo, Servo_Shell, servo control commands);
 
 /**
  * @brief 执行舵机控制命令
@@ -161,11 +171,11 @@ servo, ServoGroup, servo control commands);
 static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
     switch (cmd->cmdType) {
         case SERVO_CMD_SET_ANGLE:
-            FSUS_SetServoAngle(&FSUS_Usart, cmd->servoId, cmd->angle, 
+            FSUS_SetServoAngle(cmd->servoId, cmd->angle,
                                cmd->interval, cmd->power);
             break;
         case SERVO_CMD_STOP:
-            FSUS_StopOnControlMode(&FSUS_Usart, cmd->servoId, 0, 0);
+            FSUS_StopOnControlMode(cmd->servoId, 0, 0);
             break;
         default:
             break;

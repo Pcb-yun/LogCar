@@ -19,6 +19,8 @@ extern osEventFlagsId_t System_StatusHandle;
 #define APP_NEED_USART (1UL << 1)  // 需要使用串口
 #define UART1_TX_IDLE (1UL << 2)  // UART1发送空闲
 #define UART2_RX_CPLT (1UL << 3)  // UART2接收完成
+#define UART3_TX_IDLE (1UL << 4)  // UART3发送空闲
+#define UART3_RX_CPLT (1UL << 5)  // UART3接收完成
 
 
 #ifdef __cplusplus

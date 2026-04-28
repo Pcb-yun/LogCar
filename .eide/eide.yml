@@ -95,10 +95,8 @@ virtualFolder:
       folders: []
     - name: servo
       files:
-        - path: Drivers/User/SERVO/fashion_star_uart_servo.c
-        - path: Drivers/User/SERVO/ring_buffer.c
         - path: Drivers/User/SERVO/servo_port.c
-        - path: Drivers/User/SERVO/user_uart.c
+        - path: Drivers/User/SERVO/servo_driver.c
       folders: []
     - name: step
       files:
@@ -144,7 +142,10 @@ targets:
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
-    excludeList: []
+    excludeList:
+      - <virtual_root>/servo/fashion_star_uart_servo.c
+      - <virtual_root>/servo/ring_buffer.c
+      - <virtual_root>/servo/user_uart.c
     settings:
       debugger: cortex-debug
     toolchain: AC5
@@ -267,4 +268,14 @@ targets:
         bin: ""
         interface: cmsis-dap
         target: stm32f4x
-    uploader: OpenOCD
+      STLink:
+        address: "0x8000000"
+        bin: ""
+        elFile: None
+        optionBytes: .eide/logcar_code.st.option.bytes.ini
+        otherCmds: ""
+        proType: SWD
+        resetMode: default
+        runAfterProgram: true
+        speed: 4000
+    uploader: STLink
