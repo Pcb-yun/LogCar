@@ -79,8 +79,15 @@ const osThreadAttr_t Track_Get_attributes = {
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for Servo_Tx */
+osThreadId_t Servo_TxHandle;
+const osThreadAttr_t Servo_Tx_attributes = {
+  .name = "Servo_Tx",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -97,20 +104,20 @@ osMessageQueueId_t Track_DataHandle;
 const osMessageQueueAttr_t Track_Data_attributes = {
   .name = "Track_Data"
 };
-/* Definitions for Servo_Data */
-osMessageQueueId_t Servo_DataHandle;
-const osMessageQueueAttr_t Servo_Data_attributes = {
-  .name = "Servo_Data"
-};
 /* Definitions for Servo_Cmd */
 osMessageQueueId_t Servo_CmdHandle;
 const osMessageQueueAttr_t Servo_Cmd_attributes = {
   .name = "Servo_Cmd"
 };
-/* Definitions for ServoUartRxSemHandle */
-osSemaphoreId_t ServoUartRxSemHandleHandle;
-const osSemaphoreAttr_t ServoUartRxSemHandle_attributes = {
-  .name = "ServoUartRxSemHandle"
+/* Definitions for Servo_Rx_Data */
+osMessageQueueId_t Servo_Rx_DataHandle;
+const osMessageQueueAttr_t Servo_Rx_Data_attributes = {
+  .name = "Servo_Rx_Data"
+};
+/* Definitions for Servo_Tx_Data */
+osMessageQueueId_t Servo_Tx_DataHandle;
+const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
+  .name = "Servo_Tx_Data"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -127,6 +134,7 @@ void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
 extern void Track_Get_Task(void *argument);
 extern void Servo_Ctrl_Task(void *argument);
+extern void Servo_Tx_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -231,10 +239,6 @@ void MX_FREERTOS_Init(void) {
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
-  /* Create the semaphores(s) */
-  /* creation of ServoUartRxSemHandle */
-  ServoUartRxSemHandleHandle = osSemaphoreNew(1, 1, &ServoUartRxSemHandle_attributes);
-
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -253,11 +257,14 @@ void MX_FREERTOS_Init(void) {
   /* creation of Track_Data */
   Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
 
-  /* creation of Servo_Data */
-  Servo_DataHandle = osMessageQueueNew (5, sizeof(ServoData_t), &Servo_Data_attributes);
-
   /* creation of Servo_Cmd */
-  Servo_CmdHandle = osMessageQueueNew (8, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+  Servo_CmdHandle = osMessageQueueNew (10, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+
+  /* creation of Servo_Rx_Data */
+  Servo_Rx_DataHandle = osMessageQueueNew (64, sizeof(uint8_t), &Servo_Rx_Data_attributes);
+
+  /* creation of Servo_Tx_Data */
+  Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(PackageTypeDef), &Servo_Tx_Data_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -275,6 +282,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Servo_Ctrl */
   Servo_CtrlHandle = osThreadNew(Servo_Ctrl_Task, NULL, &Servo_Ctrl_attributes);
+
+  /* creation of Servo_Tx */
+  Servo_TxHandle = osThreadNew(Servo_Tx_Task, NULL, &Servo_Tx_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -317,7 +327,7 @@ void Sys_Init_Task(void *argument)
   logInit();
   SHOW_DMESG(dmesg_ok, NULL);
 
-  SHOW_DMESG(dmesg_wait, "Initialize Servo Module");
+  SHOW_DMESG(dmesg_wait, "Initialize Servo Module"); 
   extern void Servo_Init(void);
   Servo_Init();
   SHOW_DMESG(dmesg_ok, NULL);

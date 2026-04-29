@@ -18,10 +18,6 @@
 
 const uint8_t ServoIDList[SERVO_COUNT] = {1, 2, 3, 4, 5, 6};
 
-static void Servo_Usart_Init(void) {
-    ServoDriver_Init();
-}
-
 /**
  * @brief 舵机单圈角度控制接口（非阻塞式API）
  * @param id 舵机ID (1-254)
@@ -30,9 +26,9 @@ static void Servo_Usart_Init(void) {
  * @param power_mW 输出功率，单位mW（0-1000）
  * @note 通过消息队列发送命令
  */
-bool Servo_SetAngle(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
+bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
     ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_ANGLE,
+        .cmdType = SERVO_CMD_SET_ANGLE_SHELL,
         .servoId = id,
         .angle = angle,
         .interval = interval_ms,
@@ -47,21 +43,37 @@ bool Servo_SetAngle(uint8_t id, float angle, uint16_t interval_ms, uint16_t powe
  * @return 命令发送结果，true=发送成功，false=发送失败
  * @note 通过消息队列发送命令
  */
-bool Servo_Stop(uint8_t id) {
+bool Servo_STOP(uint8_t id) {
     ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_STOP,
+        .cmdType = SERVO_CMD_STOP_SHELL,
         .servoId = id
     };
     return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
 }
 
+#if SERVO_PING
+/**
+ * @brief 舵机Ping接口（非阻塞式API）
+ * @param id 舵机ID (1-254)
+ * @return 命令发送结果，true=发送成功，false=发送失败
+ * @note 通过消息队列发送命令
+ */
+bool Servo_PING(uint8_t id) {
+    ServoCmd_t cmd = {
+        .cmdType = SERVO_CMD_PING_SHELL,
+        .servoId = id
+    };
+    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+}
+#endif
+
 /**
  * @brief 所有舵机紧急停止接口（批量停止）
  * @note 遍历所有舵机ID列表，循环调用单舵机停止接口，实现全部舵机立即停止
  */
-void Servo_StopAll(void) {
+void Servo_STOP_ALL(void) {
     for (uint8_t i = 0; i < SERVO_COUNT; i++) {
-        Servo_Stop(ServoIDList[i]);
+        Servo_STOP(ServoIDList[i]);
     }
 }
 
@@ -80,12 +92,13 @@ static void Servo_Angle_Shell(int argc, char *argv[]) {
         logPrintln("  id: 1~254, angle: -180~180 (single turn)");
         return;
     }
-    if (Servo_SetAngle((uint8_t)atoi(argv[1]), (float)atof(argv[2]), 
-                   (argc == 4) ? (uint16_t)atoi(argv[3]) : 1000, 1000)) {
-        logPrintln("Servo %d set angle %.1f° in %d ms", (uint8_t)atoi(argv[1]), (float)atof(argv[2]), (argc == 4) ? (uint16_t)atoi(argv[3]) : 1000);
-    } else {
-        logPrintln("Failed to set servo angle");
+    uint8_t id = (uint8_t)atoi(argv[1]);
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return;
     }
+    Servo_ANGLE(id, (float)atof(argv[2]), 
+                   (argc == 4) ? (uint16_t)atoi(argv[3]) : 1000, 1000);
 }
 
 /**
@@ -99,11 +112,12 @@ static void Servo_Stop_Shell(int argc, char *argv[]) {
         logPrintln("Usage: stop <id>");
         return;
     }
-    if (Servo_Stop((uint8_t)atoi(argv[1]))) {
-        logPrintln("Servo %d stop", (uint8_t)atoi(argv[1]));
-    } else {
-        logPrintln("Failed to stop servo");
+    uint8_t id = (uint8_t)atoi(argv[1]);
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return;
     }
+    Servo_STOP(id);
 }
 
 /**
@@ -111,10 +125,11 @@ static void Servo_Stop_Shell(int argc, char *argv[]) {
  * @note 停止指定舵机的当前运动，舵机进入停止状态
  */
 static void Servo_StopAll_Shell(void) {
-    Servo_StopAll();
+    Servo_STOP_ALL();
     logPrintln("All servos stopped");
 }
 
+#if SERVO_PING
 /**
  * @brief 舵机连通性测试命令(Shell接口)
  * @param argc 参数个数
@@ -127,13 +142,13 @@ static void Servo_Ping_Shell(int argc, char *argv[]) {
         return;
     }
     uint8_t id = (uint8_t)atoi(argv[1]);
-    FSUS_STATUS ret = FSUS_Ping(id);
-    if (ret == FSUS_STATUS_SUCCESS) {
-        logPrintln("Servo %d responded", id);
-    } else {
-        logPrintln("Servo %d no response (error %d)", id, ret);
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return;
     }
+    Servo_PING(id);
 }
+#endif
 
 /**
  * @brief 舵机模块Shell命令
@@ -145,20 +160,27 @@ static void Servo_Shell(int argc, char *argv[]){
         logPrintln(SERVO_CMD_HELP);
         return;
     }
+
+    int sub_argc = argc - 1;
+    char **sub_argv = &argv[1];
+    
     if(strcmp(argv[1], "angle") == 0) {
-        Servo_Angle_Shell(argc, argv);
+        Servo_Angle_Shell(sub_argc, sub_argv);
     } else if(strcmp(argv[1], "stop") == 0) {
-        Servo_Stop_Shell(argc, argv);
+        Servo_Stop_Shell(sub_argc, sub_argv);
     } else if(strcmp(argv[1], "stopall") == 0) {
         Servo_StopAll_Shell();
     } else if(strcmp(argv[1], "ping") == 0) {
-        Servo_Ping_Shell(argc, argv);
+        Servo_Ping_Shell(sub_argc, sub_argv);
     } else {
         logPrintln("Invalid command: %s", argv[1]);
         logPrintln(SERVO_CMD_HELP);
     }
 }
 
+/**
+ * @brief 导出舵机模块Shell命令
+ */
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 servo, Servo_Shell, servo control commands);
@@ -170,13 +192,28 @@ servo, Servo_Shell, servo control commands);
  */
 static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
     switch (cmd->cmdType) {
-        case SERVO_CMD_SET_ANGLE:
-            FSUS_SetServoAngle(cmd->servoId, cmd->angle,
-                               cmd->interval, cmd->power);
+        case SERVO_CMD_SET_ANGLE_SHELL:
+            if(Servo_SetServoAngle(cmd->servoId, cmd->angle,
+                               cmd->interval, cmd->power)==SERVO_STATUS_SUCCESS){
+                logPrintln("Servo %d angle set to %.2f", cmd->servoId, cmd->angle);
+            }
             break;
-        case SERVO_CMD_STOP:
-            FSUS_StopOnControlMode(cmd->servoId, 0, 0);
+        case SERVO_CMD_STOP_SHELL:
+            if(Servo_StopOnControlMode(cmd->servoId, 0, 0)==SERVO_STATUS_SUCCESS){
+                logPrintln("Servo %d stop", cmd->servoId);
+            } else {
+                logPrintln("Servo %d stop failed (error %d)", cmd->servoId, cmd->servoId);
+            }
             break;
+        #if SERVO_PING
+        case SERVO_CMD_PING_SHELL:
+            if(Servo_Ping(cmd->servoId)==SERVO_STATUS_SUCCESS){
+                logPrintln("Servo %d responded", cmd->servoId);
+            } else {
+                logPrintln("Servo %d no response (error %d)", cmd->servoId, cmd->servoId);
+            }
+            break;
+        #endif
         default:
             break;
     }
@@ -201,12 +238,8 @@ void Servo_Ctrl_Task(void *argument) {
     }
 }
 
-/**
- * @brief 舵机模块初始化函数
- */
 void Servo_Init(void) {
-    // 初始化串口
-    Servo_Usart_Init();
-
+    MX_USART3_UART_Init();
+    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
+    osEventFlagsClear(System_StatusHandle, UART3_RX_IDLE);
 }
-

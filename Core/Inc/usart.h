@@ -40,6 +40,7 @@ extern UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN Private defines */
 #define USART1_RX_BUF_SIZE 32
+#define USART3_RX_BUF_SIZE 32
 
 /* USER CODE END Private defines */
 

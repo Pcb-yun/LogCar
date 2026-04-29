@@ -32,8 +32,9 @@ extern "C" {
 extern const uint8_t ServoIDList[SERVO_COUNT];
 
 typedef enum {
-    SERVO_CMD_SET_ANGLE = 0,
-    SERVO_CMD_STOP,
+    SERVO_CMD_SET_ANGLE_SHELL = 0,
+    SERVO_CMD_STOP_SHELL = 1,
+    SERVO_CMD_PING_SHELL = 2,
 } ServoCmdType_t;
 
 typedef struct {
@@ -63,10 +64,11 @@ extern osMessageQueueId_t Servo_CmdHandle;
 
 void Servo_Init(void);
 void Servo_Ctrl_Task(void *argument);
-
-bool Servo_SetAngle(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_Stop(uint8_t id);
-void Servo_StopAll(void);
+    
+bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
+bool Servo_STOP(uint8_t id);
+bool Servo_PING(uint8_t id);
+void Servo_STOP_ALL(void);
 
 #ifdef __cplusplus
 }

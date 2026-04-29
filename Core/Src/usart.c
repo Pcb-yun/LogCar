@@ -30,6 +30,10 @@
 #include "servo_driver.h"
 
 uint8_t rx1Buffer[USART1_RX_BUF_SIZE];
+uint8_t rx3Buffer[USART3_RX_BUF_SIZE];
+
+
+
 
 /* USER CODE END 0 */
 
@@ -410,10 +414,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART2) {
     osEventFlagsSet(System_StatusHandle, UART2_RX_CPLT);
   }
-  else if (huart->Instance == USART3) {
-    osEventFlagsSet(System_StatusHandle, UART3_RX_CPLT);
-    Servo_Uart_RxCpltCallback();
-  }
 }
 
 /**
@@ -437,6 +437,21 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       }
     }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx1Buffer, USART1_RX_BUF_SIZE);
+  }
+  else if (huart->Instance == USART3) {
+    if(huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
+      extern osMessageQueueId_t Servo_Rx_DataHandle;
+
+      osStatus_t state;
+      for (uint16_t i = 0; i < Size; i++) {
+        state = osMessageQueuePut(Servo_Rx_DataHandle, &rx3Buffer[i], NULL, 0);
+        if (state != osOK) {
+          logWarning("Failed to put data into Servo message queue, code: %d", state);
+          break; // 如果队列满了，跳出循环
+        }
+      }
+      HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
+    }
   }
 }
 
