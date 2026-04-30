@@ -17,6 +17,8 @@ extern "C" {
 #include "freertos.h"
 #include "Events.h"
 
+extern UART_HandleTypeDef huart3;
+
 #define SERVO_DLC 0 // 舵机其他功能
 #define SERVO_ASYNC 0 // 异步命令
 #define SERVO_SYNC 0 // 同步命令
@@ -24,15 +26,8 @@ extern "C" {
 #define SERVO_SYNC_MONITOR 0 // 同步监控命令
 #define SERVO_PING 1 // Ping命令
 
-// 串口通讯超时设置
-#define SERVO_TIMEOUT_MS 100
-
-/**
- * @brief 最大舵机数量
- */
-#define SERVO_MAX_COUNT 2
-
-
+#define SERVO_TIMEOUT_MS 100     // 串口通讯超时设置
+#define SERVO_MAX_COUNT 2   // 最大舵机数量
 
 /**
  * @brief Fashion Star总线伺服舵机协议请求头
@@ -245,9 +240,6 @@ BIT[7] - 温度错误置1，温度恢复正常后清零。
 // 校验和接收的标志位
 #define SERVO_RECV_FLAG_CHECKSUM 0x10
 
-extern osSemaphoreId_t ServoUartRxSemHandle;
-extern UART_HandleTypeDef huart3;
-
 // 数据帧结构体（统一结构）
 typedef struct {
     uint16_t header;
@@ -301,19 +293,17 @@ typedef enum {
     MODE_Query_SERVO_Monitor = 7
 } ServoMode;
 
-extern Sync_ServoData SyncArray[SERVO_MAX_COUNT];
-extern ServoData servodata[SERVO_MAX_COUNT];
 
-static void Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
-static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg);
+
+static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
 static uint8_t Servo_CalcChecksum(PackageTypeDef *pkg);
 
-void Servo_Uart_Send(uint8_t* data, uint16_t size);
-SERVO_STATUS Servo_Ping(uint8_t servo_id);
+#if SERVO_DLC
+extern ServoData servodata[SERVO_MAX_COUNT];
+SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id);
 SERVO_STATUS Servo_ResetUserData(uint8_t servo_id);
 SERVO_STATUS Servo_ReadData(uint8_t servo_id,  uint8_t address, uint8_t *value, uint8_t *size);
 SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, uint8_t size);
-SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interval, uint16_t power);
 SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id, 
 				float angle, uint16_t interval, uint16_t t_acc, 
 				uint16_t t_dec, uint16_t  power);
@@ -330,14 +320,31 @@ SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
 SERVO_STATUS Servo_QueryServoAngleMTurn(uint8_t servo_id, float *angle);
 SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power);
 SERVO_STATUS Servo_ResetServoMTurnAngle(uint8_t servo_id);
-SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id);
+
+#endif
+#if SERVO_ASYNC
 SERVO_STATUS Servo_BeginAsync(void);
 SERVO_STATUS Servo_EndAsync(uint8_t mode);
-SERVO_STATUS Servo_Monitor(uint8_t servo_id, ServoData servodata[]);
-SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t power);
-SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]);
+#endif
+#if SERVO_SYNC
 SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_ServoData servoSync []);
+#endif
+#if SERVO_MONITOR
+SERVO_STATUS Servo_Monitor(uint8_t servo_id, ServoData servodata[]);
+#endif
+#if SERVO_SYNC_MONITOR
+static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg);
+SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]);
+#endif
+#if SERVO_PING
+SERVO_STATUS Servo_Ping(uint8_t servo_id);
+static SERVO_STATUS Servo_RecvPackage(PackageTypeDef *pkg);
+static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg);
+#endif
 
+void Servo_Uart_Send(uint8_t* data, uint16_t size);
+SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interval, uint16_t power);
+SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t power);
 
 #ifdef __cplusplus
 }

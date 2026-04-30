@@ -12,17 +12,9 @@
 #include <math.h>
 #include "Events.h"
 
-extern UART_HandleTypeDef huart3;
-
-static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg);
-static uint8_t Servo_CalcChecksum(PackageTypeDef *pkg);
-
-Sync_ServoData SyncArray[SERVO_MAX_COUNT];
-ServoData servodata[SERVO_MAX_COUNT];
-
-
 /*舵机其他功能*/
 #if SERVO_DLC
+ServoData servodata[SERVO_MAX_COUNT];
 /**
  * @brief 重置舵机的用户资料
  * @param servo_id 伺服ID
@@ -286,11 +278,8 @@ SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
     content[9] = power & 0xFF;
     content[10] = (power >> 8) & 0xFF;
 	
-	// 发送请求包
-	// 注: 因为用的是环形队列 head是空出来的,所以指针需要向后推移一个字节
-	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN, size, content,0);
-
-	return SERVO_STATUS_SUCCESS;
+    // 发送请求包
+    return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN, size, content,0);
 }
 
 /**
@@ -345,9 +334,7 @@ SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
 	content[14] = (power >> 8) & 0xFF;                        // power高字节
 	
 	// 发送请求包
-	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_INTERVAL, size, content,0);
-	
-	return SERVO_STATUS_SUCCESS;    
+    return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_INTERVAL, size, content,0);
 }
 
 /**
@@ -401,10 +388,8 @@ SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
 	content[11] = power & 0xFF;                               // power低字节
 	content[12] = (power >> 8) & 0xFF;                        // power高字节
 	
-	// 发送请求包
-	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY, size, content,0);
-	
-	return SERVO_STATUS_SUCCESS;
+    // 发送请求包
+    return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY, size, content,0);
 }
 /**
  * @brief 查询舵机的角度(多圈模式)
@@ -453,9 +438,8 @@ SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power){
 	content[0] = servo_id;
 	content[1] = power & 0xFF;
 	content[2] = (power >> 8) & 0xFF;
-	// 发送请求包
-	Servo_SendPackage_Common(SERVO_CMD_DAMPING, size, content,0);
-	return SERVO_STATUS_SUCCESS;
+    // 发送请求包
+    return Servo_SendPackage_Common(SERVO_CMD_DAMPING, size, content,0);
 }
 
 /**
@@ -1040,6 +1024,23 @@ static SERVO_STATUS Servo_RecvPackage(PackageTypeDef *pkg) {
 }
 
 /**
+ * @brief 验证伺服数据包有效性
+ * @param pkg 数据包指针
+ * @return SERVO_STATUS 状态码
+ */
+static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg) {
+    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
+        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
+    if (pkg->cmdId > SERVO_CMD_NUM)
+        return SERVO_STATUS_UNKNOWN_CMD_ID;
+    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
+        return SERVO_STATUS_SIZE_TOO_BIG;
+    if (Servo_CalcChecksum(pkg) != pkg->checksum)
+        return SERVO_STATUS_CHECKSUM_ERROR;
+    return SERVO_STATUS_SUCCESS;
+}
+
+/**
  * @brief 舵机通讯检测
  * @param servo_id 伺服ID
  * @return SERVO_STATUS 状态码
@@ -1051,7 +1052,7 @@ SERVO_STATUS Servo_Ping(uint8_t servo_id){
 	// 发送请求包
 	Servo_SendPackage_Common(SERVO_CMD_PING, 1, &servo_id,0);
 	// 接收返回的Ping
-	PackageTypeDef pkg;
+	PackageTypeDef pkg = {0};
 	statusCode = Servo_RecvPackage(&pkg);
 	if(statusCode == SERVO_STATUS_SUCCESS){
 		// 进一步检查ID号是否匹配
@@ -1072,7 +1073,7 @@ SERVO_STATUS Servo_Ping(uint8_t servo_id){
  * @param content 数据指针
  * @param isSync 是否同步
  */
-static void Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync){
+static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync){
     extern osMessageQueueId_t Servo_Tx_DataHandle;
     PackageTypeDef pkg = {
         .header = SERVO_PACK_REQUEST_HEADER,
@@ -1088,24 +1089,11 @@ static void Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *cont
     if(osMessageQueuePut(Servo_Tx_DataHandle, &pkg, 0, 50) != osOK){
         // 发送失败
         logError("Failed to send package to Servo");
+        return SERVO_STATUS_FAIL;
+    } else {
+        // 发送成功
+        return SERVO_STATUS_SUCCESS;
     }
-}
-
-/**
- * @brief 验证伺服数据包有效性
- * @param pkg 数据包指针
- * @return SERVO_STATUS 状态码
- */
-static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg) {
-    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
-        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
-    if (pkg->cmdId > SERVO_CMD_NUM)
-        return SERVO_STATUS_UNKNOWN_CMD_ID;
-    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
-        return SERVO_STATUS_SIZE_TOO_BIG;
-    if (Servo_CalcChecksum(pkg) != pkg->checksum)
-        return SERVO_STATUS_CHECKSUM_ERROR;
-    return SERVO_STATUS_SUCCESS;
 }
 
 /**
@@ -1130,8 +1118,6 @@ static uint8_t Servo_CalcChecksum(PackageTypeDef *pkg) {
     }
     return (uint8_t)(sum % 256);
 }
-
-
 
 /**
  * @brief 设置伺服角度
@@ -1165,9 +1151,8 @@ SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interva
 	// 发送请求包
     logPrintln("Package size: %d", size);
 		
-	Servo_SendPackage_Common(SERVO_CMD_ROTATE, size, content,0);
+	return Servo_SendPackage_Common(SERVO_CMD_ROTATE, size, content,0);
 		
-	return SERVO_STATUS_SUCCESS;
 }
 
 /**
@@ -1189,11 +1174,10 @@ SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t po
 	content[1] = mode | 0x10;
 	content[2] = power & 0xFF;
 	content[3] = (power >> 8) & 0xFF;
-		
-	Servo_SendPackage_Common(SERVO_CMD_CONTROL_MODE_STOP,(uint8_t)size, content,0);
-	
-    return SERVO_STATUS_SUCCESS;
+			
+    return Servo_SendPackage_Common(SERVO_CMD_CONTROL_MODE_STOP,(uint8_t)size, content,0);
 }
+
 /**
  * @brief 将数据包转换为字节流（用于串口发送）
  * @param pkg 数据包指针

@@ -16,8 +16,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-const uint8_t ServoIDList[SERVO_COUNT] = {1, 2, 3, 4, 5, 6};
-
 /**
  * @brief 舵机单圈角度控制接口（非阻塞式API）
  * @param id 舵机ID (1-254)
@@ -27,6 +25,10 @@ const uint8_t ServoIDList[SERVO_COUNT] = {1, 2, 3, 4, 5, 6};
  * @note 通过消息队列发送命令
  */
 bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return false;
+    }
     ServoCmd_t cmd = {
         .cmdType = SERVO_CMD_SET_ANGLE_SHELL,
         .servoId = id,
@@ -35,46 +37,6 @@ bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_m
         .power = power_mW
     };
     return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
-}
-
-/**
- * @brief 舵机紧急停止接口（立即停止运动） （非阻塞式API）
- * @param id 舵机ID (1-254)
- * @return 命令发送结果，true=发送成功，false=发送失败
- * @note 通过消息队列发送命令
- */
-bool Servo_STOP(uint8_t id) {
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_STOP_SHELL,
-        .servoId = id
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
-}
-
-#if SERVO_PING
-/**
- * @brief 舵机Ping接口（非阻塞式API）
- * @param id 舵机ID (1-254)
- * @return 命令发送结果，true=发送成功，false=发送失败
- * @note 通过消息队列发送命令
- */
-bool Servo_PING(uint8_t id) {
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_PING_SHELL,
-        .servoId = id
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
-}
-#endif
-
-/**
- * @brief 所有舵机紧急停止接口（批量停止）
- * @note 遍历所有舵机ID列表，循环调用单舵机停止接口，实现全部舵机立即停止
- */
-void Servo_STOP_ALL(void) {
-    for (uint8_t i = 0; i < SERVO_COUNT; i++) {
-        Servo_STOP(ServoIDList[i]);
-    }
 }
 
 /**
@@ -102,6 +64,24 @@ static void Servo_Angle_Shell(int argc, char *argv[]) {
 }
 
 /**
+ * @brief 舵机紧急停止接口（立即停止运动） （非阻塞式API）
+ * @param id 舵机ID (1-254)
+ * @return 命令发送结果，true=发送成功，false=发送失败
+ * @note 通过消息队列发送命令
+ */
+bool Servo_STOP(uint8_t id) {
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return false;
+    }
+    ServoCmd_t cmd = {
+        .cmdType = SERVO_CMD_STOP_SHELL,
+        .servoId = id
+    };
+    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+}
+
+/**
  * @brief 舵机停止命令(Shell接口)
  * @param argc 参数个数，必须为2
  * @param argv 参数数组，argv[1]为舵机ID
@@ -121,8 +101,18 @@ static void Servo_Stop_Shell(int argc, char *argv[]) {
 }
 
 /**
+ * @brief 所有舵机紧急停止接口（批量停止）
+ * @note 遍历所有舵机ID列表，循环调用单舵机停止接口，实现全部舵机立即停止
+ */
+void Servo_STOP_ALL(void) {
+    for (uint8_t i = 0; i < SERVO_COUNT; i++) {
+        Servo_STOP(i + 1);
+    }
+}
+
+/**
  * @brief 舵机全部停止命令(Shell接口)
- * @note 停止指定舵机的当前运动，舵机进入停止状态
+ * @note 停止所有舵机的当前运动，舵机进入停止状态
  */
 static void Servo_StopAll_Shell(void) {
     Servo_STOP_ALL();
@@ -130,6 +120,23 @@ static void Servo_StopAll_Shell(void) {
 }
 
 #if SERVO_PING
+/**
+ * @brief 舵机Ping接口（非阻塞式API）
+ * @param id 舵机ID (1-254)
+ * @return 命令发送结果，true=发送成功，false=发送失败
+ * @note 通过消息队列发送命令
+ */
+bool Servo_PING(uint8_t id) {
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return false;
+    }
+    ServoCmd_t cmd = {
+        .cmdType = SERVO_CMD_PING_SHELL,
+        .servoId = id
+    };
+    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+}
 /**
  * @brief 舵机连通性测试命令(Shell接口)
  * @param argc 参数个数
@@ -148,6 +155,46 @@ static void Servo_Ping_Shell(int argc, char *argv[]) {
     }
     Servo_PING(id);
 }
+#endif
+
+#if SERVO_DLC
+/**
+ * @brief 舵机复位用户数据接口（非阻塞式API）
+ * @param servo_id 舵机ID (1-254)
+ * @return 命令发送结果，true=发送成功，false=发送失败
+ * @note 通过消息队列发送命令
+ */
+bool Servo_ResetData(uint8_t servo_id) {
+    if (servo_id == 0 || servo_id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
+        return false;
+    }
+    ServoCmd_t cmd = {
+        .cmdType = SERVO_CMD_RESET_USER_DATA_SHELL,
+        .servoId = servo_id
+    };
+    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+}
+
+/**
+ * @brief 舵机复位用户数据命令(Shell接口)
+ * @param argc 参数个数，必须为2
+ * @param argv 参数数组，argv[1]为舵机ID
+ * @note 向指定舵机发送复位用户数据命令，将用户数据重置为默认值
+ */
+static void Servo_ResetData_Shell(int argc, char *argv[]) {
+    if (argc != 2) {
+        logPrintln("Usage: resetdata <id>");
+        return;
+    }
+    uint8_t id = (uint8_t)atoi(argv[1]);
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
+        return;
+    }
+    Servo_ResetData(id);
+}
+
 #endif
 
 /**
@@ -170,9 +217,18 @@ static void Servo_Shell(int argc, char *argv[]){
         Servo_Stop_Shell(sub_argc, sub_argv);
     } else if(strcmp(argv[1], "stopall") == 0) {
         Servo_StopAll_Shell();
-    } else if(strcmp(argv[1], "ping") == 0) {
+    } 
+    #if SERVO_PING
+    else if(strcmp(argv[1], "ping") == 0) {
         Servo_Ping_Shell(sub_argc, sub_argv);
-    } else {
+    }
+    #endif
+    #if SERVO_DLC
+    else if(strcmp(argv[1], "reset") == 0) {
+        Servo_ResetData_Shell(sub_argc, sub_argv);
+    }
+    #endif
+    else {
         logPrintln("Invalid command: %s", argv[1]);
         logPrintln(SERVO_CMD_HELP);
     }
@@ -202,7 +258,7 @@ static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
             if(Servo_StopOnControlMode(cmd->servoId, 0, 0)==SERVO_STATUS_SUCCESS){
                 logPrintln("Servo %d stop", cmd->servoId);
             } else {
-                logPrintln("Servo %d stop failed (error %d)", cmd->servoId, cmd->servoId);
+                logPrintln("Servo %d stop failed", cmd->servoId);
             }
             break;
         #if SERVO_PING
@@ -210,7 +266,16 @@ static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
             if(Servo_Ping(cmd->servoId)==SERVO_STATUS_SUCCESS){
                 logPrintln("Servo %d responded", cmd->servoId);
             } else {
-                logPrintln("Servo %d no response (error %d)", cmd->servoId, cmd->servoId);
+                logPrintln("Servo %d no response", cmd->servoId);
+            }
+            break;
+        #endif
+        #if SERVO_DLC
+        case SERVO_CMD_RESET_USER_DATA_SHELL:
+            if(Servo_ResetData(cmd->servoId)==SERVO_STATUS_SUCCESS){
+                logPrintln("Servo %d user data reset", cmd->servoId);
+            } else {
+                logPrintln("Servo %d user data reset failed (error %d)", cmd->servoId, cmd->servoId);
             }
             break;
         #endif
@@ -238,6 +303,10 @@ void Servo_Ctrl_Task(void *argument) {
     }
 }
 
+/**
+ * @brief 舵机模块初始化
+ * @note 初始化串口，设置波特率为115200
+ */
 void Servo_Init(void) {
     MX_USART3_UART_Init();
     osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
