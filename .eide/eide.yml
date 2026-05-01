@@ -24,7 +24,6 @@ virtualFolder:
                 - path: Core/Src/main.c
                 - path: Core/Src/gpio.c
                 - path: Core/Src/freertos.c
-                - path: Core/Src/can.c
                 - path: Core/Src/dma.c
                 - path: Core/Src/tim.c
                 - path: Core/Src/usart.c
@@ -39,7 +38,6 @@ virtualFolder:
           files:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c
-            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c
@@ -98,9 +96,10 @@ virtualFolder:
       folders: []
     - name: step
       files:
-        - path: Drivers/User/STEP/driver/step_can.c
+        - path: Drivers/User/STEP/driver/step_ttl.c
         - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
+        - path: Drivers/User/STEP/motion/motion_control.c
       folders: []
     - name: track
       files:
@@ -144,7 +143,8 @@ targets:
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings: {}
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:

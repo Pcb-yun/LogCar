@@ -42,7 +42,6 @@ extern "C" {
 #define CMD_READ_VERSION_INFO     0x1F  // 读取固件版本和硬件版本
 #define CMD_READ_PHASE_PARAMS     0x20  // 读取相电阻和相电感
 #define CMD_READ_OPTION_PARAMS    0x1A  // 读取选项参数状态
-#define CMD_READ_MOTOR_ID         0x15  // 广播读取电机ID/地址
 #define CMD_READ_PID_PARAMS       0x21  // 读取PID参数
 #define CMD_READ_HOME_PARAMS      0x22  // 读取回零参数
 #define CMD_READ_POSITION_WINDOW  0x41  // 读取位置到达窗口
@@ -109,6 +108,7 @@ extern "C" {
 /* 系统命令 */
 #define CMD_RESTORE_FACTORY      0x00  // 恢复出厂设置
 #define CMD_BROADCAST_READ_ID    0x15  // 广播读取ID地址
+#define CMD_RESET_CURPOS_TO_ZERO 0x0A  // 重置当前位置为零
 
 
 #ifdef __cplusplus

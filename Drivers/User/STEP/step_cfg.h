@@ -7,53 +7,35 @@
 #ifndef __STEP_CFG_H__
 #define __STEP_CFG_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #define CURRENT_FIRMWARE         FIRMWARE_EMM       // 当前使用的固件版本
 #define CURRENT_MOTOR_MODEL      MOTOR_MODEL_X42S   // 当前使用的电机型号
 
-#define PACKET_TIMEOUT 100      // 多包数据超时时间，单位：ms
+
+/******************** 电机参数 **********************/
+
+#define MOTOR_ELECTRICAL   1      // 电气参数（电压/电流/温度）
+#define MOTOR_MOTION       1      // 运动状态（速度/位置/误差/脉冲）
+#define MOTOR_ENCODER      0      // 编码器信息（线性值/原始值）
+#define MOTOR_STATUS_FLAGS 0      // 状态标志（电机/回零/引脚）
+#define MOTOR_SYSTEM       0      // 系统信息（固件/硬件/电阻/电感/选项）
+#define MOTOR_CONTROL      0      // 控制参数（PID/积分限幅/位置窗口）
+#define MOTOR_PROTECTION   0      // 保护参数（过热/过流/心跳/碰撞角度）
+#define MOTOR_CLOG         0      // 堵转保护参数（使能/转速/电流/延时）
+#define MOTOR_HOME         0      // 回零参数（模式/方向/速度/超时/碰撞）
+#define MOTOR_DRIVER       0      // 驱动配置（控制模式/电机类型/细分/插补/方向/电流/速度/固件）
+#define MOTOR_COMM         0      // 通讯参数（波特率/校验/应答）
+#define MOTOR_CURRENT      0      // 电流参数（开环/闭环电流）
 
 
-/**
- * @brief 电机状态结构体配置宏
- */
-#define MOTOR_STATUS_ELECTRICAL   1      // 电气参数
-#define MOTOR_STATUS_MOTION       1      // 运动状态
-#define MOTOR_STATUS_ENCODER      1      // 编码器信息
-#define MOTOR_STATUS_STATUS       1      // 状态标志
-#define MOTOR_STATUS_SYSTEM       1      // 系统信息
-#define MOTOR_STATUS_CONTROL      1      // 控制参数
-#define MOTOR_STATUS_PROTECTION   1      // 保护参数
-#define MOTOR_STATUS_BATCH        1      // 批量参数
-#define MOTOR_STATUS_COMM         1      // 通讯参数
+/******************** 电机控制命令 **********************/
 
-/**
- * @brief 电机控制命令结构体配置宏
- */
-#define MOTOR_CMD_ENABLE         1      // 使能控制命令
-#define MOTOR_CMD_VELOCITY       1      // 速度模式命令
-#define MOTOR_CMD_POSITION       1      // 位置模式命令
-#define MOTOR_CMD_TORQUE         1      // 力矩模式命令
-#define MOTOR_CMD_STOP           1      // 停止命令
-#define MOTOR_CMD_HOME           1      // 回零命令
-#define MOTOR_CMD_FAST           1      // 快速位置模式命令
+#define MOTOR_CMD_ENABLE   1      // 使能控制
+#define MOTOR_CMD_VELOCITY 1      // 速度控制
+#define MOTOR_CMD_POSITION 1      // 位置控制
+#define MOTOR_CMD_TORQUE   0      // 力矩控制
+#define MOTOR_CMD_STOP     1      // 停止
+#define MOTOR_CMD_HOME     1      // 回零
+#define MOTOR_CMD_FAST     0      // 快速位置
 
-/**
- * @brief 电机参数配置结构体配置宏
- */
-#define MOTOR_PARAM_BASIC       1      // 基本参数
-#define MOTOR_PARAM_CURRENT     1      // 电流参数
-#define MOTOR_PARAM_PID         1      // PID参数
-#define MOTOR_PARAM_PROTECT     1      // 保护参数
-#define MOTOR_PARAM_COMM        1      // 通信参数
-
-
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* __STEP_CFG_H__ */

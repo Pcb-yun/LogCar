@@ -9,39 +9,41 @@
 #include "log.h"
 #include "shell_cmd_group.h"
 #include "cmsis_os.h"
-#include "can.h"
+#include "usart.h"
 #include "Events.h"
+#include "ZDT_V5_Driver.h"
+#include "motion_control.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+extern osMessageQueueId_t Usart6_Rx_DataHandle;
+extern osMessageQueueId_t MotorCmdsHandle;
+extern MotorStatusShared_t g_motor_status;
+static bool is_init = false;    // 电机模块是否初始化
+static uint16_t update_time;    // 电机状态更新时间间隔 (ms)
+
 
 /**
  * @brief 初始化电机模块
  */
 bool Motor_Init(void) {
-    MX_CAN1_Init();
-
-    CAN_FilterTypeDef canfilter = {0};
-    canfilter.FilterActivation = CAN_FILTER_ENABLE;
-    canfilter.FilterBank = 0;
-    canfilter.FilterMode = CAN_FILTERMODE_IDMASK;
-    canfilter.FilterScale = CAN_FILTERSCALE_32BIT;
-    canfilter.FilterIdHigh = 0x0000;
-    canfilter.FilterIdLow  = 0x0000;
-    canfilter.FilterMaskIdHigh = 0x0000;
-    canfilter.FilterMaskIdLow  = 0x0000;
-    canfilter.FilterFIFOAssignment = CAN_RX_FIFO0;
-
-    if (HAL_CAN_ConfigFilter(&hcan1, &canfilter) != HAL_OK) return false;
-    if (HAL_CAN_Start(&hcan1) != HAL_OK) return false;
-    if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) return false;
+    extern uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
+    MX_USART6_UART_Init();
+    update_time = 250;
 
     for (uint8_t i = 0; i < 4; i++) {
-        g_motor_status.motors[i].motor_id = i + 1;
+        ZDT_V5_Read_Motor_ID(i + 1);
+        if (HAL_UART_Receive(&huart6, rx6Buffer, 4, 10) == HAL_OK) {
+            is_init |= true;
+        }
     }
 
-    g_motor_status.is_init = true;
-    return true;
+    if (is_init) {
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart6, rx6Buffer, USART6_RX_BUF_SIZE);
+    }
+
+    return is_init;
 }
 
 /**
@@ -50,8 +52,6 @@ bool Motor_Init(void) {
  * @return true 成功发送，false 失败
  */
 bool Motor_Send_Cmd(MotorCmd_t *cmd) {
-    extern osMessageQueueId_t MotorCmdsHandle;
-
     osStatus_t status = osMessageQueuePut(MotorCmdsHandle, cmd, 0, 100);
     return (status == osOK);
 }
@@ -62,239 +62,1014 @@ bool Motor_Send_Cmd(MotorCmd_t *cmd) {
  */
 void Motor_Ctrl_Task(void *argument) {
     (void)argument;
-    extern osMessageQueueId_t MotorCmdsHandle;
     MotorCmd_t cmd;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    if (!g_motor_status.is_init)  vTaskDelete(NULL);
+    if (!is_init) vTaskDelete(NULL);
 
     for(;;) {
         if (osMessageQueueGet(MotorCmdsHandle, &cmd, NULL, osWaitForever) == osOK) {
             Motor_Process_Cmd(&cmd);
+            osDelay(2);     // 防止粘包
         }
     }
 }
 
 /**
- * @brief 电机状态任务
+ * @brief 电机状态获取任务
  * @param argument 任务参数
  */
 void Motor_Get_Sta_Task(void *argument) {
     (void)argument;
-    CAN_Rx_Message_t msg;
-    extern osMessageQueueId_t Can1_Rx_DataHandle;
+    Usart6_RxBuf_t rxBuf;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    if (!g_motor_status.is_init)  vTaskDelete(NULL);
+    if (!is_init) vTaskDelete(NULL);
 
     for(;;) {
-        if (osMessageQueueGet(Can1_Rx_DataHandle, &msg, NULL, osWaitForever) == osOK) {
-            if (process_multi_packet(&msg) != true) {
-                logWarning("Failed to process multi packet");
-            }
+        if (osMessageQueueGet(Usart6_Rx_DataHandle, &rxBuf, NULL, osWaitForever) == osOK) {
+            Motor_Receive(rxBuf.data, rxBuf.len);
         }
     }
 }
 
 /**
- * @brief 测试电机控制命令
- * @param argc 命令参数个数
- * @param argv 命令参数数组
+ * @brief 电机状态更新任务
+ * @param argument 任务参数
  */
-static void Motor_cmd_tset(int argc, char *argv[]) {
-    if (!g_motor_status.is_init) {
-        logPrintln("Motor not initialized");
-        return;
-    }
+void Motor_Update_Task(void *argument) {
+    (void)argument;
 
-    if (argc != 2) {
-        logPrintln("Usage: cmd [cmd]" \
-                    "Example: cmd \"01 F3 AB 00 00 6B\"");
-        return;
-    }
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    if (!is_init) vTaskDelete(NULL);
 
-    char *cmd_str = argv[1];
-    uint8_t cmd_buffer[64];
-    uint8_t cmd_len = 0;
+#if !USE_VIEW
+    vTaskDelete(NULL);
+#else
+    MotorCmd_t cmd;
+    cmd.op_type = OP_PARAM_READ;
 
-    char *token = strtok(cmd_str, " ");
-    while (token != NULL && cmd_len < sizeof(cmd_buffer)) {
-        uint8_t byte = 0;
-        sscanf(token, "%2hhx", &byte);
-        cmd_buffer[cmd_len++] = byte;
-        token = strtok(NULL, " ");
-    }
-
-    extern osThreadId_t Motor_CtrlHandle;
-    extern osThreadId_t Motor_Get_StaHandle;
-    osThreadSuspend(Motor_CtrlHandle);
-    osThreadSuspend(Motor_Get_StaHandle);
-
-    ZDT_V5_SEND_CMD(cmd_buffer, cmd_len);
-
-    CAN_Rx_Message_t rx_msg;
-
-    logPrintln("Waiting for motor response...");
-    extern osMessageQueueId_t Can1_Rx_DataHandle;
-
-    if (osMessageQueueGet(Can1_Rx_DataHandle, &rx_msg, 0, 500) == osOK) {
-        char buffer[64];
-        uint8_t pos = 0;
-
-        for (uint8_t i = 0; i < rx_msg.DLC; i++) {
-            if (i > 0) {
-                buffer[pos++] = ' ';
-            }
-            pos += sprintf(&buffer[pos], "%02X", rx_msg.data[i]);
+    for(;;) {
+        osDelay(update_time);
+        for(uint8_t i = 0; i < 4; i++) {
+            cmd.motor_id = i + 1;
+        #if MOTOR_ELECTRICAL
+            cmd.type.param.type = PARAM_ELECTRICAL;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_MOTION
+            cmd.type.param.type = PARAM_MOTION;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_ENCODER
+            cmd.type.param.type = PARAM_ENCODER;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_STATUS_FLAGS
+            cmd.type.param.type = PARAM_STATUS;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_SYSTEM
+            cmd.type.param.type = PARAM_SYSTEM;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_CONTROL
+            cmd.type.param.type = PARAM_CONTROL;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_PROTECTION
+            cmd.type.param.type = PARAM_PROTECT;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_CLOG
+            cmd.type.param.type = PARAM_CLOG;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_HOME
+            cmd.type.param.type = PARAM_HOME;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_DRIVER
+            cmd.type.param.type = PARAM_DRIVER;
+            Motor_Send_Cmd(&cmd);
+        #endif
+        #if MOTOR_COMM
+            cmd.type.param.type = PARAM_COMM;
+            Motor_Send_Cmd(&cmd);
+        #endif
         }
-        buffer[pos] = '\0';
-
-        logPrintln("ExtId: %08X, DLC: %d, Data: %s", rx_msg.ExtId, rx_msg.DLC, buffer);
-    } else {
-        logPrintln("Timeout waiting for motor response");
     }
-
-    osThreadResume(Motor_CtrlHandle);
-    osThreadResume(Motor_Get_StaHandle);
+#endif /* USE_VIEW */
 }
 
+/**
+ * @brief 检查电机是否在线
+ * @param motor_id 电机ID
+ * @return true 电机在线，false 电机不在线
+ */
+static bool Motor_isonline(uint8_t motor_id) {
+    MotorStatus_t *motor = &g_motor_status.motors[motor_id - 1];
+    motor->is_online = false;
+    ZDT_V5_Read_Motor_ID(motor_id);
+    osDelay(update_time + 50);
+    return motor->is_online;
+}
+
+#if MOTOR_CMD_ENABLE
+/**
+ * @brief 紧急停止
+ * */
+static void Step_ES(int argc, char *argv[]) {
+    if (argc == 2 && strcmp(argv[1], "r") == 0) {
+        ZDT_V5_En_Control(0, true, false);
+        logPrintln("Motor Enabled");
+    } else {
+        ZDT_V5_En_Control(0, false, false);
+        logPrintln("Motor Emergency Stop\r\nUse: es r to reset");
+    }
+}
+SHELL_EXPORT_CMD(
+SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+es, Step_ES, Emergency Stop);
+#endif /* MOTOR_CMD_ENABLE */
+
+#if MOTOR_CMD_VELOCITY
+/**
+ * @brief 单个电机速度控制
+ */
+static void Motor_vel_Shell(int argc, char *argv[]) {
+    if (argc != 5) {
+        logPrintln("Usage: vel [id] [dir] [vel] [acc]");
+        return;
+    }
+
+    uint8_t motor_id = atoi(argv[1]);
+    uint8_t dir = atoi(argv[2]);
+    uint16_t vel = atoi(argv[3]);
+    uint16_t acc = atoi(argv[4]);
+
+    MotorCmd_t cmd;
+    cmd.op_type = OP_CONTROL;
+    cmd.motor_id = motor_id;
+    cmd.type.ctrl.type = CMD_VELOCITY;
+    cmd.type.ctrl.p.vel.dir = dir;
+    cmd.type.ctrl.p.vel.vel = vel;
+    cmd.type.ctrl.p.vel.acc = acc;
+    cmd.type.ctrl.p.vel.sync = false;
+
+    if (Motor_Send_Cmd(&cmd)) {
+        logPrintln("Velocity cmd sent to motor %d: dir=%d, vel=%d, acc=%d", motor_id, dir, vel, acc);
+    } else {
+        logPrintln("Failed to send velocity command");
+    }
+}
+#endif /* MOTOR_CMD_VELOCITY */
+
+static void Tool_Help(void) {
+    logPrintln("Usage: tool COMMAND [value...]\r\n" \
+               "\r\n" \
+               "commands:\r\n" \
+               "  cmd       Send Motor Command\r\n" \
+               "  online    Check Motor Online\r\n" \
+               "  time      Set Update Time\r\n" \
+               "  cal       Calibrate Motor Encoder");
+#if MOTOR_CMD_ENABLE
+        logPrintln("  en        Enable/Disable Motor");
+#endif
+#if MOTOR_CMD_VELOCITY
+        logPrintln("  found     Find Motor");
+#endif
+#if MOTOR_CMD_STOP
+        logPrintln("  stop      Stop Motor");
+#endif
+#if MOTOR_CMD_HOME
+        logPrintln("  zero      Reset Motor Position to Zero");
+        logPrintln("  home      Trigger Motor Homing");
+#endif
+}
+
+#if MOTOR_CMD_POSITION
+/**
+ * @brief 单个电机位置控制
+ */
+static void Motor_pos_Shell(int argc, char *argv[]) {
+    if (argc != 7) {
+        logPrintln("Usage: pos [id] [dir] [vel] [acc] [target/angle] [mode]");
+        logPrintln("mode: 0-relative to last target, 1-absolute, 2-relative to current");
+        return;
+    }
+
+    uint8_t motor_id = atoi(argv[1]);
+    uint8_t dir = atoi(argv[2]);
+    uint16_t vel = atoi(argv[3]);
+    uint16_t acc = atoi(argv[4]);
+    int32_t target_angle = atoi(argv[5]);
+    uint8_t mode = atoi(argv[6]);
+
+    MotorCmd_t cmd;
+    cmd.op_type = OP_CONTROL;
+    cmd.type.ctrl.type = CMD_POSITION;
+    cmd.type.ctrl.p.pos.dir = dir;
+    cmd.type.ctrl.p.pos.vel = vel;
+    cmd.type.ctrl.p.pos.acc = acc;
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    cmd.type.ctrl.p.pos.dec = acc;
+#endif
+    cmd.type.ctrl.p.pos.target = target_angle;
+    cmd.type.ctrl.p.pos.mode = mode;
+    cmd.type.ctrl.p.pos.sync = false;
+    cmd.motor_id = motor_id;
+
+    if (Motor_Send_Cmd(&cmd)) {
+        logPrintln("Position cmd sent to motor %d: dir=%d, vel=%d, acc=%d, target/angle=%ld, mode=%d",
+                  motor_id, dir, vel, acc, target_angle, mode);
+    } else {
+        logPrintln("Failed to send position command");
+    }
+}
+#endif /* MOTOR_CMD_POSITION */
+
+/**
+ * @brief 电机实用工具组
+ */
+static void Motor_tool_Shell(int argc, char *argv[]) {
+    if (argc < 2) { Tool_Help(); return; }
+    uint8_t motor_id;
+
+    if (strcmp(argv[1], "cmd") == 0) {
+        if (argc != 3) {
+            logPrintln("Usage: tool cmd [cmd]"); return;
+        }
+
+        char *cmd_str = argv[2];
+        uint8_t cmd_buffer[16];
+        uint8_t cmd_len = 0;
+
+        char *token = strtok(cmd_str, " ");
+        while (token != NULL && cmd_len < sizeof(cmd_buffer)) {
+            uint8_t byte = 0;
+            sscanf(token, "%2hhx", &byte);
+            cmd_buffer[cmd_len++] = byte;
+            token = strtok(NULL, " ");
+        }
+        ZDT_V5_SEND_CMD(cmd_buffer, cmd_len);
+    }
+#if MOTOR_CMD_ENABLE
+    else if (strcmp(argv[1], "en") == 0) {
+        if (argc != 4) { logPrintln("Usage: tool en [id] [state]"); return; }
+        motor_id = atoi(argv[2]);
+        bool state = atoi(argv[3]);
+
+        MotorCmd_t cmd; cmd.op_type = OP_CONTROL; cmd.type.ctrl.type = CMD_ENABLE;
+        cmd.type.ctrl.p.en.enable = state; cmd.type.ctrl.p.en.sync = false;
+        cmd.motor_id = motor_id;
+
+        if (Motor_Send_Cmd(&cmd))
+        logPrintln("Motor %d is %s", motor_id, state ? "enabled" : "disabled");
+        else logPrintln("Failed to send enable command");
+    }
+#endif /* MOTOR_CMD_ENABLE */
+#if MOTOR_CMD_STOP
+    else if (strcmp(argv[1], "stop") == 0) {
+        if (argc != 3) { logPrintln("Usage: tool stop [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        ZDT_V5_Stop_Now(motor_id, false);
+        logPrintln("Motor %d is stopped", motor_id);
+    }
+#endif /* MOTOR_CMD_STOP */
+#if MOTOR_CMD_HOME
+    else if (strcmp(argv[1], "zero") == 0) {
+        if (argc != 3) { logPrintln("Usage: tool zero [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        ZDT_V5_Reset_CurPos_To_Zero(motor_id);
+        ZDT_V5_Origin_Set_O(motor_id, true);
+        logPrintln("Motor %d position reset to zero", motor_id);
+    }
+    else if (strcmp(argv[1], "home") == 0) {
+        if (argc != 3) { logPrintln("Usage: tool home [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        ZDT_V5_Origin_Trigger_Return(motor_id, 0, false);
+        logPrintln("Motor %d homing triggered", motor_id);
+    }
+#endif /* MOTOR_CMD_HOME */
+    else if (strcmp(argv[1], "cal") == 0) {
+        if (argc != 3) { logPrintln("Usage: tool cal [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        ZDT_V5_Trig_Encoder_Cal(motor_id);
+        logPrintln("Starting calibration for motor %d...", motor_id);
+    } else if (strcmp(argv[1], "time") == 0) {
+        if (argc > 3) {
+            logPrintln("Usage: tool time [time]"); return;
+        } else if (argc == 2) {
+            logPrintln("current time: %d ms", update_time); return;
+        }
+
+        update_time = atoi(argv[2]);
+        logPrintln("Motor update time set to: %d ms", update_time);
+    } else if (strcmp(argv[1], "online") == 0){
+        if (argc != 3) { logPrintln("Usage: tool online [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        logPrintln("Motor %d is %s", motor_id, Motor_isonline(motor_id) ? "online" : "offline");
+    }
+#if MOTOR_CMD_VELOCITY
+    else if (strcmp(argv[1], "found") == 0) {
+        if (argc != 3) { logPrintln("Usage: tool found [id]"); return; }
+        motor_id = atoi(argv[2]);
+
+        MotorCmd_t cmd; cmd.op_type = OP_CONTROL; cmd.motor_id = motor_id;
+        cmd.type.ctrl.type = CMD_VELOCITY; cmd.type.ctrl.p.vel.dir = 0;
+        cmd.type.ctrl.p.vel.vel = 300; cmd.type.ctrl.p.vel.acc = 100;
+        cmd.type.ctrl.p.vel.sync = false;
+
+        if (!Motor_Send_Cmd(&cmd)) logPrintln("Failed to send velocity command");
+        logPrintln("Motor %d running 3s", motor_id);
+        osDelay(3000);
+        cmd.type.ctrl.p.vel.vel = 0;
+        while (!Motor_Send_Cmd(&cmd));
+    }
+#endif /* MOTOR_CMD_VELOCITY */
+    else {
+        logPrintln("Invalid command: %s", argv[1]);
+        Tool_Help();
+    }
+}
+
+#if USE_VIEW
+static void Motor_View_Shell(void);
+#endif
+
+ShellCommand StepGroup[] = {
+#if USE_VIEW
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, view, Motor_View_Shell, View Motor Status),
+#endif
+#if MOTOR_CMD_VELOCITY
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, vel, Motor_vel_Shell, Set Motor Velocity),
+#endif
+#if MOTOR_CMD_POSITION
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Motor_pos_Shell, Set Motor Position),
+#endif
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, tool, Motor_tool_Shell, Motor Tools),
+    SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+step, StepGroup, Step Control CMD Group);
+
+#if MOTOR_CMD_POSITION
+/**
+ * @brief 将车移动指定距离
+ */
+static void Car_Move(int argc, char *argv[]) {
+    if (argc != 4) {
+        logPrintln("Usage: car pos [x_offset] [y_offset] [yaw_offset]"); return;
+    }
+
+    int32_t x_offset = atoi(argv[1]);
+    int32_t y_offset = atoi(argv[2]);
+    int32_t yaw_offset = atoi(argv[3]);
+
+    MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
+}
+#endif /* MOTOR_CMD_POSITION */
+
+#if MOTOR_CMD_VELOCITY
+/**
+ * @brief 按键遥控
+ */
+static void Car_Key(void) {
+	Shell *shell = shellGetCurrent();
+	logPrintln("Key control started. WASD=move, QE=rotate, ^C=exit");
+
+	char prev_key = 0;
+	char key;
+
+	for (;;) {
+        osDelay(10);
+		short ret = shell->read(&key, 1);
+
+		if (ret <= 0) {	// 超时无输入
+			if (prev_key != 0) {
+				MotionControl_Stop();
+				prev_key = 0;
+			} continue;
+		}
+
+		if (key == 0x03) {	// ^C 退出
+			MotionControl_Stop(); break;
+		}
+
+		if (key == prev_key) continue;
+
+		int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
+		bool valid_key = true;
+
+		switch (key) {
+		case 'w': case 'W': x_comp = 127;   break;	// 前进
+		case 's': case 'S': x_comp = -127;  break;	// 后退
+		case 'a': case 'A': y_comp = 127;   break;	// 左移
+		case 'd': case 'D': y_comp = -127;  break;	// 右移
+		case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
+		case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
+		default: valid_key = false; break;
+		}
+
+		if (valid_key) {
+			MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
+		}
+
+		prev_key = key;
+	}
+    logPrintln("\033[%dA\033[J\033[2A", 1);
+}
+#endif /* MOTOR_CMD_VELOCITY */
+
+/**
+ * @brief 设置车的运动参数
+ */
+static void Car_Params(int argc, char *argv[]) {
+    uint16_t linear_speed;
+    uint16_t yaw_speed;
+    uint16_t acc;
+    uint16_t dec;
+
+    if (argc == 1) {
+        MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
+        logPrintln("Current params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec); return;
+    } else if (argc != 5) {
+        logPrintln("Usage: car par [linear_speed] [yaw_speed] [acc] [dec]"); return;
+    }
+
+    linear_speed = atoi(argv[2]);
+    yaw_speed = atoi(argv[3]);
+    acc = atoi(argv[4]);
+    dec = atoi(argv[5]);
+
+    MotionControl_SetMotionParams(linear_speed, yaw_speed, acc, dec);
+    logPrintln("Set params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec);
+}
+
+
+ShellCommand MoveGroup[] = {
+#if MOTOR_CMD_POSITION
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
+#endif
+#if MOTOR_CMD_VELOCITY
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
+#endif
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, par, Car_Params, Set Car Motion Params),
+    SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+car, MoveGroup, Car Control CMD Group);
+
+
+#if USE_VIEW
+#if MOTOR_HOME
+static const char* home_mode_str(uint8_t mode) {
+	switch (mode) {
+		case 0: return "Near"; case 1: return "Dir"; case 2: return "Col";
+		case 3: return "Limit"; default: return "?";
+	}
+}
+#endif
+#if MOTOR_DRIVER
+static const char* ctrl_str(uint8_t v) { return v == 0 ? "Open" : "Close"; }
+static const char* motor_type_str(uint8_t t) {
+	if (t == 25) return "1.8"; if (t == 50) return "0.9";
+#if CURRENT_FIRMWARE == FIRMWARE_X
+	if (t == 0) {
+		uint8_t opt = g_motor_status.motors[0].option_params;
+		return (opt & 0x01) ? "0.9" : "1.8";
+	}
+#endif
+	return "?";
+}
+#endif
+#if MOTOR_DRIVER || MOTOR_HOME
+static const char* dir_str(uint8_t dir) { return dir == 0 ? "CW" : "CCW"; }
+#endif
+#if MOTOR_DRIVER || MOTOR_HOME || MOTOR_CLOG
+static const char* onoff_str(uint8_t v) { return v ? "On" : "Off"; }
+#endif
+#if MOTOR_COMM
+static const char* uart_baud_str(uint8_t code) {
+	switch (code) {
+		case 0: return "9600"; case 1: return "19200"; case 2: return "25000"; case 3: return "38400";
+		case 4: return "57600"; case 5: return "115200"; case 6: return "256000"; case 7: return "512000";
+		case 8: return "921600"; default: return "?";
+	}
+}
+static const char* can_baud_str(uint8_t code) {
+	switch (code) {
+		case 0: return "10K"; case 1: return "20K"; case 2: return "50K"; case 3: return "83K";
+		case 4: return "100K"; case 5: return "125K"; case 6: return "250K"; case 7: return "500K";
+		case 8: return "800K"; case 9: return "1M"; default: return "?";
+	}
+}
+static const char* verify_str(uint8_t code) {
+	switch (code) {
+		case 0: return "None"; case 1: return "Even"; case 2: return "Odd";
+		case 3: return "Low"; case 4: return "High"; default: return "?";
+	}
+}
+static const char* respond_str(uint8_t code) {
+	switch (code) {
+		case 0: return "Always"; case 1: return "Once"; case 2: return "Silent";
+		case 3: return "Broad"; case 4: return "None"; default: return "?";
+	}
+}
+#endif /* MOTOR_COMM */
+#if MOTOR_MOTION
+static const char* fmt_int(int32_t v) {
+	static char buf[4][8];
+	static uint8_t idx;
+	idx = (idx + 1) & 3;
+	if (v < 10000 && v > -10000) {
+		sprintf(buf[idx], "%6d", v);
+	} else if (v < 1000000 && v > -1000000) {
+		sprintf(buf[idx], "%4.1fk", (float)v / 1000.0f);
+	} else {
+		sprintf(buf[idx], "%4.1fm", (float)v / 1000000.0f);
+	}
+	return buf[idx];
+}
+#endif /* MOTOR_MOTION */
 /**
  * @brief 查看电机状态
  */
-static void Motor_View(void) {
+static void Motor_View_Shell(void) {
     char ch;
     extern Shell shell;
-
     uint8_t line_count = 0;
 
-    if (!g_motor_status.is_init) {
-        logPrintln("Motor not initialized");
-        return;
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
     }
 
+{   // 首次输出包含
     logPrintln("Motor Status Viewer - Press ^C to exit");
-    logPrintln("  ID |  -  |  -  |  -  |  -  |");
+    logPrintln("  ID |   -   |   -   |   -   |   -   |");
     line_count += 1;
-#if MOTOR_STATUS_ELECTRICAL
-    logPrintln("V(mV)|-----|-----|-----|-----|");
-    logPrintln("I(mA)|-----|-----|-----|-----|");
-    logPrintln("PhI  |-----|-----|-----|-----|");
-    logPrintln("Temp |-----|-----|-----|-----|");
-    line_count += 4;
-    #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
-    logPrintln("BatV |-----|-----|-----|-----|");
-    line_count++;
-    #endif
-#endif
-#if MOTOR_STATUS_MOTION
-    logPrintln("Vel  |-----|-----|-----|-----|");
-    logPrintln("Pos  |-----|-----|-----|-----|");
-    logPrintln("TPos |-----|-----|-----|-----|");
-    logPrintln("Err  |-----|-----|-----|-----|");
-    line_count += 4;
-#endif
-#if MOTOR_STATUS_ENCODER
-    logPrintln("Enc  |-----|-----|-----|-----|");
+#if MOTOR_ELECTRICAL
+    logPrintln("V(mV)|-------|-------|-------|-------|");
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    logPrintln("BusI |-------|-------|-------|-------|");
     line_count++;
 #endif
-#if MOTOR_STATUS_STATUS
-    logPrintln("Sta  |-----|-----|-----|-----|");
-    logPrintln("Hom  |-----|-----|-----|-----|");
+    logPrintln("PhI  |-------|-------|-------|-------|");
+    logPrintln("Temp |------|------|------|------|");
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+    logPrintln("BatV |-------|-------|-------|-------|");
+    line_count++;
+#endif
+    line_count += 3;
+#endif /* MOTOR_ELECTRICAL */
+#if MOTOR_MOTION
+    logPrintln("Vel  |-------|-------|-------|-------|");
+    logPrintln("Pos  |-------|-------|-------|-------|");
+    logPrintln("TPos |-------|-------|-------|-------|");
+    logPrintln("Err  |-------|-------|-------|-------|");
+    line_count += 4;
+#endif
+#if MOTOR_ENCODER
+    logPrintln("EncL |-------|-------|-------|-------|");
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    logPrintln("EncR |-------|-------|-------|-------|");
+    line_count++;
+#endif
+    line_count++;
+#endif
+#if MOTOR_STATUS_FLAGS
+    logPrintln("Sta  |-------|-------|-------|-------|");
+    logPrintln("Hom  |-------|-------|-------|-------|");
+    logPrintln("Pin  |-------|-------|-------|-------|");
+    line_count += 3;
+#endif
+#if MOTOR_MOTION
+    logPrintln("SPos |-------|-------|-------|-------|");
+    logPrintln("Puls |-------|-------|-------|-------|");
     line_count += 2;
 #endif
+#if MOTOR_SYSTEM
+    logPrintln("FWVer|-------|-------|-------|-------|");
+    logPrintln("HWVer|-------|-------|-------|-------|");
+    logPrintln("Res  |-------|-------|-------|-------|");
+    logPrintln("Ind  |-------|-------|-------|-------|");
+    logPrintln("Opt  |-------|-------|-------|-------|");
+    logPrintln("LockL|-------|-------|-------|-------|");
+    line_count += 6;
+#endif
+#if MOTOR_CONTROL
+    logPrintln("Kp   |-------|-------|-------|-------|");
+    logPrintln("Ki   |-------|-------|-------|-------|");
+    logPrintln("Kd   |-------|-------|-------|-------|");
+    logPrintln("PosW |-------|-------|-------|-------|");
+    logPrintln("IntL |-------|-------|-------|-------|");
+    line_count += 5;
+#endif
+#if MOTOR_PROTECTION
+    logPrintln("TempT|-------|-------|-------|-------|");
+    logPrintln("CurrT|-------|-------|-------|-------|");
+    logPrintln("ProtT|-------|-------|-------|-------|");
+    logPrintln("HearT|-------|-------|-------|-------|");
+    logPrintln("ColA |-------|-------|-------|-------|");
+    line_count += 5;
+#endif
+#if MOTOR_CLOG
+    logPrintln("ClogE|-------|-------|-------|-------|");
+    logPrintln("ClogR|-------|-------|-------|-------|");
+    logPrintln("ClogC|-------|-------|-------|-------|");
+    logPrintln("ClogT|-------|-------|-------|-------|");
+    line_count += 4;
+#endif
+#if MOTOR_HOME
+    logPrintln("HomeM|-------|-------|-------|-------|");
+    logPrintln("HomeD|-------|-------|-------|-------|");
+    logPrintln("HomeS|-------|-------|-------|-------|");
+    logPrintln("HomeT|-------|-------|-------|-------|");
+    logPrintln("HmAEn|-------|-------|-------|-------|");
+    logPrintln("ColR |-------|-------|-------|-------|");
+    logPrintln("ColC |-------|-------|-------|-------|");
+    logPrintln("ColT |-------|-------|-------|-------|");
+    line_count += 8;
+#endif
+#if MOTOR_DRIVER
+    logPrintln("CtrlM|-------|-------|-------|-------|");
+    logPrintln("MotTp|-------|-------|-------|-------|");
+    logPrintln("MotD |-------|-------|-------|-------|");
+    logPrintln("Micro|-------|-------|-------|-------|");
+    logPrintln("Inter|-------|-------|-------|-------|");
+    logPrintln("OpenI|-------|-------|-------|-------|");
+    logPrintln("ClosI|-------|-------|-------|-------|");
+#if CURRENT_FIRMWARE == FIRMWARE_EMM
+    logPrintln("MaxV |-------|-------|-------|-------|");
+    line_count++;
+#elif CURRENT_FIRMWARE == FIRMWARE_X
+    logPrintln("MaxS |-------|-------|-------|-------|");
+    line_count++;
+#endif
+    line_count += 7;
+#endif
+#if MOTOR_COMM
+    logPrintln("Uart |--------|--------|--------|--------|");
+    logPrintln("Can  |--------|--------|--------|--------|");
+    logPrintln("Vrfy |--------|--------|--------|--------|");
+    logPrintln("Resp |--------|--------|--------|--------|");
+#if CURRENT_FIRMWARE == FIRMWARE_X
+    logPrintln("PScl |--------|--------|--------|--------|");
+    line_count++;
+#endif
+    line_count += 4;
+#endif
+}
 
     for(;;) {
-        logPrintln("\033[%dA\033[2K\r  ID |  %d  |  %d  |  %d  |  %d  |",
+        logPrintln("\033[%dA\033[2K\r  ID | %3d   | %3d   | %3d   | %3d   |",
                 line_count,
                 g_motor_status.motors[0].motor_id,
                 g_motor_status.motors[1].motor_id,
                 g_motor_status.motors[2].motor_id,
                 g_motor_status.motors[3].motor_id);
-#if MOTOR_STATUS_ELECTRICAL
-        logPrintln("\033[2K\rV(mV)|%5d|%5d|%5d|%5d|",
+#if MOTOR_ELECTRICAL
+        logPrintln("\033[2K\rV(mV)|%7d|%7d|%7d|%7d|",
                 g_motor_status.motors[0].voltage,
                 g_motor_status.motors[1].voltage,
                 g_motor_status.motors[2].voltage,
                 g_motor_status.motors[3].voltage);
-        logPrintln("\033[2K\rI(mA)|%5d|%5d|%5d|%5d|",
-                g_motor_status.motors[0].current,
-                g_motor_status.motors[1].current,
-                g_motor_status.motors[2].current,
-                g_motor_status.motors[3].current);
-        logPrintln("\033[2K\rPhI  |%5d|%5d|%5d|%5d|",
+#if CURRENT_FIRMWARE == FIRMWARE_X
+        logPrintln("\033[2K\rBusI|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].bus_current,
+                g_motor_status.motors[1].bus_current,
+                g_motor_status.motors[2].bus_current,
+                g_motor_status.motors[3].bus_current);
+#endif
+        logPrintln("\033[2K\rPhI  |%7d|%7d|%7d|%7d|",
                 g_motor_status.motors[0].phase_current,
                 g_motor_status.motors[1].phase_current,
                 g_motor_status.motors[2].phase_current,
                 g_motor_status.motors[3].phase_current);
-        logPrintln("\033[2K\rTemp | %3d | %3d | %3d | %3d |",
+        logPrintln("\033[2K\rTemp | %4d  | %4d  | %4d  | %4d  |",
                 g_motor_status.motors[0].temp,
                 g_motor_status.motors[1].temp,
                 g_motor_status.motors[2].temp,
                 g_motor_status.motors[3].temp);
-        #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
-        logPrintln("\033[2K\rBatV |%5d|%5d|%5d|%5d|",
+#if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
+        logPrintln("\033[2K\rBatV |%7d|%7d|%7d|%7d|",
                 g_motor_status.motors[0].battery_voltage,
                 g_motor_status.motors[1].battery_voltage,
                 g_motor_status.motors[2].battery_voltage,
                 g_motor_status.motors[3].battery_voltage);
-        #endif
 #endif
-#if MOTOR_STATUS_MOTION
-        logPrintln("\033[2K\rVel  |%5d|%5d|%5d|%5d|",
+#endif /* MOTOR_ELECTRICAL */
+#if MOTOR_MOTION
+        logPrintln("\033[2K\rVel  |%7d|%7d|%7d|%7d|",
                 g_motor_status.motors[0].vel,
                 g_motor_status.motors[1].vel,
                 g_motor_status.motors[2].vel,
                 g_motor_status.motors[3].vel);
-        logPrintln("\033[2K\rPos  |%5d|%5d|%5d|%5d|",
-                g_motor_status.motors[0].pos,
-                g_motor_status.motors[1].pos,
-                g_motor_status.motors[2].pos,
-                g_motor_status.motors[3].pos);
-        logPrintln("\033[2K\rTPos |%5d|%5d|%5d|%5d|",
-                g_motor_status.motors[0].target_pos,
-                g_motor_status.motors[1].target_pos,
-                g_motor_status.motors[2].target_pos,
-                g_motor_status.motors[3].target_pos);
-        logPrintln("\033[2K\rErr  |%5d|%5d|%5d|%5d|",
-                g_motor_status.motors[0].pos_error,
-                g_motor_status.motors[1].pos_error,
-                g_motor_status.motors[2].pos_error,
-                g_motor_status.motors[3].pos_error);
+        logPrintln("\033[2K\rPos  |%7s|%7s|%7s|%7s|",
+                fmt_int(g_motor_status.motors[0].pos),
+                fmt_int(g_motor_status.motors[1].pos),
+                fmt_int(g_motor_status.motors[2].pos),
+                fmt_int(g_motor_status.motors[3].pos));
+        logPrintln("\033[2K\rTPos |%7s|%7s|%7s|%7s|",
+                fmt_int(g_motor_status.motors[0].target_pos),
+                fmt_int(g_motor_status.motors[1].target_pos),
+                fmt_int(g_motor_status.motors[2].target_pos),
+                fmt_int(g_motor_status.motors[3].target_pos));
+        logPrintln("\033[2K\rErr  |%7s|%7s|%7s|%7s|",
+                fmt_int(g_motor_status.motors[0].pos_error),
+                fmt_int(g_motor_status.motors[1].pos_error),
+                fmt_int(g_motor_status.motors[2].pos_error),
+                fmt_int(g_motor_status.motors[3].pos_error));
 #endif
-#if MOTOR_STATUS_ENCODER
-        logPrintln("\033[2K\rEnc  |%5d|%5d|%5d|%5d|",
-                g_motor_status.motors[0].encoder_value,
-                g_motor_status.motors[1].encoder_value,
-                g_motor_status.motors[2].encoder_value,
-                g_motor_status.motors[3].encoder_value);
+#if MOTOR_ENCODER
+        logPrintln("\033[2K\rEncL |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].encoder_linear,
+                g_motor_status.motors[1].encoder_linear,
+                g_motor_status.motors[2].encoder_linear,
+                g_motor_status.motors[3].encoder_linear);
+#if CURRENT_FIRMWARE == FIRMWARE_X
+        logPrintln("\033[2K\rEncR |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].encoder_raw,
+                g_motor_status.motors[1].encoder_raw,
+                g_motor_status.motors[2].encoder_raw,
+                g_motor_status.motors[3].encoder_raw);
 #endif
-#if MOTOR_STATUS_STATUS
-        logPrintln("\033[2K\rSta  | 0x%02X| 0x%02X| 0x%02X| 0x%02X|",
+#endif
+#if MOTOR_STATUS_FLAGS
+        logPrintln("\033[2K\rSta  |  %04X |  %04X |  %04X |  %04X |",
                 g_motor_status.motors[0].status,
                 g_motor_status.motors[1].status,
                 g_motor_status.motors[2].status,
                 g_motor_status.motors[3].status);
-        logPrintln("\033[2K\rHom  | 0x%02X| 0x%02X| 0x%02X| 0x%02X|",
+        logPrintln("\033[2K\rHom  |  %04X |  %04X |  %04X |  %04X |",
                 g_motor_status.motors[0].home_status,
                 g_motor_status.motors[1].home_status,
                 g_motor_status.motors[2].home_status,
                 g_motor_status.motors[3].home_status);
+        logPrintln("\033[2K\rPin  |  %04X |  %04X |  %04X |  %04X |",
+                g_motor_status.motors[0].pin_status,
+                g_motor_status.motors[1].pin_status,
+                g_motor_status.motors[2].pin_status,
+                g_motor_status.motors[3].pin_status);
 #endif
-        osDelay(50);
-
+#if MOTOR_MOTION
+        logPrintln("\033[2K\rSPos |%7s|%7s|%7s|%7s|",
+                fmt_int(g_motor_status.motors[0].set_pos),
+                fmt_int(g_motor_status.motors[1].set_pos),
+                fmt_int(g_motor_status.motors[2].set_pos),
+                fmt_int(g_motor_status.motors[3].set_pos));
+        logPrintln("\033[2K\rPuls |%7s|%7s|%7s|%7s|",
+                fmt_int(g_motor_status.motors[0].input_pulses),
+                fmt_int(g_motor_status.motors[1].input_pulses),
+                fmt_int(g_motor_status.motors[2].input_pulses),
+                fmt_int(g_motor_status.motors[3].input_pulses));
+#endif
+#if MOTOR_SYSTEM
+    {   static char fw[4][8];
+        for (int _i = 0; _i < 4; _i++) {
+            uint16_t v = g_motor_status.motors[_i].firmware_version;
+            sprintf(fw[_i], "%d.%02d", v / 100, v % 100);
+        }
+        logPrintln("\033[2K\rFWVer|%7s|%7s|%7s|%7s|",
+                fw[0], fw[1], fw[2], fw[3]);
+    }
+        logPrintln("\033[2K\rHWVer|  %4d  |  %4d  |  %4d  |  %4d  |",
+                g_motor_status.motors[0].hardware_version,
+                g_motor_status.motors[1].hardware_version,
+                g_motor_status.motors[2].hardware_version,
+                g_motor_status.motors[3].hardware_version);
+        logPrintln("\033[2K\rRes  |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].phase_resistance,
+                g_motor_status.motors[1].phase_resistance,
+                g_motor_status.motors[2].phase_resistance,
+                g_motor_status.motors[3].phase_resistance);
+        logPrintln("\033[2K\rInd  |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].phase_inductance,
+                g_motor_status.motors[1].phase_inductance,
+                g_motor_status.motors[2].phase_inductance,
+                g_motor_status.motors[3].phase_inductance);
+        logPrintln("\033[2K\rOpt  |  %04X |  %04X |  %04X |  %04X |",
+                g_motor_status.motors[0].option_params,
+                g_motor_status.motors[1].option_params,
+                g_motor_status.motors[2].option_params,
+                g_motor_status.motors[3].option_params);
+        logPrintln("\033[2K\rLockL|  %4d  |  %4d  |  %4d  |  %4d  |",
+                g_motor_status.motors[0].lock_level,
+                g_motor_status.motors[1].lock_level,
+                g_motor_status.motors[2].lock_level,
+                g_motor_status.motors[3].lock_level);
+#endif
+#if MOTOR_CONTROL
+        logPrintln("\033[2K\rKp   |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].kp,
+                g_motor_status.motors[1].kp,
+                g_motor_status.motors[2].kp,
+                g_motor_status.motors[3].kp);
+        logPrintln("\033[2K\rKi   |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].ki,
+                g_motor_status.motors[1].ki,
+                g_motor_status.motors[2].ki,
+                g_motor_status.motors[3].ki);
+        logPrintln("\033[2K\rKd   |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].kd,
+                g_motor_status.motors[1].kd,
+                g_motor_status.motors[2].kd,
+                g_motor_status.motors[3].kd);
+        logPrintln("\033[2K\rPosW |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].pos_window,
+                g_motor_status.motors[1].pos_window,
+                g_motor_status.motors[2].pos_window,
+                g_motor_status.motors[3].pos_window);
+        logPrintln("\033[2K\rIntL |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].integral_limit,
+                g_motor_status.motors[1].integral_limit,
+                g_motor_status.motors[2].integral_limit,
+                g_motor_status.motors[3].integral_limit);
+#endif
+#if MOTOR_PROTECTION
+        logPrintln("\033[2K\rTempT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].temp_threshold,
+                g_motor_status.motors[1].temp_threshold,
+                g_motor_status.motors[2].temp_threshold,
+                g_motor_status.motors[3].temp_threshold);
+        logPrintln("\033[2K\rCurrT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].current_threshold,
+                g_motor_status.motors[1].current_threshold,
+                g_motor_status.motors[2].current_threshold,
+                g_motor_status.motors[3].current_threshold);
+        logPrintln("\033[2K\rProtT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].protect_time,
+                g_motor_status.motors[1].protect_time,
+                g_motor_status.motors[2].protect_time,
+                g_motor_status.motors[3].protect_time);
+        logPrintln("\033[2K\rHearT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].heartbeat_time,
+                g_motor_status.motors[1].heartbeat_time,
+                g_motor_status.motors[2].heartbeat_time,
+                g_motor_status.motors[3].heartbeat_time);
+        logPrintln("\033[2K\rColA |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].collision_angle,
+                g_motor_status.motors[1].collision_angle,
+                g_motor_status.motors[2].collision_angle,
+                g_motor_status.motors[3].collision_angle);
+#endif
+#if MOTOR_CLOG
+        logPrintln("\033[2K\rClogE| %-5s | %-5s | %-5s | %-5s |",
+                onoff_str(g_motor_status.motors[0].clog_enable),
+                onoff_str(g_motor_status.motors[1].clog_enable),
+                onoff_str(g_motor_status.motors[2].clog_enable),
+                onoff_str(g_motor_status.motors[3].clog_enable));
+        logPrintln("\033[2K\rClogR|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].clog_rpm,
+                g_motor_status.motors[1].clog_rpm,
+                g_motor_status.motors[2].clog_rpm,
+                g_motor_status.motors[3].clog_rpm);
+        logPrintln("\033[2K\rClogC|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].clog_current,
+                g_motor_status.motors[1].clog_current,
+                g_motor_status.motors[2].clog_current,
+                g_motor_status.motors[3].clog_current);
+        logPrintln("\033[2K\rClogT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].clog_time,
+                g_motor_status.motors[1].clog_time,
+                g_motor_status.motors[2].clog_time,
+                g_motor_status.motors[3].clog_time);
+#endif
+#if MOTOR_HOME
+        logPrintln("\033[2K\rHomeM| %-4s  | %-4s  | %-4s  | %-4s  |",
+                home_mode_str(g_motor_status.motors[0].home_mode),
+                home_mode_str(g_motor_status.motors[1].home_mode),
+                home_mode_str(g_motor_status.motors[2].home_mode),
+                home_mode_str(g_motor_status.motors[3].home_mode));
+        logPrintln("\033[2K\rHomeD| %-4s | %-4s | %-4s | %-4s |",
+                dir_str(g_motor_status.motors[0].home_dir),
+                dir_str(g_motor_status.motors[1].home_dir),
+                dir_str(g_motor_status.motors[2].home_dir),
+                dir_str(g_motor_status.motors[3].home_dir));
+        logPrintln("\033[2K\rHomeS|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].home_speed,
+                g_motor_status.motors[1].home_speed,
+                g_motor_status.motors[2].home_speed,
+                g_motor_status.motors[3].home_speed);
+        logPrintln("\033[2K\rHomeT|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].home_timeout,
+                g_motor_status.motors[1].home_timeout,
+                g_motor_status.motors[2].home_timeout,
+                g_motor_status.motors[3].home_timeout);
+        logPrintln("\033[2K\rHmAEn| %-4s  | %-4s  | %-4s  | %-4s  |",
+                onoff_str(g_motor_status.motors[0].home_auto_enable),
+                onoff_str(g_motor_status.motors[1].home_auto_enable),
+                onoff_str(g_motor_status.motors[2].home_auto_enable),
+                onoff_str(g_motor_status.motors[3].home_auto_enable));
+        logPrintln("\033[2K\rColR |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].collision_rpm,
+                g_motor_status.motors[1].collision_rpm,
+                g_motor_status.motors[2].collision_rpm,
+                g_motor_status.motors[3].collision_rpm);
+        logPrintln("\033[2K\rColC |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].collision_current,
+                g_motor_status.motors[1].collision_current,
+                g_motor_status.motors[2].collision_current,
+                g_motor_status.motors[3].collision_current);
+        logPrintln("\033[2K\rColT |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].collision_time,
+                g_motor_status.motors[1].collision_time,
+                g_motor_status.motors[2].collision_time,
+                g_motor_status.motors[3].collision_time);
+#endif
+#if MOTOR_DRIVER
+        logPrintln("\033[2K\rCtrlM| %-4s  | %-4s  | %-4s  | %-4s  |",
+                ctrl_str(g_motor_status.motors[0].control_mode),
+                ctrl_str(g_motor_status.motors[1].control_mode),
+                ctrl_str(g_motor_status.motors[2].control_mode),
+                ctrl_str(g_motor_status.motors[3].control_mode));
+        logPrintln("\033[2K\rMotTp| %-4s | %-4s | %-4s | %-4s |",
+                motor_type_str(g_motor_status.motors[0].motor_type),
+                motor_type_str(g_motor_status.motors[1].motor_type),
+                motor_type_str(g_motor_status.motors[2].motor_type),
+                motor_type_str(g_motor_status.motors[3].motor_type));
+        logPrintln("\033[2K\rMotD | %-4s | %-4s | %-4s | %-4s |",
+                dir_str(g_motor_status.motors[0].motor_direction),
+                dir_str(g_motor_status.motors[1].motor_direction),
+                dir_str(g_motor_status.motors[2].motor_direction),
+                dir_str(g_motor_status.motors[3].motor_direction));
+    {   static char ms[4][6];
+        for (int _i = 0; _i < 4; _i++) {
+            uint8_t v = g_motor_status.motors[_i].micro_step;
+            sprintf(ms[_i], v == 0 ? "256" : "%d", v);
+        }
+        logPrintln("\033[2K\rMicro| %-4s | %-4s | %-4s | %-4s |",
+                ms[0], ms[1], ms[2], ms[3]);
+    }
+        logPrintln("\033[2K\rInter| %-4s | %-4s | %-4s | %-4s |",
+                onoff_str(g_motor_status.motors[0].interpolation),
+                onoff_str(g_motor_status.motors[1].interpolation),
+                onoff_str(g_motor_status.motors[2].interpolation),
+                onoff_str(g_motor_status.motors[3].interpolation));
+        logPrintln("\033[2K\rOpenI|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].open_current,
+                g_motor_status.motors[1].open_current,
+                g_motor_status.motors[2].open_current,
+                g_motor_status.motors[3].open_current);
+        logPrintln("\033[2K\rClosI|%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].close_current,
+                g_motor_status.motors[1].close_current,
+                g_motor_status.motors[2].close_current,
+                g_motor_status.motors[3].close_current);
+#if CURRENT_FIRMWARE == FIRMWARE_EMM
+        logPrintln("\033[2K\rMaxV |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].max_output_voltage,
+                g_motor_status.motors[1].max_output_voltage,
+                g_motor_status.motors[2].max_output_voltage,
+                g_motor_status.motors[3].max_output_voltage);
+#elif CURRENT_FIRMWARE == FIRMWARE_X
+        logPrintln("\033[2K\rMaxS |%7d|%7d|%7d|%7d|",
+                g_motor_status.motors[0].max_speed,
+                g_motor_status.motors[1].max_speed,
+                g_motor_status.motors[2].max_speed,
+                g_motor_status.motors[3].max_speed);
+#endif
+#endif /* MOTOR_DRIVER */
+#if MOTOR_COMM
+        logPrintln("\033[2K\rUart | %-6s | %-6s | %-6s | %-6s |",
+                uart_baud_str(g_motor_status.motors[0].uart_baudrate),
+                uart_baud_str(g_motor_status.motors[1].uart_baudrate),
+                uart_baud_str(g_motor_status.motors[2].uart_baudrate),
+                uart_baud_str(g_motor_status.motors[3].uart_baudrate));
+        logPrintln("\033[2K\rCan  | %-6s | %-6s | %-6s | %-6s |",
+                can_baud_str(g_motor_status.motors[0].can_baudrate),
+                can_baud_str(g_motor_status.motors[1].can_baudrate),
+                can_baud_str(g_motor_status.motors[2].can_baudrate),
+                can_baud_str(g_motor_status.motors[3].can_baudrate));
+        logPrintln("\033[2K\rVrfy | %-5s | %-5s | %-5s | %-5s |",
+                verify_str(g_motor_status.motors[0].verify_mode),
+                verify_str(g_motor_status.motors[1].verify_mode),
+                verify_str(g_motor_status.motors[2].verify_mode),
+                verify_str(g_motor_status.motors[3].verify_mode));
+        logPrintln("\033[2K\rResp | %-6s | %-6s | %-6s | %-6s |",
+                respond_str(g_motor_status.motors[0].response_mode),
+                respond_str(g_motor_status.motors[1].response_mode),
+                respond_str(g_motor_status.motors[2].response_mode),
+                respond_str(g_motor_status.motors[3].response_mode));
+#if CURRENT_FIRMWARE == FIRMWARE_X
+        logPrintln("\033[2K\rPScl | %-4s | %-4s | %-4s | %-4s |",
+                onoff_str(g_motor_status.motors[0].pos_scale),
+                onoff_str(g_motor_status.motors[1].pos_scale),
+                onoff_str(g_motor_status.motors[2].pos_scale),
+                onoff_str(g_motor_status.motors[3].pos_scale));
+#endif
+#endif /* MOTOR_COMM */
+        osDelay(update_time);
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break;
         }
     }
     logPrintln("\033[%dA\033[J\033[2A", ++line_count);
 }
-
-
-ShellCommand StepGroup[] =
-{
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, cmd, Motor_cmd_tset, Test Motor Control Command),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, view, Motor_View, View Motor Status),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-step, StepGroup, command group step);
+#endif /* USE_VIEW */

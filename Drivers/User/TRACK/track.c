@@ -96,8 +96,6 @@ static void Track_Set_Mode(TrackSet_t mode) {
 
 /**
  * @brief 设置巡线模块模式
- * @param argc 参数数量
- * @param argv 参数列表
  */
 static void Track_Mode_Shell(int argc, char *argv[]) {
     if(argc != 2) {
@@ -124,14 +122,13 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
 }
 
 /**
- * @brief 设置巡线模块发送时间间隔
- * @param argc 参数数量
- * @param argv 参数列表
+ * @brief 查看或设置巡线模块发送时间间隔
  */
 static void Track_Time_Sell(int argc, char *argv[]) {
-    if(argc != 2) {
-        logPrintln(TRACK_TIME_HELP);
-        return;
+    if(argc > 2) {
+        logPrintln(TRACK_TIME_HELP); return;
+    } else if(argc == 1) {
+        logPrintln("current time: %d ms", track.time); return;
     }
 
     // 判断参数是否为数字
@@ -208,12 +205,12 @@ static void Track_View_Sell(void) {
 ShellCommand TrackGroup[] =
 {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, set track mode),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Sell, set track time),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Sell, view or set track time),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Sell, view track data),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-track, TrackGroup, command group track);
+track, TrackGroup, Track Tool Group);
 
 /**
  * @brief 初始化巡线模块
@@ -223,7 +220,7 @@ void Track_Init(void) {
     osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
 
     track.mode = TRACK_STOP;
-    track.time = 500;
+    track.time = 100;
 }
 
 /**

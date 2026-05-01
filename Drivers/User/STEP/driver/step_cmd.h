@@ -49,11 +49,17 @@ typedef enum {
     PARAM_NONE = 0,      // 无参数
     PARAM_BASIC,         // 基本参数
     PARAM_CURRENT,       // 电流参数
-    PARAM_PID,           // PID参数
     PARAM_PROTECT,       // 保护参数
+    PARAM_ELECTRICAL,    // 电气参数
+    PARAM_MOTION,        // 运动状态
+    PARAM_ENCODER,       // 编码器
+    PARAM_STATUS,        // 状态标志
+    PARAM_SYSTEM,        // 系统信息
+    PARAM_CONTROL,       // 控制参数（PID/积分限幅/位置窗口）
+    PARAM_CLOG,          // 堵转保护
+    PARAM_HOME,          // 回零参数
+    PARAM_DRIVER,        // 驱动配置
     PARAM_COMM,          // 通信参数
-    PARAM_BATCH_STATUS,  // 批量读取系统状态
-    PARAM_BATCH_CONFIG,  // 批量读取驱动配置
 } MotorParamType_t;
 
 /**
@@ -62,6 +68,8 @@ typedef enum {
 typedef struct {
     MotorCmdType_t type;       // 控制命令类型
 
+#if MOTOR_CMD_ENABLE || MOTOR_CMD_VELOCITY || MOTOR_CMD_POSITION || MOTOR_CMD_TORQUE \
+    || MOTOR_CMD_STOP || MOTOR_CMD_HOME || MOTOR_CMD_FAST
     // 子命令
     union {
 #if MOTOR_CMD_ENABLE
@@ -79,6 +87,7 @@ typedef struct {
             uint16_t vel;           // 速度（RPM）
             uint16_t acc;           // 加速度（RPM/S或档位）
             uint16_t max_current;   // 最大电流限制（mA）
+            bool sync;              // 同步标志
         } vel;
 #endif
 
@@ -113,7 +122,7 @@ typedef struct {
 #if MOTOR_CMD_STOP
         // 停止控制
         struct {
-            bool stop;     // 停止同步标志
+            bool sync;          // 同步标志
         } stop;
 #endif
 
@@ -127,8 +136,8 @@ typedef struct {
             uint16_t sl_vel;        // 碰撞检测转速（RPM）
             uint16_t sl_current;    // 碰撞检测电流（mA）
             uint16_t sl_time;       // 碰撞检测时间（ms）
-            bool auto_home;              // 上电自动回零：true-使能，false-禁用
-            bool sync_flag;         // 同步标志：true-等待同步触发，false-立即执行
+            bool auto_home;         // 上电自动回零：true-使能，false-禁用
+            bool sync;              // 同步标志：true-等待同步触发，false-立即执行
         } home;
 #endif
 
@@ -154,6 +163,7 @@ typedef struct {
         } fast_send;
 #endif
     } p;
+#endif
 } MotorCtrl_t;
 
 /**
@@ -162,9 +172,10 @@ typedef struct {
 typedef struct {
     MotorParamType_t type;        // 参数类型
 
+#if MOTOR_DRIVER || MOTOR_CURRENT || MOTOR_CONTROL || MOTOR_PROTECTION || MOTOR_COMM
     // 子命令
     union {
-#if MOTOR_PARAM_BASIC
+#if MOTOR_DRIVER
         // 基本参数
         struct {
             uint8_t micro_step;    // 细分值
@@ -176,7 +187,7 @@ typedef struct {
         } basic;
 #endif
 
-#if MOTOR_PARAM_CURRENT
+#if MOTOR_CURRENT
         // 电流参数
         struct {
             uint16_t open_current;      // 开环工作电流（mA）
@@ -185,8 +196,8 @@ typedef struct {
         } current;
 #endif
 
-#if MOTOR_PARAM_PID
-        // PID参数
+#if MOTOR_CONTROL
+        // 控制参数（PID/积分限幅/位置窗口）
         struct {
             uint32_t kp;                // PID比例系数
             uint32_t ki;                // PID积分系数
@@ -196,7 +207,7 @@ typedef struct {
         } pid;
 #endif
 
-#if MOTOR_PARAM_PROTECT
+#if MOTOR_PROTECTION
         // 保护参数
         struct {
             uint16_t temp_threshold;        // 过热保护阈值（℃）
@@ -209,7 +220,7 @@ typedef struct {
         } protect;
 #endif
 
-#if MOTOR_PARAM_COMM
+#if MOTOR_COMM
         // 通信参数
         struct {
             uint8_t uart_baudrate;      // 串口波特率
@@ -220,6 +231,7 @@ typedef struct {
         } comm;
 #endif
     } p;
+#endif
 } MotorParam_t;
 
 /**
