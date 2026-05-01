@@ -10,6 +10,13 @@
 #define CURRENT_FIRMWARE         FIRMWARE_EMM       // 当前使用的固件版本
 #define CURRENT_MOTOR_MODEL      MOTOR_MODEL_X42S   // 当前使用的电机型号
 
+// 是否使用心跳保护
+#define USE_HEARTBEAT 1
+
+// 是否使用查看任务
+// 当前程序架构存在问题，除调试阶段否则不建议使用
+// 如果使能且启用了大量的功能开关，会严重影响控制性能
+#define USE_VIEW 0
 
 /******************** 电机参数 **********************/
 

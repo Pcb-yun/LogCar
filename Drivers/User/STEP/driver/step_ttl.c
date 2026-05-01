@@ -150,6 +150,8 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
         case CMD_READ_HOME_STATUS: if (len >= 4) motor->home_status = data[2]; break;
         case CMD_READ_STATUS_FLAGS: if (len >= 5) { motor->home_status = data[2]; motor->status = data[3]; } break;
         case CMD_READ_PIN_STATUS: if (len >= 4) motor->pin_status = data[2]; break;
+#elif USE_HEARTBEAT
+        case CMD_READ_MOTOR_STATUS: break;
 #endif /* MOTOR_STATUS_FLAGS */
 #if MOTOR_HOME
         case CMD_READ_HOME_PARAMS:
@@ -342,6 +344,7 @@ void Motor_Process_Cmd(MotorCmd_t *cmd) {
     bool save = false;
 
     switch (cmd->op_type) {
+        case OP_HEARTBEAT: ZDT_V5_Read_Sys_Params(cmd->motor_id, S_FLAG); break;
         case OP_CONTROL: Motor_Process_Ctrl(cmd->motor_id, &cmd->type.ctrl); break;
         case OP_PARAM_READ: Motor_Process_Param_Read(cmd->motor_id, &cmd->type.param); break;
         case OP_PARAM_WRITE:

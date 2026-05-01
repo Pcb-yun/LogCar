@@ -24,6 +24,7 @@ typedef enum {
     OP_CONTROL,       // 控制操作
     OP_PARAM_READ,    // 参数读取
     OP_PARAM_WRITE,   // 参数写入
+    OP_HEARTBEAT,     // 心跳保护
 } MotorOpType_t;
 
 /**

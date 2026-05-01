@@ -796,7 +796,7 @@ void ZDT_V5_Read_Heart_Protect(uint8_t addr) {
   */
 void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp) {
     static uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x68; cmd[2] = 0x83; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x68; cmd[2] = 0x38; cmd[3] = svF;
     cmd[4] = (uint8_t)(hp >> 24); cmd[5] = (uint8_t)(hp >> 16); cmd[6] = (uint8_t)(hp >> 8); cmd[7] = (uint8_t)(hp >> 0);
     cmd[8] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 9);
@@ -824,6 +824,20 @@ void ZDT_V5_Modify_Collision_Angle(uint8_t addr, bool svF, uint16_t angle) {
     cmd[4] = (uint8_t)(angle >> 8); cmd[5] = (uint8_t)(angle >> 0);
     cmd[6] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 7);
+}
+#elif USE_HEARTBEAT
+/**
+  * @brief 修改心跳保护时间
+  * @param addr 电机地址
+  * @param svF 是否存储标志,false为不存储,true为存储
+  * @param hp 心跳保护时间(ms)
+  */
+void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp) {
+    static uint8_t cmd[16] = {0};
+    cmd[0] = addr; cmd[1] = 0x68; cmd[2] = 0x38; cmd[3] = svF;
+    cmd[4] = (uint8_t)(hp >> 24); cmd[5] = (uint8_t)(hp >> 16); cmd[6] = (uint8_t)(hp >> 8); cmd[7] = (uint8_t)(hp >> 0);
+    cmd[8] = 0x6B;
+    ZDT_V5_SEND_CMD(cmd, 9);
 }
 #endif
 

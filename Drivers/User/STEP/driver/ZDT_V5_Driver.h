@@ -169,6 +169,8 @@ void ZDT_V5_Modify_Pos_Window(uint8_t addr, bool svF, uint16_t prw);
 void ZDT_V5_Modify_Otocp(uint8_t addr, bool svF, uint16_t otp, uint16_t ocp, uint16_t time_ms);
 void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp);
 void ZDT_V5_Modify_Collision_Angle(uint8_t addr, bool svF, uint16_t angle);
+#elif USE_HEARTBEAT
+void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp);
 #endif
 #if MOTOR_COMM
 void ZDT_V5_Modify_Comm_Params(uint8_t addr, bool svF, uint8_t uart_baudrate, uint8_t can_baudrate, uint8_t verify_mode, uint8_t response_mode);

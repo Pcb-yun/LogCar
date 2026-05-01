@@ -30,10 +30,14 @@ static uint16_t update_time;    // 电机状态更新时间间隔 (ms)
 bool Motor_Init(void) {
     extern uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
     MX_USART6_UART_Init();
-    update_time = 250;
+    update_time = 100;
 
     for (uint8_t i = 0; i < 4; i++) {
+#if USE_HEARTBEAT
+        ZDT_V5_Modify_Heart_Protect(i + 1, false, update_time + 500);
+#else
         ZDT_V5_Read_Motor_ID(i + 1);
+#endif
         if (HAL_UART_Receive(&huart6, rx6Buffer, 4, 10) == HAL_OK) {
             is_init |= true;
         }
@@ -103,16 +107,18 @@ void Motor_Update_Task(void *argument) {
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
-#if !USE_VIEW
-    vTaskDelete(NULL);
-#else
     MotorCmd_t cmd;
-    cmd.op_type = OP_PARAM_READ;
 
     for(;;) {
         osDelay(update_time);
         for(uint8_t i = 0; i < 4; i++) {
             cmd.motor_id = i + 1;
+#if USE_HEARTBEAT
+            cmd.op_type = OP_HEARTBEAT;
+            Motor_Send_Cmd(&cmd);
+#endif /* USE_HEARTBEAT */
+#if USE_VIEW
+            cmd.op_type = OP_PARAM_READ;
         #if MOTOR_ELECTRICAL
             cmd.type.param.type = PARAM_ELECTRICAL;
             Motor_Send_Cmd(&cmd);
@@ -157,9 +163,9 @@ void Motor_Update_Task(void *argument) {
             cmd.type.param.type = PARAM_COMM;
             Motor_Send_Cmd(&cmd);
         #endif
+#endif /* USE_VIEW */
         }
     }
-#endif /* USE_VIEW */
 }
 
 /**
@@ -231,7 +237,7 @@ static void Tool_Help(void) {
                "commands:\r\n" \
                "  cmd       Send Motor Command\r\n" \
                "  online    Check Motor Online\r\n" \
-               "  time      Set Update Time\r\n" \
+               "  time      View or Set Update Time\r\n" \
                "  cal       Calibrate Motor Encoder");
 #if MOTOR_CMD_ENABLE
         logPrintln("  en        Enable/Disable Motor");
@@ -367,6 +373,12 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
         } else if (argc == 2) {
             logPrintln("current time: %d ms", update_time); return;
         }
+
+#if USE_HEARTBEAT
+        for (uint8_t i = 0; i < 4; i++) {
+            ZDT_V5_Modify_Heart_Protect(i + 1, false, update_time + 500);
+        }
+#endif
 
         update_time = atoi(argv[2]);
         logPrintln("Motor update time set to: %d ms", update_time);
