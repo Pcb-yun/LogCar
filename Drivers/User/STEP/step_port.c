@@ -197,6 +197,14 @@ static void Step_ES(int argc, char *argv[]) {
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 es, Step_ES, Emergency Stop);
+
+/**
+ * @brief 紧急停止按键导出
+ */
+static void ES_Key(void) {
+    Step_ES(0, NULL);
+}
+SHELL_EXPORT_KEY(SHELL_CMD_PERMISSION(0), 0x18000000, ES_Key, ^X);
 #endif /* MOTOR_CMD_ENABLE */
 
 #if MOTOR_CMD_VELOCITY
