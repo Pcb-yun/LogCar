@@ -16,6 +16,7 @@
                 "Applications/letter_shell/log",
                 "Applications/letter_shell/shell_enhance",
                 "Drivers/User/MISC",
+                "Drivers/User/OPS",
                 "Drivers/User/RTOS",
                 "Drivers/User/SERVO",
                 "Drivers/User/STEP",

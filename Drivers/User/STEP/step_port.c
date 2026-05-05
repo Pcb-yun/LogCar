@@ -62,8 +62,7 @@ bool Motor_Send_Cmd(MotorCmd_t *cmd) {
 
 /**
  * @brief 电机控制任务
- * @param argument 任务参数
- */
+*/
 void Motor_Ctrl_Task(void *argument) {
     (void)argument;
     MotorCmd_t cmd;
@@ -81,8 +80,7 @@ void Motor_Ctrl_Task(void *argument) {
 
 /**
  * @brief 电机状态获取任务
- * @param argument 任务参数
- */
+*/
 void Motor_Get_Sta_Task(void *argument) {
     (void)argument;
     Usart6_RxBuf_t rxBuf;
@@ -99,8 +97,7 @@ void Motor_Get_Sta_Task(void *argument) {
 
 /**
  * @brief 电机状态更新任务
- * @param argument 任务参数
- */
+*/
 void Motor_Update_Task(void *argument) {
     (void)argument;
 

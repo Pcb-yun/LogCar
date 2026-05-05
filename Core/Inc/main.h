@@ -65,6 +65,8 @@ void Error_Handler(void);
 #define LED_Green_GPIO_Port GPIOF
 #define KEY_UP_Pin GPIO_PIN_0
 #define KEY_UP_GPIO_Port GPIOA
+#define OPS_RX_Pin GPIO_PIN_1
+#define OPS_RX_GPIO_Port GPIOA
 #define Tracking_TX_Pin GPIO_PIN_2
 #define Tracking_TX_GPIO_Port GPIOA
 #define Tracking_RX_Pin GPIO_PIN_3
@@ -81,6 +83,8 @@ void Error_Handler(void);
 #define Terminal_TX_GPIO_Port GPIOA
 #define Terminal_RX_Pin GPIO_PIN_10
 #define Terminal_RX_GPIO_Port GPIOA
+#define OPS_TX_Pin GPIO_PIN_10
+#define OPS_TX_GPIO_Port GPIOC
 #define Tracking_KEY_Pin GPIO_PIN_13
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14

@@ -96,6 +96,13 @@ const osThreadAttr_t Motor_Update_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime,
 };
+/* Definitions for OPS_Update */
+osThreadId_t OPS_UpdateHandle;
+const osThreadAttr_t OPS_Update_attributes = {
+  .name = "OPS_Update",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime3,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -138,6 +145,7 @@ extern void Track_Get_Task(void *argument);
 extern void Motor_Get_Sta_Task(void *argument);
 extern void Motor_Ctrl_Task(void *argument);
 extern void Motor_Update_Task(void *argument);
+extern void OPS_Update_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -289,6 +297,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Motor_Update */
   Motor_UpdateHandle = osThreadNew(Motor_Update_Task, NULL, &Motor_Update_attributes);
 
+  /* creation of OPS_Update */
+  OPS_UpdateHandle = osThreadNew(OPS_Update_Task, NULL, &OPS_Update_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -329,6 +340,11 @@ void Sys_Init_Task(void *argument)
   Track_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
+  extern void OPS_Init(void);
+  OPS_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else {
@@ -351,4 +367,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

@@ -337,7 +337,7 @@
               <MiscControls />
               <Define>USE_HAL_DRIVER,STM32F407xx,STM32_THREAD_SAFE_STRATEGY=4</Define>
               <Undefine />
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/STEP/motion;../Drivers/User/TRACK</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/STEP/motion;../Drivers/User/TRACK</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -726,6 +726,16 @@
               <FileName>message.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\MISC\message.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>ops</GroupName>
+          <Files>
+            <File>
+              <FileName>ops.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\OPS\ops.c</FilePath>
             </File>
           </Files>
         </Group>

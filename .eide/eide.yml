@@ -87,6 +87,10 @@ virtualFolder:
       files:
         - path: Drivers/User/MISC/message.c
       folders: []
+    - name: ops
+      files:
+        - path: Drivers/User/OPS/ops.c
+      folders: []
     - name: servo
       files:
         - path: Drivers/User/SERVO/fashion_star_uart_servo.c
@@ -133,6 +137,7 @@ targets:
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
         - Drivers/User/MISC
+        - Drivers/User/OPS
         - Drivers/User/RTOS
         - Drivers/User/SERVO
         - Drivers/User/STEP

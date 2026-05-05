@@ -27,8 +27,7 @@ static void Track_Parse(uint8_t *buffer, TrackData_t *data);
 
 /**
  * @brief 巡线模块获取任务
- * @param argument 任务参数
- */
+*/
 void Track_Get_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Track_DataHandle;
