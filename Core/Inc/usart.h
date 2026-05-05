@@ -45,12 +45,17 @@ extern UART_HandleTypeDef huart6;
 /* USER CODE BEGIN Private defines */
 #define USART1_RX_BUF_SIZE 32
 #define USART6_RX_BUF_SIZE 40
+#define USART4_RX_BUF_SIZE 32
 
 typedef struct {
     uint8_t data[USART6_RX_BUF_SIZE];
-    uint16_t len;
+    uint8_t len;
 } Usart6_RxBuf_t;
 
+typedef struct {
+    uint8_t data[USART4_RX_BUF_SIZE];
+    uint8_t len;
+} Uart4_RxBuf_t;
 
 /* USER CODE END Private defines */
 

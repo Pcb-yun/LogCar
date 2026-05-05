@@ -29,8 +29,9 @@
 #include <stdio.h>
 #include "string.h"
 
-uint8_t rx1Buffer[USART1_RX_BUF_SIZE];
+static uint8_t rx1Buffer[USART1_RX_BUF_SIZE];
 uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
+static Uart4_RxBuf_t rx4Buf;
 
 /* USER CODE END 0 */
 
@@ -72,6 +73,7 @@ void MX_UART4_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN UART4_Init 2 */
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart4, rx4Buf.data, USART4_RX_BUF_SIZE);
 
   /* USER CODE END UART4_Init 2 */
 
@@ -652,11 +654,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       extern osMessageQueueId_t Usart1_Rx_DataHandle;
 
       // 发送接收数据到消息队列
-      osStatus_t state;
       for (uint16_t i = 0; i < Size; i++) {
-        state = osMessageQueuePut(Usart1_Rx_DataHandle, &rx1Buffer[i], NULL, 0);
+        osStatus_t state = osMessageQueuePut(Usart1_Rx_DataHandle, &rx1Buffer[i], NULL, 0);
         if (state != osOK) {
-          logWarning("Failed to put data into message queue, code: %d", state);
+          logWarning("Failed to put USART1 data into queue, code: %d", state);
           break; // 如果队列满了，跳出循环
         }
       }
@@ -672,10 +673,21 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
       osStatus_t state = osMessageQueuePut(Usart6_Rx_DataHandle, &rxBuf, NULL, 0);
       if (state != osOK) {
-        logWarning("Failed to put USART6 data into message queue, code: %d", state);
+        logWarning("Failed to put USART6 data into queue, code: %d", state);
       }
     }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart6, rx6Buffer, USART6_RX_BUF_SIZE);
+  } else if (huart->Instance == UART4) {
+    if (huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
+      extern osMessageQueueId_t Uart4_Rx_DataHandle;
+
+      rx4Buf.len = Size;
+      osStatus_t state = osMessageQueuePut(Uart4_Rx_DataHandle, &rx4Buf, NULL, 0);
+      if (state != osOK) {
+        logWarning("Failed to put USART4 data into queue, code: %d", state);
+      }
+    }
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart4, rx4Buf.data, USART4_RX_BUF_SIZE);
   }
 }
 

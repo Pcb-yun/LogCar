@@ -32,6 +32,7 @@
 #include "track.h"
 #include "usart.h"
 #include "step_port.h"
+#include "ops.h"
 
 /* USER CODE END Includes */
 
@@ -127,6 +128,16 @@ const osMessageQueueAttr_t MotorCmds_attributes = {
 osMessageQueueId_t Usart6_Rx_DataHandle;
 const osMessageQueueAttr_t Usart6_Rx_Data_attributes = {
   .name = "Usart6_Rx_Data"
+};
+/* Definitions for Uart4_Rx_Data */
+osMessageQueueId_t Uart4_Rx_DataHandle;
+const osMessageQueueAttr_t Uart4_Rx_Data_attributes = {
+  .name = "Uart4_Rx_Data"
+};
+/* Definitions for OPS_Data */
+osMessageQueueId_t OPS_DataHandle;
+const osMessageQueueAttr_t OPS_Data_attributes = {
+  .name = "OPS_Data"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -274,6 +285,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of Usart6_Rx_Data */
   Usart6_Rx_DataHandle = osMessageQueueNew (5, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
 
+  /* creation of Uart4_Rx_Data */
+  Uart4_Rx_DataHandle = osMessageQueueNew (3, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
+
+  /* creation of OPS_Data */
+  OPS_DataHandle = osMessageQueueNew (1, sizeof(OPSData_t), &OPS_Data_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -367,3 +384,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

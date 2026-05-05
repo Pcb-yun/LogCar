@@ -115,7 +115,7 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
     } else if(strcmp(argv[1], "rst") == 0) {
         Track_Reset();
     } else {
-        logPrintln("invalid choice: %s", argv[1]);
+        logPrintln("invalid command: %s", argv[1]);
         logPrintln(TRACK_MODE_HELP);
     }
 }
