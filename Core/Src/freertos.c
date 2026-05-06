@@ -59,7 +59,7 @@
 osThreadId_t Sys_InitHandle;
 const osThreadAttr_t Sys_Init_attributes = {
   .name = "Sys_Init",
-  .stack_size = 256 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityRealtime7,
 };
 /* Definitions for Shell */
@@ -101,7 +101,7 @@ const osThreadAttr_t Motor_Update_attributes = {
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Usart1_Rx_Data */
@@ -206,8 +206,8 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
    called if a stack overflow is detected. */
    my_printf("\r\n[ERROR] Stack overflow detected!\r\n");
 
-   my_printf("[ERROR] Task name: %s\r\n", pcTaskName);
-   my_printf("[ERROR] Task ID: 0x%p\r\n", xTask);
+   my_printf("Task name: %s\r\n", pcTaskName);
+   my_printf("Task ID: 0x%p\r\n", xTask);
 
    Error_Handler();
 }
@@ -374,7 +374,6 @@ void Sys_Init_Task(void *argument)
 
   extern Shell shell;
   Shell_New_Convo(&shell);
-
   osEventFlagsSet(System_StatusHandle, SYS_INIT_COMPLETE);
 	vTaskDelete(NULL);
   /* USER CODE END Sys_Init_Task */
@@ -384,4 +383,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

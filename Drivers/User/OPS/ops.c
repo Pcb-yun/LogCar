@@ -62,18 +62,30 @@ void OPS_Update_Task(void *argument) {
 static void OPS_Cal_Shell(int argc, char *argv[]) {
     extern osThreadId_t OPS_UpdateHandle;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
+    extern Shell shell;
     Uart4_RxBuf_t rx_buf;
     uint32_t timeout = 16 * 60 * 1000;
     char spinner[] = {'|', '/', '-', '\\'};
     uint8_t spinner_idx = 0;
+
+    logPrintln("The calibration takes about 15 minutes and the error is absolutely stationary.\r\n" \
+        "Calibration is not recommended in general.\r\n" \
+        "Would you like to proceed? (y/n)\r\n");
+
+    char ch;
+    while(1) {
+        if (shell.read(&ch, 1) == 1)
+            if (ch == 'y') break;
+            else return;
+        osDelay(100);
+    }
 
     osThreadSuspend(OPS_UpdateHandle);
     OPS_Send_Cmd((const uint8_t *)"ACTR", 4);
     osMessageQueueReset(Uart4_Rx_DataHandle);
 
     if (osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, 500) == osOK) {
-        logPrintln("Calibration start: %s\r\n" \
-                "Keep module stationary for ~15 minutes\r\n", rx_buf.data);
+        logPrintln("Calibration start: %s\r\nPress ^C to stop\r\n", rx_buf.data);
     } else {
         logPrintln("Calibration start timeout");
         osThreadResume(OPS_UpdateHandle); return;
@@ -82,7 +94,7 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
     uint32_t start_time = HAL_GetTick();
     uint32_t elapsed = 0;
     while (elapsed < timeout) {
-        if (osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, 500) == osOK) {
+        if (osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, 150) == osOK) {
             if (strcmp((char *)rx_buf.data, "check") == 0) {
                 logPrintln("\033[1A\033[2K\rCalibration completed"); break;
             }
@@ -93,6 +105,12 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         uint8_t sec = (uint8_t)((elapsed % 60000) / 1000);
         logPrintln("\033[1A\033[2K\rCalibrating...  %c          Usage: %02u:%02u", spinner[spinner_idx], min, sec);
         spinner_idx = (spinner_idx + 1) % 4;
+
+        if (shell.read(&ch, 1) == 1) {
+            if (ch == 0x03) {
+                logPrintln("Keyboard interruption"); break;
+            }
+        }
     }
 
     if (elapsed >= timeout) {
@@ -123,10 +141,12 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
     }
 
     char *endptr;
-    float value = strtof(argv[2], &endptr);
+    int32_t int_value = strtol(argv[2], &endptr, 10);
     if (*endptr != '\0') {
         logPrintln("Invalid value: %s", argv[2]); return;
     }
+
+    float value = (float)int_value;
 
     union {
         float f;
@@ -138,13 +158,13 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
 
     if (strcmp(argv[1], "j") == 0) {
         cmd[3] = 'J';
-        logPrintln("Set yaw to %.2f deg", value);
+        logPrintln("Set yaw to %ld", int_value);
     } else if (strcmp(argv[1], "x") == 0) {
         cmd[3] = 'X';
-        logPrintln("Set X to %.2f mm", value);
+        logPrintln("Set X to %ld", int_value);
     } else if (strcmp(argv[1], "y") == 0) {
         cmd[3] = 'Y';
-        logPrintln("Set Y to %.2f mm", value);
+        logPrintln("Set Y to %ld", int_value);
     } else {
         logPrintln("Invalid command: %s", argv[1]);
         logPrintln(OPS_SET_HELP); return;

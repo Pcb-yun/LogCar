@@ -731,8 +731,9 @@ void my_printf(const char *fmt, ...) {
   len = vsnprintf(buffer, 1023, fmt, ap);
   va_end(ap);
 
-  // 处理字符串超长情况
   actual_len = (len > 1023) ? (1023) : len;
+
+  HAL_UART_AbortTransmit(&huart1);
   HAL_UART_Transmit(&huart1, (uint8_t *)(buffer), actual_len, 0xFFFF);
 }
 

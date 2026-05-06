@@ -26,6 +26,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
+#include "usart.h"
 
 /* USER CODE END TD */
 
@@ -98,6 +99,155 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== HardFault Detected ====================\r\n");
+
+  uint32_t *hardfault_args;
+  uint32_t stacked_r0;
+  uint32_t stacked_r1;
+  uint32_t stacked_r2;
+  uint32_t stacked_r3;
+  uint32_t stacked_r12;
+  uint32_t stacked_lr;
+  uint32_t stacked_pc;
+  uint32_t stacked_xpsr;
+
+  hardfault_args = (uint32_t *)__get_MSP();
+
+  stacked_r0  = hardfault_args[0];
+  stacked_r1  = hardfault_args[1];
+  stacked_r2  = hardfault_args[2];
+  stacked_r3  = hardfault_args[3];
+  stacked_r12 = hardfault_args[4];
+  stacked_lr  = hardfault_args[5];
+  stacked_pc  = hardfault_args[6];
+  stacked_xpsr = hardfault_args[7];
+
+  my_printf("R0  = 0x%08lX\r\n", stacked_r0);
+  my_printf("R1  = 0x%08lX\r\n", stacked_r1);
+  my_printf("R2  = 0x%08lX\r\n", stacked_r2);
+  my_printf("R3  = 0x%08lX\r\n", stacked_r3);
+  my_printf("R12 = 0x%08lX\r\n", stacked_r12);
+  my_printf("LR  = 0x%08lX\r\n", stacked_lr);
+  my_printf("PC  = 0x%08lX (Fault Address)\r\n", stacked_pc);
+  my_printf("xPSR= 0x%08lX\r\n", stacked_xpsr);
+
+  my_printf("\r\n--- Fault Status Registers ---\r\n");
+
+  uint32_t cfsr = (*((volatile uint32_t *)(0xE000ED28)));
+  uint32_t hfsr = (*((volatile uint32_t *)(0xE000ED2C)));
+  uint32_t dfsr = (*((volatile uint32_t *)(0xE000ED30)));
+  uint32_t afsr = (*((volatile uint32_t *)(0xE000ED3C)));
+  uint32_t bfar = (*((volatile uint32_t *)(0xE000ED38)));
+  uint32_t mmfar = (*((volatile uint32_t *)(0xE000ED34)));
+
+  my_printf("CFSR = 0x%08lX\r\n", cfsr);
+  my_printf("HFSR = 0x%08lX\r\n", hfsr);
+  my_printf("DFSR = 0x%08lX\r\n", dfsr);
+  my_printf("AFSR = 0x%08lX\r\n", afsr);
+  my_printf("BFAR = 0x%08lX\r\n", bfar);
+  my_printf("MMFAR= 0x%08lX\r\n", mmfar);
+
+  my_printf("\r\n--- Detailed Fault Analysis ---\r\n");
+
+  if (cfsr & 0x00800000) {
+    my_printf("[MemManage] MemManage Fault occurred\r\n");
+    if (cfsr & 0x00008000) {
+      my_printf("  - MMARVALID: MMFAR (0x%08lX) holds a valid fault address\r\n", mmfar);
+    }
+    if (cfsr & 0x00000001) {
+      my_printf("  - IACCVIOL: Instruction access violation\r\n");
+    }
+    if (cfsr & 0x00000002) {
+      my_printf("  - DACCVIOL: Data access violation\r\n");
+    }
+    if (cfsr & 0x00000008) {
+      my_printf("  - MUNSTKERR: Unstacking error\r\n");
+    }
+    if (cfsr & 0x00000010) {
+      my_printf("  - MSTKERR: Stacking error\r\n");
+    }
+    if (cfsr & 0x00000020) {
+      my_printf("  - MLSPERR: MemManage fault during FP lazy state preservation\r\n");
+    }
+  }
+
+  if (cfsr & 0x00008000) {
+    my_printf("[BusFault] Bus Fault occurred\r\n");
+    if (cfsr & 0x00004000) {
+      my_printf("  - BFARVALID: BFAR (0x%08lX) holds a valid fault address\r\n", bfar);
+    }
+    if (cfsr & 0x00000100) {
+      my_printf("  - IBUSERR: Instruction bus error\r\n");
+    }
+    if (cfsr & 0x00000200) {
+      my_printf("  - PRECISERR: Precise data bus error\r\n");
+    }
+    if (cfsr & 0x00000400) {
+      my_printf("  - IMPRECISERR: Imprecise data bus error\r\n");
+    }
+    if (cfsr & 0x00000800) {
+      my_printf("  - UNSTKERR: Unstacking error\r\n");
+    }
+    if (cfsr & 0x00001000) {
+      my_printf("  - STKERR: Stacking error\r\n");
+    }
+    if (cfsr & 0x00002000) {
+      my_printf("  - LSPERR: Bus fault during FP lazy state preservation\r\n");
+    }
+  }
+
+  if (cfsr & 0x00000001) {
+    my_printf("[UsageFault] Usage Fault occurred\r\n");
+    if (cfsr & 0x00000001) {
+      my_printf("  - UNDEFINSTR: Undefined instruction\r\n");
+    }
+    if (cfsr & 0x00000002) {
+      my_printf("  - INVSTATE: Invalid state\r\n");
+    }
+    if (cfsr & 0x00000004) {
+      my_printf("  - INVPC: Invalid PC load\r\n");
+    }
+    if (cfsr & 0x00000008) {
+      my_printf("  - NOCP: No coprocessor\r\n");
+    }
+    if (cfsr & 0x00000010) {
+      my_printf("  - UNALIGNED: Unaligned access\r\n");
+    }
+    if (cfsr & 0x00000020) {
+      my_printf("  - DIVBYZERO: Divide by zero\r\n");
+    }
+  }
+
+  if (hfsr & 0x40000000) {
+    my_printf("[HardFault] FORCED: Escalated from configurable fault\r\n");
+  }
+  if (hfsr & 0x80000000) {
+    my_printf("[HardFault] DEBUGEVT: Debug event\r\n");
+  }
+
+  if (stacked_xpsr & 0x000001FF) {
+    my_printf("\r\n--- xPSR Analysis ---\r\n");
+    if (stacked_xpsr & 0x00000080) {
+      my_printf("  - C: Carry flag set\r\n");
+    }
+    if (stacked_xpsr & 0x00000040) {
+      my_printf("  - Z: Zero flag set\r\n");
+    }
+    if (stacked_xpsr & 0x00000020) {
+      my_printf("  - N: Negative flag set\r\n");
+    }
+    if (stacked_xpsr & 0x00000010) {
+      my_printf("  - V: Overflow flag set\r\n");
+    }
+    if (stacked_xpsr & 0x00000008) {
+      my_printf("  - Q: Saturation flag set\r\n");
+    }
+    my_printf("  - Thumb bit: %s\r\n", (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear");
+  }
+
+  my_printf("\r\n[ERROR] System halted due to HardFault\r\n");
+  my_printf("=============================================================\r\n");
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
@@ -113,6 +263,8 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== MemManage Detected ====================\r\n");
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
@@ -128,6 +280,8 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== BusFault Detected ====================\r\n");
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
@@ -143,6 +297,8 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== UsageFault Detected ====================\r\n");
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -158,6 +314,8 @@ void UsageFault_Handler(void)
 void DebugMon_Handler(void)
 {
   /* USER CODE BEGIN DebugMonitor_IRQn 0 */
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== DebugMonitor Detected ====================\r\n");
 
   /* USER CODE END DebugMonitor_IRQn 0 */
   /* USER CODE BEGIN DebugMonitor_IRQn 1 */

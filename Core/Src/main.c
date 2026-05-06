@@ -206,8 +206,8 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_SET);  // 点亮红灯
-  my_printf("\r\n[ERROR] Error_Handler call\r\n");
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== Error_Handler Call ====================\r\n");
 
   while (1)
   {
@@ -227,8 +227,13 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  my_printf("\r\n[ERROR] Assert failed: file %s on line %ld\r\n", file, line);
-  Error_Handler();
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
+  my_printf("\r\n==================== Assert failed Detected ====================\r\n");
+  my_printf("file: %s\r\n", file);
+  my_printf("line: %ld\r\n", line);
+
+  while (1);
+
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
