@@ -75,7 +75,8 @@ extern uint8_t trackBuffer[TRACK_ALL_LEN];
     "  d        Send digital data\r\n" \
     "  all      Send all data\r\n" \
     "  stop     Stop sending data\r\n" \
-    "  rst      Reset track module"
+    "  rst      Reset track module\r\n" \
+    "  sta      Show track module status"
 
 // 时间设置帮助信息
 #define TRACK_TIME_HELP \

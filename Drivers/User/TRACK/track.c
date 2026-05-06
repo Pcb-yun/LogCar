@@ -101,6 +101,7 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
         logPrintln(TRACK_MODE_HELP);
         return;
     }
+    const char *mode_str;
 
     if(strcmp(argv[1], "cal") == 0) {
         Track_Set_Mode(TRACK_CAL);
@@ -114,6 +115,16 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
         Track_Set_Mode(TRACK_STOP);
     } else if(strcmp(argv[1], "rst") == 0) {
         Track_Reset();
+    } else if(strcmp(argv[1], "sta") == 0) {
+        switch(track.mode) {
+            case TRACK_CAL: mode_str = "Calibration"; break;
+            case TRACK_ANALOG: mode_str = "Analog"; break;
+            case TRACK_DIGITAL: mode_str = "Digital"; break;
+            case TRACK_ALL: mode_str = "All"; break;
+            case TRACK_STOP: mode_str = "Stop"; break;
+            default: mode_str = "Unknown"; break;
+        }
+        logPrintln("Status: %s , Time: %d", mode_str, track.time);
     } else {
         logPrintln("invalid command: %s", argv[1]);
         logPrintln(TRACK_MODE_HELP);

@@ -91,6 +91,10 @@ virtualFolder:
       files:
         - path: Drivers/User/OPS/ops.c
       folders: []
+    - name: rtos
+      files:
+        - path: Drivers/User/RTOS/rtos_utils.c
+      folders: []
     - name: servo
       files:
         - path: Drivers/User/SERVO/fashion_star_uart_servo.c
