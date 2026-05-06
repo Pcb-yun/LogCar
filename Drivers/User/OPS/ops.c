@@ -84,12 +84,12 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
     OPS_Send_Cmd((const uint8_t *)"ACTR", 4);
     osMessageQueueReset(Uart4_Rx_DataHandle);
 
-    // if (osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, 500) == osOK) {
-    //     logPrintln("Calibration start: %s\r\nPress ^C to stop\r\n", rx_buf.data);
-    // } else {
-    //     logPrintln("Calibration start timeout");
-    //     osThreadResume(OPS_UpdateHandle); return;nn
-    // }
+    if (osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, 500) == osOK) {
+        logPrintln("Calibration start: %s\r\nPress ^C to stop\r\n", rx_buf.data);
+    } else {
+        logPrintln("Calibration start timeout");
+        osThreadResume(OPS_UpdateHandle); return;
+    }
 
     uint32_t start_time = HAL_GetTick();
     uint32_t elapsed = 0;
