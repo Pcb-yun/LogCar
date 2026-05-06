@@ -209,6 +209,10 @@ SHELL_EXPORT_KEY(SHELL_CMD_PERMISSION(0), 0x18000000, ES_Key, ^X);
  * @brief 单个电机速度控制
  */
 static void Motor_vel_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
+    }
+
     if (argc != 5) {
         logPrintln("Usage: vel [id] [dir] [vel] [acc]");
         return;
@@ -264,6 +268,10 @@ static void Tool_Help(void) {
  * @brief 单个电机位置控制
  */
 static void Motor_pos_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
+    }
+
     if (argc != 7) {
         logPrintln("Usage: pos [id] [dir] [vel] [acc] [target/angle] [mode]");
         logPrintln("mode: 0-relative to last target, 1-absolute, 2-relative to current");
@@ -304,6 +312,10 @@ static void Motor_pos_Shell(int argc, char *argv[]) {
  * @brief 电机实用工具组
  */
 static void Motor_tool_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
+    }
+
     if (argc < 2) { Tool_Help(); return; }
     uint8_t motor_id;
 
@@ -441,6 +453,10 @@ step, StepGroup, Step Control CMD Group);
  * @brief 将车移动指定距离
  */
 static void Car_Move(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
+    }
+
     if (argc != 4) {
         logPrintln("Usage: car pos [x_offset] [y_offset] [yaw_offset]"); return;
     }
@@ -458,6 +474,10 @@ static void Car_Move(int argc, char *argv[]) {
  * @brief 按键遥控
  */
 static void Car_Key(void) {
+    if (!is_init) {
+        logWarning("Motor module not initialized"); return;
+    }
+
 	Shell *shell = shellGetCurrent();
 	logPrintln("Key control started. WASD=move, QE=rotate, ^C=exit");
 
