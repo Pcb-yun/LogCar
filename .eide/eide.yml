@@ -278,4 +278,4 @@ targets:
         resetMode: default
         runAfterProgram: true
         speed: 4000
-    uploader: STLink
+    uploader: OpenOCD
