@@ -59,7 +59,7 @@ static void Servo_Angle_Shell(int argc, char *argv[]) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
         return;
     }
-    Servo_ANGLE(id, (float)atof(argv[2]), 
+    Servo_ANGLE(id, (float)atof(argv[2]),
                    (argc == 4) ? (uint16_t)atoi(argv[3]) : 1000, 1000);
 }
 
@@ -102,7 +102,7 @@ static void Servo_Stop_Shell(int argc, char *argv[]) {
 
 /**
  * @brief 所有舵机紧急停止接口（批量停止）
- * @note 遍历所有舵机ID列表，循环调用单舵机停止接口，实现全部舵机立即停止
+ * @note 遍历所有舵机ID，循环调用单舵机停止接口，实现全部舵机立即停止
  */
 void Servo_STOP_ALL(void) {
     for (uint8_t i = 0; i < SERVO_COUNT; i++) {
@@ -210,14 +210,14 @@ static void Servo_Shell(int argc, char *argv[]){
 
     int sub_argc = argc - 1;
     char **sub_argv = &argv[1];
-    
+
     if(strcmp(argv[1], "angle") == 0) {
         Servo_Angle_Shell(sub_argc, sub_argv);
     } else if(strcmp(argv[1], "stop") == 0) {
         Servo_Stop_Shell(sub_argc, sub_argv);
     } else if(strcmp(argv[1], "stopall") == 0) {
         Servo_StopAll_Shell();
-    } 
+    }
     #if SERVO_PING
     else if(strcmp(argv[1], "ping") == 0) {
         Servo_Ping_Shell(sub_argc, sub_argv);
@@ -251,12 +251,12 @@ static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
         case SERVO_CMD_SET_ANGLE_SHELL:
             if(Servo_SetServoAngle(cmd->servoId, cmd->angle,
                                cmd->interval, cmd->power)==SERVO_STATUS_SUCCESS){
-                logPrintln("Servo %d angle set to %.2f", cmd->servoId, cmd->angle);
+                // logPrintln("Servo %d angle set to %.2f", cmd->servoId, cmd->angle);
             }
             break;
         case SERVO_CMD_STOP_SHELL:
             if(Servo_StopOnControlMode(cmd->servoId, 0, 0)==SERVO_STATUS_SUCCESS){
-                logPrintln("Servo %d stop", cmd->servoId);
+                // logPrintln("Servo %d stop", cmd->servoId);
             } else {
                 logPrintln("Servo %d stop failed", cmd->servoId);
             }
@@ -273,9 +273,9 @@ static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
         #if SERVO_DLC
         case SERVO_CMD_RESET_USER_DATA_SHELL:
             if(Servo_ResetData(cmd->servoId)==SERVO_STATUS_SUCCESS){
-                logPrintln("Servo %d user data reset", cmd->servoId);
+                // logPrintln("Servo %d user data reset", cmd->servoId);
             } else {
-                logPrintln("Servo %d user data reset failed (error %d)", cmd->servoId, cmd->servoId);
+                logPrintln("Servo %d user data reset failed", cmd->servoId);
             }
             break;
         #endif
@@ -291,10 +291,10 @@ static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
 void Servo_Ctrl_Task(void *argument) {
     (void)argument;
     ServoCmd_t cmd;
-    
+
     // 等待系统初始化完成
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    
+
     for (;;) {
         // 阻塞等待命令
         if (osMessageQueueGet(Servo_CmdHandle, &cmd, NULL, osWaitForever) == osOK) {

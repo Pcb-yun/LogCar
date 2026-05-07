@@ -19,15 +19,15 @@ extern "C" {
 
 extern UART_HandleTypeDef huart3;
 
-#define SERVO_DLC 0 // 舵机其他功能
-#define SERVO_ASYNC 0 // 异步命令
-#define SERVO_SYNC 0 // 同步命令
-#define SERVO_MONITOR 0 // 监控命令
-#define SERVO_SYNC_MONITOR 0 // 同步监控命令
-#define SERVO_PING 0 // Ping命令
+#define SERVO_DLC 0             // 舵机其他功能
+#define SERVO_ASYNC 0           // 异步命令
+#define SERVO_SYNC 0            // 同步命令
+#define SERVO_MONITOR 0         // 监控命令
+#define SERVO_SYNC_MONITOR 0    // 同步监控命令
+#define SERVO_PING 0            // Ping命令
 
-#define SERVO_TIMEOUT_MS 100     // 串口通讯超时设置
-#define SERVO_MAX_COUNT 2   // 最大舵机数量
+#define SERVO_TIMEOUT_MS 100    // 串口通讯超时设置
+#define SERVO_MAX_COUNT 2       // 最大舵机数量
 
 /**
  * @brief Fashion Star总线伺服舵机协议请求头
@@ -38,56 +38,56 @@ extern UART_HandleTypeDef huart3;
 // 返回的响应数据包最长的长度
 #define SERVO_PACK_RESPONSE_MAX_SIZE 350
 
-#define SERVO_CMD_NUM 30
 
 // SERVO控制指令数据
 // 注: 一下所有的指令都是针对单个舵机的
 #define SERVO_CMD_NUM 30
-#define SERVO_CMD_PING 1                               // 舵机通讯检测
-#define SERVO_CMD_RESET_USER_DATA 2                    // 重置用户数据
-#define SERVO_CMD_READ_DATA 3                          // 单个舵机 读取数据库
-#define SERVO_CMD_WRITE_DATA 4                         // 单个舵机 写入数据块
-#define SERVO_CMD_READ_BATCH_DATA 5                    // 单个舵机 批次读取(读取一个舵机所有的数据)
-#define SERVO_CMD_WRITE_BATCH_DATA 6                   // 单个舵机 批次写入(写入一个舵机所有的数据)
-#define SERVO_CMD_SPIN 7                               // 单个舵机 设置轮式模式
-#define SERVO_CMD_ROTATE 8                             // 角度控制模式(设置舵机的角度))
-#define SERVO_CMD_DAMPING 9                            // 阻尼模式
-#define SERVO_CMD_READ_ANGLE 10                        // 舵机角度读取
-#define SERVO_CMD_SET_ANGLE_BY_INTERVAL 11       // 角度设置(指定周期)
-#define SERVO_CMD_SET_ANGLE_BY_VELOCITY 12       // 角度设置(指定转速)
-#define SERVO_CMD_SET_ANGLE_MTURN 13             // 多圈角度设置
-#define SERVO_CMD_SET_ANGLE_MTURN_BY_INTERVAL 14 // 多圈角度设置(指定周期)
-#define SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY 15 // 多圈角度设置(指定转速)
-#define SERVO_CMD_QUERY_ANGLE_MTURN 16           // 查询舵机角度(多圈)
-#define SERVO_CMD_RESET_ANGLE_MTURN 17          // 重置舵机多圈角度
-#define SERVO_CMD_BEGIN_ASYNC 18                       // 开始异步命令
-#define SERVO_CMD_END_ASYNC 19                      		// 结束异步命令
-#define SERVO_CMD_SET_SERVO_ReadData 22                // 舵机数据监控
-#define SERVO_CMD_SET_ORIGIN_POINT 23                  // 设置零点
-#define SERVO_CMD_CONTROL_MODE_STOP 24                 // 控制模式停止指令
-#define SERVO_CMD_SET_SERVO_SyncCommand 25             // 同步命令
+#define SERVO_CMD_PING 1                                // 舵机通讯检测
+#define SERVO_CMD_RESET_USER_DATA 2                     // 重置用户数据
+#define SERVO_CMD_READ_DATA 3                           // 单个舵机 读取数据库
+#define SERVO_CMD_WRITE_DATA 4                          // 单个舵机 写入数据块
+#define SERVO_CMD_READ_BATCH_DATA 5                     // 单个舵机 批次读取(读取一个舵机所有的数据)
+#define SERVO_CMD_WRITE_BATCH_DATA 6                    // 单个舵机 批次写入(写入一个舵机所有的数据)
+#define SERVO_CMD_SPIN 7                                // 单个舵机 设置轮式模式
+#define SERVO_CMD_ROTATE 8                              // 角度控制模式(设置舵机的角度))
+#define SERVO_CMD_DAMPING 9                             // 阻尼模式
+#define SERVO_CMD_READ_ANGLE 10                         // 舵机角度读取
+#define SERVO_CMD_SET_ANGLE_BY_INTERVAL 11              // 角度设置(指定周期)
+#define SERVO_CMD_SET_ANGLE_BY_VELOCITY 12              // 角度设置(指定转速)
+#define SERVO_CMD_SET_ANGLE_MTURN 13                    // 多圈角度设置
+#define SERVO_CMD_SET_ANGLE_MTURN_BY_INTERVAL 14        // 多圈角度设置(指定周期)
+#define SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY 15        // 多圈角度设置(指定转速)
+#define SERVO_CMD_QUERY_ANGLE_MTURN 16                  // 查询舵机角度(多圈)
+#define SERVO_CMD_RESET_ANGLE_MTURN 17                  // 重置舵机多圈角度
+#define SERVO_CMD_BEGIN_ASYNC 18                        // 开始异步命令
+#define SERVO_CMD_END_ASYNC 19                          // 结束异步命令
+#define SERVO_CMD_SET_SERVO_ReadData 22                 // 舵机数据监控
+#define SERVO_CMD_SET_ORIGIN_POINT 23                   // 设置零点
+#define SERVO_CMD_CONTROL_MODE_STOP 24                  // 控制模式停止指令
+#define SERVO_CMD_SET_SERVO_SyncCommand 25              // 同步命令
 
 // SERVO状态码
-#define SERVO_STATUS uint8_t
-#define SERVO_STATUS_SUCCESS 0               // 设置/读取成功
-#define SERVO_STATUS_FAIL 1                  // 设置/读取失败
-#define SERVO_STATUS_TIMEOUT 2               // 等待超时
-#define SERVO_STATUS_WRONG_RESPONSE_HEADER 3 // 响应头不对
-#define SERVO_STATUS_UNKNOWN_CMD_ID 4         // 未知的控制指令
-#define SERVO_STATUS_SIZE_TOO_BIG 5          // 参数的size大于SERVO_PACK_RESPONSE_MAX_SIZE里面的限制
-#define SERVO_STATUS_CHECKSUM_ERROR 6        // 校验和错误
-#define SERVO_STATUS_ID_NOT_MATCH 7          // 请求的舵机ID跟反馈回来的舵机ID不匹配
-#define SERVO_STATUS_ERROR 8                  // 设置同步模式错误
+typedef enum {
+    SERVO_STATUS_SUCCESS = 0,                  	// 设置/读取成功
+    SERVO_STATUS_FAIL,                         	// 设置/读取失败
+    SERVO_STATUS_TIMEOUT,                      	// 等待超时
+    SERVO_STATUS_WRONG_RESPONSE_HEADER,        	// 响应头不对
+    SERVO_STATUS_UNKNOWN_CMD_ID,               	// 未知的控制指令
+    SERVO_STATUS_SIZE_TOO_BIG,                 	// 参数的size大于SERVO_PACK_RESPONSE_MAX_SIZE里面的限制
+    SERVO_STATUS_CHECKSUM_ERROR,               	// 校验和错误
+    SERVO_STATUS_ID_NOT_MATCH,                 	// 请求的舵机ID跟反馈回来的舵机ID不匹配
+    SERVO_STATUS_ERROR                         	// 设置同步模式错误
+} SERVO_STATUS;
 
 // 静止状态判断条件
-#define SERVO_ANGLE_DEADAREA 2.0f  // 电机角度死区
-#define SERVO_WAIT_COUNT_MAX 10000 // 等待重复查询角度的最大次数
+#define SERVO_ANGLE_DEADAREA 2.0f       // 电机角度死区
+#define SERVO_WAIT_COUNT_MAX 10000      // 等待重复查询角度的最大次数
 
 /* 舵机只读数据ID及使用说明 (只读)*/
-#define SERVO_PARAM_VOLTAGE 1    // 电压 (单位mV)
-#define SERVO_PARAM_CURRENT 2    // 电流 (单位mA)
-#define SERVO_PARAM_POWER 3      // 功率 (单位mw)
-#define SERVO_PARAM_TEMPRATURE 4 // 温度 (单位ADC)
+#define SERVO_PARAM_VOLTAGE 1         // 电压 (单位mV)
+#define SERVO_PARAM_CURRENT 2         // 电流 (单位mA)
+#define SERVO_PARAM_POWER 3           // 功率 (单位mw)
+#define SERVO_PARAM_TEMPRATURE 4      // 温度 (单位ADC)
 
 /*
 舵机工作状态
@@ -100,7 +100,7 @@ BIT[5] - 电流错误置1，电流恢复正常后清零。
 BIT[6] - 功率错误置1，功率恢复正常后清零。
 BIT[7] - 温度错误置1，温度恢复正常后清零。
 */
-#define SERVO_PARAM_SERVO_STATUS 5 // 舵机工作状态 (字节长度 1)
+#define SERVO_PARAM_SERVO_STATUS 5      // 舵机工作状态 (字节长度 1)
 
 /* 舵机用户自定义参数的数据ID及使用说明 (可度也可写)*/
 
@@ -280,7 +280,7 @@ typedef struct {
 * 2：设置舵机的角度(指定周期)
 * 3：设置舵机的角度(指定转速)
 * 4：设置舵机的角度(多圈模式)
-* 5：设置舵机的角度(多圈模式, 指定周期) 
+* 5：设置舵机的角度(多圈模式, 指定周期)
 * 6：设置舵机的角度(多圈模式, 指定转速)
 * 7：读取舵机的数据*/
 typedef enum {
@@ -294,24 +294,19 @@ typedef enum {
 } ServoMode;
 
 
-
-static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
-static uint8_t Servo_CalcChecksum(PackageTypeDef *pkg);
-
 #if SERVO_DLC
-extern ServoData servodata[SERVO_MAX_COUNT];
 SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id);
 SERVO_STATUS Servo_ResetUserData(uint8_t servo_id);
 SERVO_STATUS Servo_ReadData(uint8_t servo_id,  uint8_t address, uint8_t *value, uint8_t *size);
 SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, uint8_t size);
-SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id, 
-				float angle, uint16_t interval, uint16_t t_acc, 
+SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
+				float angle, uint16_t interval, uint16_t t_acc,
 				uint16_t t_dec, uint16_t  power);
 SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
 				float angle, float velocity, uint16_t t_acc,
 				uint16_t t_dec, uint16_t  power);
 SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle);
-SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle, 
+SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
 	                                uint32_t interval, uint16_t power);
 SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
 				uint32_t interval,  uint16_t t_acc,  uint16_t t_dec, uint16_t power);
@@ -333,16 +328,12 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
 SERVO_STATUS Servo_Monitor(uint8_t servo_id, ServoData servodata[]);
 #endif
 #if SERVO_SYNC_MONITOR
-static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg);
 SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]);
 #endif
 #if SERVO_PING
 SERVO_STATUS Servo_Ping(uint8_t servo_id);
-static SERVO_STATUS Servo_RecvPackage(PackageTypeDef *pkg);
-static SERVO_STATUS Servo_IsValidResponsePackage(PackageTypeDef *pkg);
 #endif
 
-void Servo_Uart_Send(uint8_t* data, uint16_t size);
 SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interval, uint16_t power);
 SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t power);
 

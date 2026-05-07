@@ -13,7 +13,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include "servo_driver.h"
-#include "cmsis_os.h"
+#include "cmsis_os2.h"
 
 // 基础使用说明
 #define SERVO_CMD_USAGE \
@@ -57,9 +57,6 @@ extern "C" {
 /* 舵机数量配置 */
 #define SERVO_COUNT         6
 
-/* 舵机 ID 列表 */
-extern const uint8_t ServoIDList[SERVO_COUNT];
-
 typedef enum {
     SERVO_CMD_SET_ANGLE_SHELL = 0,
     SERVO_CMD_STOP_SHELL = 1,
@@ -94,7 +91,7 @@ extern osMessageQueueId_t Servo_CmdHandle;
 
 void Servo_Init(void);
 void Servo_Ctrl_Task(void *argument);
-    
+
 bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
 bool Servo_STOP(uint8_t id);
 void Servo_STOP_ALL(void);

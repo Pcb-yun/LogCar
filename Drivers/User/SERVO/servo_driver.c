@@ -12,9 +12,15 @@
 #include <math.h>
 #include "Events.h"
 
+static uint8_t Servo_CalcChecksum(PackageTypeDef *pkg);
+
+
+#if SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
+ServoData servodata[SERVO_MAX_COUNT];
+#endif
+
 /*舵机其他功能*/
 #if SERVO_DLC
-ServoData servodata[SERVO_MAX_COUNT];
 /**
  * @brief 重置舵机的用户资料
  * @param servo_id 伺服ID
@@ -111,8 +117,8 @@ SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, 
  * @param power 功率
  * @return SERVO_STATUS 状态码
  */
-SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id, 
-				float angle, uint16_t interval, uint16_t t_acc, 
+SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
+				float angle, uint16_t interval, uint16_t t_acc,
 				uint16_t t_dec, uint16_t  power){
 
 	const uint8_t size = 11;
@@ -130,7 +136,7 @@ SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
 		t_dec = 20;
 	}
     int16_t scaledAngle = (int16_t)(10*angle);
-	
+
 	// 协议打包
     uint8_t content[size];
 	content[0] = servo_id;                           // 1字节：舵机ID
@@ -144,10 +150,10 @@ SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
 	content[8] = (t_dec >> 8) & 0xFF;                // t_dec高字节
 	content[9] = power & 0xFF;                       // power低字节
 	content[10] = (power >> 8) & 0xFF;               // power高字节
-	
+
 	// 发送请求包
 	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_BY_INTERVAL, size, content,0);
-	
+
 	return SERVO_STATUS_SUCCESS;
 }
 
@@ -166,7 +172,7 @@ SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
 				uint16_t t_dec, uint16_t  power){
 	// 创建环形缓冲队列
 	const uint8_t size = 11;
-	
+
 	// 数值约束
 	if(angle > 180.0f){
 		angle = 180.0f;
@@ -186,7 +192,7 @@ SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
 	}
 	int16_t scaledAngle = (int16_t)(10*angle);
 	uint16_t scaledVelocity = (uint16_t)(10*velocity);
-	
+
 	// 协议打包
     uint8_t content[size];
 	content[0] = servo_id;                           // 1字节：舵机ID
@@ -200,10 +206,10 @@ SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
 	content[8] = (t_dec >> 8) & 0xFF;                // t_dec高字节
 	content[9] = power & 0xFF;                       // power低字节
 	content[10] = (power >> 8) & 0xFF;               // power高字节
-	
+
 	// 发送请求包
 	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_BY_VELOCITY, size, content,0);
-	
+
 	return SERVO_STATUS_SUCCESS;
 }
 
@@ -217,7 +223,7 @@ SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle){
 	const uint8_t size = 1; // 请求包content的长度
 	uint8_t ehcoServoId;
 	int16_t echoAngle;
-	
+
 	// 发送舵机角度请求包
 	Servo_SendPackage_Common(SERVO_CMD_READ_ANGLE, size, &servo_id,0);
 	// 接收返回的Ping
@@ -234,7 +240,7 @@ SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle){
 
 		// 提取舵机角度
 		echoAngle = (int16_t)(pkg.content[1] | (pkg.content[2] << 8));
-		*angle = (float)(echoAngle / 10.0);
+		*angle = (float)echoAngle / 10.0f;
 	}
   return statusCode;
 }
@@ -247,12 +253,12 @@ SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle){
  * @param power 功率
  * @return SERVO_STATUS 状态码
  */
-SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle, 
+SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
 	                                    uint32_t interval, uint16_t power){
 
 	const uint8_t size = 11;
 
-	// 数值约束			
+	// 数值约束
 	if(angle > 368640.0f){
 		angle = 368640.0f;
 	}else if(angle < -368640.0f){
@@ -277,7 +283,7 @@ SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
     content[8] = (interval >> 24) & 0xFF;
     content[9] = power & 0xFF;
     content[10] = (power >> 8) & 0xFF;
-	
+
     // 发送请求包
     return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN, size, content,0);
 }
@@ -296,8 +302,8 @@ SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
 		    	uint32_t interval,  uint16_t t_acc,  uint16_t t_dec, uint16_t power){
 
 	const uint8_t size = 15;
-	
-	// 数值约束			
+
+	// 数值约束
 	if(angle > 368640.0f){
 		angle = 368640.0f;
 	}else if(angle < -368640.0f){
@@ -332,7 +338,7 @@ SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
 	content[12] = (t_dec >> 8) & 0xFF;                        // t_dec高字节
 	content[13] = power & 0xFF;                               // power低字节
 	content[14] = (power >> 8) & 0xFF;                        // power高字节
-	
+
 	// 发送请求包
     return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_INTERVAL, size, content,0);
 }
@@ -387,7 +393,7 @@ SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
 	content[10] = (t_dec >> 8) & 0xFF;                        // t_dec高字节
 	content[11] = power & 0xFF;                               // power低字节
 	content[12] = (power >> 8) & 0xFF;                        // power高字节
-	
+
     // 发送请求包
     return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY, size, content,0);
 }
@@ -402,7 +408,7 @@ SERVO_STATUS Servo_QueryServoAngleMTurn(uint8_t servo_id, float *angle){
 	const uint8_t size = 1; // 请求包content的长度
 	uint8_t ehcoServoId;
 	int32_t echoAngle;
-	
+
 	// 发送舵机角度请求包
 	Servo_SendPackage_Common(SERVO_CMD_QUERY_ANGLE_MTURN, size, &servo_id,0);
 	// 接收返回的Ping
@@ -416,10 +422,10 @@ SERVO_STATUS Servo_QueryServoAngleMTurn(uint8_t servo_id, float *angle){
 			// 反馈得到的舵机ID号不匹配
 			return SERVO_STATUS_ID_NOT_MATCH;
 		}
-		
+
 		// 提取舵机角度
 		echoAngle = (int32_t)(pkg.content[1] | (pkg.content[2] << 8) |  (pkg.content[3] << 16) | (pkg.content[4] << 24));
-		*angle = (float)(echoAngle / 10.0);
+		*angle = (float)echoAngle / 10.0f;
 	}
   return statusCode;
 }
@@ -430,7 +436,7 @@ SERVO_STATUS Servo_QueryServoAngleMTurn(uint8_t servo_id, float *angle){
  * @param power 功率
  * @return SERVO_STATUS 状态码
  */
-SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power){   
+SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power){
 	const uint8_t size = 3; // 请求包content的长度
 
 	// 构造content
@@ -461,12 +467,12 @@ SERVO_STATUS Servo_ResetServoMTurnAngle(uint8_t servo_id){
  * @brief 零点设置 仅适用于无刷磁编码舵机
  * @param servo_id 伺服ID
  * @return SERVO_STATUS 状态码
- */ 
+ */
 SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id){
 	uint8_t statusCode; // 状态码
 	PackageTypeDef pkg;
 
-	Servo_SendPackage_Common(SERVO_CMD_SET_ORIGIN_POINT, 2, &servo_id,0);
+	Servo_SendPackage_Common(SERVO_CMD_SET_ORIGIN_POINT, 1, &servo_id,0);
 	// 接收返回的Ping
 	statusCode = Servo_RecvPackage(&pkg);
 	return statusCode;
@@ -524,13 +530,13 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
         case MODE_SET_SERVO_ANGLE:
             /* 同步命令设置舵机的角度(单圈模式）*/
             size = 3 + servo_count * 7;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 8;     // 指令标识
             content[1] = 7;     // 参数长度
             content[2] = servo_count;  // 舵机数量
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int16_t angle;
                 if (servoSync[i].angle > 180.0f) {
@@ -542,7 +548,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 }
                 uint16_t interval = servoSync[i].interval_single;
                 uint16_t power = servoSync[i].power;
-                
+
                 uint8_t *p = content + 3 + i * 7;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -553,17 +559,17 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[6] = (power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_SET_SERVO_ANGLE_BY_INTERVAL:
             /* 同步命令设置舵机的角度(单圈模式，指定周期) */
             size = 3 + servo_count * 11;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 11;
             content[1] = 11;
             content[2] = servo_count;
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int16_t angle;
                 if (servoSync[i].angle > 180.0f) {
@@ -573,7 +579,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 } else {
                     angle = (int16_t)(10 * servoSync[i].angle);
                 }
-                
+
                 uint8_t *p = content + 3 + i * 11;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -588,17 +594,17 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[10] = (servoSync[i].power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_SET_SERVO_ANGLE_BY_VELOCITY:
             /* 同步命令设置舵机的角度(单圈模式，指定转速) */
             size = 3 + servo_count * 11;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 12;
             content[1] = 11;
             content[2] = servo_count;
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int16_t angle;
                 if (servoSync[i].angle > 180.0f) {
@@ -609,7 +615,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                     angle = (int16_t)(10 * servoSync[i].angle);
                 }
                 uint16_t velocity = (uint16_t)(10.0f * servoSync[i].velocity);
-                
+
                 uint8_t *p = content + 3 + i * 11;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -624,17 +630,17 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[10] = (servoSync[i].power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_SET_SERVO_ANGLE_MTURN:
             /* 同步命令设置舵机的角度(多圈模式) */
             size = 3 + servo_count * 11;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 13;
             content[1] = 11;
             content[2] = servo_count;
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int32_t angle;
                 if (servoSync[i].angle > 368640.0f) {
@@ -644,7 +650,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 } else {
                     angle = (int32_t)(10 * servoSync[i].angle);
                 }
-                
+
                 uint8_t *p = content + 3 + i * 11;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -659,17 +665,17 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[10] = (servoSync[i].power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_SET_SERVO_ANGLE_MTURN_BY_INTERVAL:
             /* 同步命令设置舵机的角度(多圈模式, 指定周期) */
             size = 3 + servo_count * 15;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 14;
             content[1] = 15;
             content[2] = servo_count;
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int32_t angle;
                 if (servoSync[i].angle > 368640.0f) {
@@ -679,7 +685,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 } else {
                     angle = (int32_t)(10 * servoSync[i].angle);
                 }
-                
+
                 uint8_t *p = content + 3 + i * 15;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -698,17 +704,17 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[14] = (servoSync[i].power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_SET_SERVO_ANGLE_MTURN_BY_VELOCITY:
             /* 同步命令设置舵机的角度(多圈模式, 指定转速) */
             size = 3 + servo_count * 13;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 15;
             content[1] = 13;
             content[2] = servo_count;
-            
+
             for (int i = 0; i < servo_count; i++) {
                 int32_t angle;
                 if (servoSync[i].angle > 368640.0f) {
@@ -719,7 +725,7 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                     angle = (int32_t)(10 * servoSync[i].angle);
                 }
                 uint16_t velocity = (uint16_t)(10.0f * servoSync[i].velocity);
-                
+
                 uint8_t *p = content + 3 + i * 13;
                 p[0] = servoSync[i].id;
                 p[1] = angle & 0xFF;
@@ -736,13 +742,13 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 p[12] = (servoSync[i].power >> 8) & 0xFF;
             }
             break;
-            
+
         case MODE_Query_SERVO_Monitor:
             /* 同步命令读取舵机的数据 */
             size = 3 + servo_count;
-            content = (uint8_t *)malloc(size);
+            content = (uint8_t *)pvPortMalloc(size);
             if (content == NULL) return SERVO_STATUS_FAIL;
-            
+
             content[0] = 22;
             content[1] = 1;
             content[2] = servo_count;
@@ -750,23 +756,23 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
                 content[3 + i] = servoSync[i].id;
             }
             break;
-            
+
         default:
             return SERVO_STATUS_ERROR;
     }
-    
+
     // 发送请求包（根据size是否超过255决定isSync）
     uint8_t isSync = (size > 255) ? 1 : 0;
     Servo_SendPackage_Common(SERVO_CMD_SET_SERVO_SyncCommand, size, content, isSync);
-    
+
     // 如果是监控模式，接收响应数据
     if (ServoMode == MODE_Query_SERVO_Monitor) {
         Servo_SyncServoMonitor(servo_count, servodata);
     }
-    
+
     // 释放动态分配的内存
-    free(content);
-    
+    vPortFree(content);
+
     return SERVO_STATUS_SUCCESS;
 }
 #endif
@@ -828,18 +834,18 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
     uint8_t header = 0;
     uint8_t bIdx = 0;
     uint32_t startTime = osKernelGetTickCount();
-    
+
     // 初始化包状态
     pkg->status = 0;
-    
+
     // 超时等待（100ms）
     while((osKernelGetTickCount() - startTime) < SERVO_TIMEOUT_MS) {
-        
+
         // 从队列获取一个字节
         if(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) != osOK) {
             continue;
         }
-        
+
         // 帧头同步检测：严格匹配 0x05 0x1C
         if ((pkg->status & SERVO_RECV_FLAG_HEADER) == 0) {
             if (header == 0 && byte == 0x05) {
@@ -853,7 +859,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
             }
             continue;
         }
-        
+
         // 解析 cmdId
         if ((pkg->status & SERVO_RECV_FLAG_CMD_ID) == 0) {
             pkg->cmdId = byte;
@@ -863,7 +869,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
             pkg->status |= SERVO_RECV_FLAG_CMD_ID;
             continue;
         }
-        
+
         // 解析 size
         if ((pkg->status & SERVO_RECV_FLAG_SIZE) == 0) {
             pkg->size = byte;
@@ -873,7 +879,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
             pkg->status |= SERVO_RECV_FLAG_SIZE;
             continue;
         }
-        
+
         // 读取 content
         if ((pkg->status & SERVO_RECV_FLAG_CONTENT) == 0) {
             pkg->content[bIdx++] = byte;
@@ -882,7 +888,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
             }
             continue;
         }
-        
+
         // 校验和
         if ((pkg->status & SERVO_RECV_FLAG_CHECKSUM) == 0) {
             pkg->checksum = byte;
@@ -892,7 +898,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(PackageTypeDef *pkg) {
             return SERVO_STATUS_SUCCESS;
         }
     }
-    
+
     return SERVO_STATUS_TIMEOUT;
 }
 
@@ -907,18 +913,18 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]) 
     PackageTypeDef pkg;
     SERVO_STATUS status;
     uint8_t packet_count = 0;
-    
+
     while (packet_count < servo_count) {
         status = Servo_Sync_RecvPackage(&pkg);
         if (status != SERVO_STATUS_SUCCESS) {
             return status;
         }
-        
+
         servodata[packet_count].id = pkg.content[0];
         servodata[packet_count].voltage = (int16_t)((pkg.content[2] << 8) | pkg.content[1]);
         servodata[packet_count].current = (int16_t)((pkg.content[4] << 8) | pkg.content[3]);
         servodata[packet_count].power = (int16_t)((pkg.content[6] << 8) | pkg.content[5]);
-        
+
         // 温度转换（原公式，添加保护）
         uint16_t adc_temp = (uint16_t)((pkg.content[8] << 8) | pkg.content[7]);
         if (adc_temp < 4096) {  // 避免除零
@@ -928,20 +934,20 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]) 
         } else {
             servodata[packet_count].temperature = 0;
         }
-        
+
         servodata[packet_count].status = pkg.content[9];
-        
-        int32_t raw_angle = (int32_t)((pkg.content[13] << 24) | 
-                                      (pkg.content[12] << 16) | 
-                                      (pkg.content[11] << 8) | 
+
+        int32_t raw_angle = (int32_t)((pkg.content[13] << 24) |
+                                      (pkg.content[12] << 16) |
+                                      (pkg.content[11] << 8) |
                                       pkg.content[10]);
         servodata[packet_count].angle = (float)(raw_angle / 10.0f);
         servodata[packet_count].circle_count = (int16_t)((pkg.content[15] << 8) | pkg.content[14]);
-        
+
         packet_count++;
         memset(&pkg, 0, sizeof(PackageTypeDef));
     }
-    
+
     return SERVO_STATUS_SUCCESS;
 }
 #endif
@@ -957,35 +963,35 @@ static SERVO_STATUS Servo_RecvPackage(PackageTypeDef *pkg) {
     uint8_t byte;
     uint16_t header = 0;
     uint32_t startTime = osKernelGetTickCount();
-    
+
     // 超时等待（100ms）
     while((osKernelGetTickCount() - startTime) < 100) {
-        
+
         // 1. 查找帧头（滑动窗口）
         while(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) == osOK) {
             // 构建16位帧头
             header = (header << 8) | byte;
-            
+
             if(header == SERVO_PACK_RESPONSE_HEADER) {  // 0x1C05
                 pkg->header = header;
                 break;
             }
         }
-        
+
         if(header != SERVO_PACK_RESPONSE_HEADER) {
             continue;  // 没找到帧头，继续
         }
-        
+
         // 2. 接收 cmdId
         if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->cmdId, NULL, 10) != osOK) {
             continue;
         }
-        
+
         // 3. 接收 size（判断是否同步模式）
         if(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) != osOK) {
             continue;
         }
-        
+
         if(byte == 0xFF) {
             // 同步模式：size 占2字节
             pkg->isSync = 1;
@@ -998,28 +1004,28 @@ static SERVO_STATUS Servo_RecvPackage(PackageTypeDef *pkg) {
             pkg->isSync = 0;
             pkg->size = byte;
         }
-        
+
         // 4. 检查 size 有效性
         if(pkg->size == 0 || pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE) {
             continue;  // 无效大小，重新同步
         }
-        
+
         // 5. 接收 content
         for(uint16_t i = 0; i < pkg->size; i++) {
             if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->content[i], NULL, 10) != osOK) {
                 break;
             }
         }
-        
+
         // 6. 接收 checksum
         if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->checksum, NULL, 10) != osOK) {
             continue;
         }
-        
+
         // 7. 验证包有效性
         return Servo_IsValidResponsePackage(pkg);
     }
-    
+
     return SERVO_STATUS_TIMEOUT;
 }
 
@@ -1083,7 +1089,7 @@ static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8
     };
     memcpy(pkg.content, content, size);
     pkg.checksum = Servo_CalcChecksum(&pkg);
-    
+
 
     // 发送数据到串口队列
     if(osMessageQueuePut(Servo_Tx_DataHandle, &pkg, 0, 50) != osOK){
@@ -1148,11 +1154,8 @@ SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interva
     content[5] = power & 0xFF;                // power低字节
     content[6] = (power >> 8) & 0xFF;         // power高字节
 
-	// 发送请求包
-    logPrintln("Package size: %d", size);
-		
 	return Servo_SendPackage_Common(SERVO_CMD_ROTATE, size, content,0);
-		
+
 }
 
 /**
@@ -1174,7 +1177,7 @@ SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t po
 	content[1] = mode | 0x10;
 	content[2] = power & 0xFF;
 	content[3] = (power >> 8) & 0xFF;
-			
+
     return Servo_SendPackage_Common(SERVO_CMD_CONTROL_MODE_STOP,(uint8_t)size, content,0);
 }
 
@@ -1185,19 +1188,18 @@ SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t po
  * @return 字节流长度
  */
 static uint16_t Servo_PackageToBytes(PackageTypeDef *pkg, uint8_t *buffer) {
-    logPrintln("Servo Package size: %d", pkg->size);
     uint16_t offset = 0;
     uint8_t checksum = 0;
-    
+
     // 1. 写入帧头（小端：低字节在前）
     buffer[offset++] = pkg->header & 0xFF;        // 帧头低字节
     buffer[offset++] = (pkg->header >> 8) & 0xFF; // 帧头高字节
     checksum += buffer[offset-2] + buffer[offset-1];
-    
+
     // 2. 写入命令ID
     buffer[offset++] = pkg->cmdId;
     checksum += pkg->cmdId;
-    
+
     // 3. 写入长度字段
     if (pkg->isSync || pkg->size > 255) {
         // 同步模式：0xFF + 2字节长度
@@ -1211,16 +1213,16 @@ static uint16_t Servo_PackageToBytes(PackageTypeDef *pkg, uint8_t *buffer) {
         buffer[offset++] = pkg->size & 0xFF;
         checksum += pkg->size;
     }
-    
+
     // 4. 写入内容数据
     for (uint16_t i = 0; i < pkg->size; i++) {
         buffer[offset++] = pkg->content[i];
         checksum += pkg->content[i];
     }
-    
+
     // 5. 写入校验和
     buffer[offset++] = checksum % 256;
-    
+
     return offset;
 }
 
@@ -1230,8 +1232,6 @@ static uint16_t Servo_PackageToBytes(PackageTypeDef *pkg, uint8_t *buffer) {
  * @param size 发送数据大小
  */
 static void Servo_Uart_Send(uint8_t* data, uint16_t size) {
-    logPrintln("Servo UART send %d bytes", size);
-
     osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
     HAL_UART_Transmit_DMA(&huart3, data, size);
 
@@ -1249,16 +1249,13 @@ void Servo_Tx_Task(void *argument) {
     PackageTypeDef pkg;
     uint8_t txBuffer[256];
     uint16_t len;
-    logPrintln("Servo UART send task");
-    while(1) {
-        
 
+    for(;;) {
         if(osMessageQueueGet(Servo_Tx_DataHandle, &pkg, NULL, osWaitForever) == osOK) {
             len = Servo_PackageToBytes(&pkg, txBuffer);
-            
+
             // 同步发送（等待发送完成）
             Servo_Uart_Send(txBuffer, len);
         }
     }
 }
-
