@@ -28,10 +28,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "string.h"
+#include "servo_driver.h"
 
 static uint8_t rx1Buffer[USART1_RX_BUF_SIZE];
 uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
+uint8_t rx3Buffer[USART3_RX_BUF_SIZE];
 static Uart4_RxBuf_t rx4Buf;
+
+
+
 
 /* USER CODE END 0 */
 
@@ -150,7 +155,7 @@ void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 1000000;
+  huart3.Init.BaudRate = 115200;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
@@ -630,6 +635,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
       osEventFlagsSet(System_StatusHandle, UART1_TX_IDLE);
   } else if (huart->Instance == USART6) {
       osEventFlagsSet(System_StatusHandle, UART6_TX_IDLE);
+  } else if (huart->Instance == USART3) {
+    osEventFlagsSet(System_StatusHandle, UART3_TX_IDLE);
   }
 }
 
@@ -688,6 +695,20 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       }
     }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart4, rx4Buf.data, USART4_RX_BUF_SIZE);
+  } else if (huart->Instance == USART3) {
+    if(huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
+      extern osMessageQueueId_t Servo_Rx_DataHandle;
+
+      osStatus_t state;
+      for (uint16_t i = 0; i < Size; i++) {
+        state = osMessageQueuePut(Servo_Rx_DataHandle, &rx3Buffer[i], NULL, 0);
+        if (state != osOK) {
+          logWarning("Failed to put data into Servo message queue, code: %d", state);
+          break; // 如果队列满了，跳出循环
+        }
+      }
+      HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
+    }
   }
 }
 
@@ -710,7 +731,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 		huart->gState = HAL_UART_STATE_READY;
 
 		HAL_UARTEx_ReceiveToIdle_DMA(huart, rx1Buffer, USART1_RX_BUF_SIZE);
-	}
+  }
 }
 
 /**

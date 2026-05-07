@@ -34,7 +34,7 @@
                 "USE_HAL_DRIVER",
                 "STM32F407xx",
                 "STM32_THREAD_SAFE_STRATEGY=4",
-                "USE_WG=1"
+                "USE_WG=0"
             ]
         }
     ],

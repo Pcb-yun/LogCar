@@ -99,10 +99,8 @@ virtualFolder:
       folders: []
     - name: servo
       files:
-        - path: Drivers/User/SERVO/fashion_star_uart_servo.c
-        - path: Drivers/User/SERVO/ring_buffer.c
+        - path: Drivers/User/SERVO/servo_driver.c
         - path: Drivers/User/SERVO/servo_port.c
-        - path: Drivers/User/SERVO/user_uart.c
       folders: []
     - name: step
       files:
@@ -129,7 +127,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F407xx
         - STM32_THREAD_SAFE_STRATEGY=4
-        - USE_WG=1
+        - USE_WG=0
       incList:
         - Core/Inc
         - Drivers/STM32F4xx_HAL_Driver/Inc
