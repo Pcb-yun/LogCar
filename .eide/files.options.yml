@@ -19,4 +19,6 @@ options:
         files: {}
         virtualPathFiles:
             <virtual_root>/Application/User/Core/dma.c: ""
+            <virtual_root>/Application/User/Core/iwdg.c: ""
             <virtual_root>/Application/User/Core/tim.c: ""
+            <virtual_root>/Drivers/STM32F4xx_HAL_Driver/stm32f4xx_hal_iwdg.c: ""

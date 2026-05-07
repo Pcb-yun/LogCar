@@ -68,8 +68,8 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
     char spinner[] = {'|', '/', '-', '\\'};
     uint8_t spinner_idx = 0;
 
-    logPrintln("The calibration takes about 15 minutes and the error is absolutely stationary.\r\n" \
-        "Calibration is not recommended in general.\r\n" \
+    logPrintln("The calibration takes about 15 minutes and the error is absolutely stationary.\r\n"
+        "Calibration is not recommended in general.\r\n"
         "Would you like to proceed? (y/n)\r\n");
 
     char ch;
@@ -166,8 +166,8 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
         cmd[3] = 'Y';
         logPrintln("Set Y to %ld", int_value);
     } else {
-        logPrintln("Invalid command: %s", argv[1]);
-        logPrintln(OPS_SET_HELP); return;
+        logPrintln("Invalid command: %s\r\n"
+                OPS_SET_HELP, argv[1]); return;
     }
 
     memcpy(&cmd[4], data.bytes, 4);

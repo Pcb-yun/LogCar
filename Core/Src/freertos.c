@@ -164,6 +164,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void configureTimerForRunTimeStats(void);
 unsigned long getRunTimeCounterValue(void);
 void vApplicationIdleHook(void);
+void vApplicationTickHook(void);
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 void vApplicationMallocFailedHook(void);
 
@@ -197,6 +198,24 @@ void vApplicationIdleHook( void )
   HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_10);
 }
 /* USER CODE END 2 */
+
+/* USER CODE BEGIN 3 */
+void vApplicationTickHook( void )
+{
+   /* This function will be called by each tick interrupt if
+   configUSE_TICK_HOOK is set to 1 in FreeRTOSConfig.h. User code can be
+   added here, but the tick hook is called from an interrupt context, so
+   code must not attempt to block, and only the interrupt safe FreeRTOS API
+   functions can be used (those that end in FromISR()). */
+
+
+#if USE_WG
+  extern IWDG_HandleTypeDef hiwdg;
+  HAL_IWDG_Refresh(&hiwdg);
+#endif
+
+}
+/* USER CODE END 3 */
 
 /* USER CODE BEGIN 4 */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
@@ -343,12 +362,19 @@ void Sys_Init_Task(void *argument)
   /* USER CODE BEGIN Sys_Init_Task */
   (void)argument;
 
+#if USE_WG
+  SHOW_DMESG(dmesg_wait, "Initialize Watch Dog");
+  extern void MX_IWDG_Init(void);
+  MX_IWDG_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+#endif
+
   SHOW_DMESG(dmesg_wait, "Initialize Shell");
   extern void userShellInit(void);
   userShellInit();
   SHOW_DMESG(dmesg_ok, NULL);
 
-  SHOW_DMESG(dmesg_wait, "Initialize shell log.");
+  SHOW_DMESG(dmesg_wait, "Initialize shell log");
   extern void logInit(void);
   logInit();
   SHOW_DMESG(dmesg_ok, NULL);
@@ -383,4 +409,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

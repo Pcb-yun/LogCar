@@ -52,6 +52,9 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void print_stacked_registers(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3,
+                                  uint32_t r12, uint32_t lr, uint32_t pc, uint32_t xpsr);
+static void print_xpsr_analysis(uint32_t xpsr);
 
 /* USER CODE END 0 */
 
@@ -85,7 +88,7 @@ void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] NMI Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -93,6 +96,7 @@ void NMI_Handler(void)
   uint32_t *nmi_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t nvic_icsr, nvic_adr, nvic_shp12, nvic_shp13, rcc_csr;
 
   nmi_args = (uint32_t *)__get_MSP();
 
@@ -105,21 +109,22 @@ void NMI_Handler(void)
   stacked_pc  = nmi_args[6];
   stacked_xpsr = nmi_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- NMI Configuration Registers -------------------------------\r\n"
+  nvic_icsr = *(volatile uint32_t *)0xE000ED04;
+  nvic_adr  = *(volatile uint32_t *)0xE000ED08;
+  nvic_shp12 = (*(volatile uint32_t *)0xE000ED20) >> 24;
+  nvic_shp13 = (*(volatile uint32_t *)0xE000ED20) >> 16;
+  rcc_csr   = *(volatile uint32_t *)0x40023804;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- NMI Configuration Registers -------------------------------\r\n"
              "  NVIC_ICSR  = 0x%08lX\r\n"
              "  NVIC_ADR   = 0x%08lX\r\n"
              "  NVIC_SHp12 = 0x%08lX\r\n"
              "  NVIC_SHp13 = 0x%08lX\r\n"
              "  RCC_CSR    = 0x%08lX\r\n\r\n"
              "--- NMI Source Analysis --------------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3, 
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            nvic_icsr, nvic_adr, nvic_shp12, nvic_shp13, rcc_csr);
   if (nvic_icsr & 0x04000000) {
     my_printf("  [NMI] NMI bit set in NVIC_ICSR\r\n");
@@ -143,22 +148,15 @@ void NMI_Handler(void)
     my_printf("  [NMI] HSERDY - High Speed External Crystal ready\r\n");
   }
 
-  my_printf("\r\n"
-             "--- xPSR Analysis -------------------------------------------\r\n"
-             "  [xPSR] C: Carry flag set\r\n"
-             "  [xPSR] Z: Zero flag set\r\n"
-             "  [xPSR] N: Negative flag set\r\n"
-             "  [xPSR] V: Overflow flag set\r\n"
-             "  [xPSR] Thumb bit: %s\r\n"
-             "  [xPSR] Exception Number: %lu\r\n\r\n"
-             "============================================================\r\n"
+  print_xpsr_analysis(stacked_xpsr);
+
+  my_printf("============================================================\r\n"
              "  [FATAL] System halted due to NMI exception\r\n"
-             "============================================================\r\n",
-           (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
-           (stacked_xpsr & 0x000001FF));
+             "============================================================\r\n");
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
-  while (1)
+  /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
+   while (1)
   {
   }
   /* USER CODE END NonMaskableInt_IRQn 1 */
@@ -171,7 +169,7 @@ void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] HardFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -179,6 +177,7 @@ void HardFault_Handler(void)
   uint32_t *hardfault_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t cfsr, hfsr, dfsr, afsr, bfar, mmfar;
 
   hardfault_args = (uint32_t *)__get_MSP();
 
@@ -191,13 +190,17 @@ void HardFault_Handler(void)
   stacked_pc  = hardfault_args[6];
   stacked_xpsr = hardfault_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- Fault Status Registers -----------------------------------\r\n"
+  cfsr   = *(volatile uint32_t *)0xE000ED28;
+  hfsr   = *(volatile uint32_t *)0xE000ED2C;
+  dfsr   = *(volatile uint32_t *)0xE000ED30;
+  afsr   = *(volatile uint32_t *)0xE000ED3C;
+  bfar   = *(volatile uint32_t *)0xE000ED38;
+  mmfar  = *(volatile uint32_t *)0xE000ED34;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- Fault Status Registers -----------------------------------\r\n"
              "  CFSR  = 0x%08lX\r\n"
              "  HFSR  = 0x%08lX\r\n"
              "  DFSR  = 0x%08lX\r\n"
@@ -205,10 +208,8 @@ void HardFault_Handler(void)
              "  BFAR  = 0x%08lX\r\n"
              "  MMFAR = 0x%08lX\r\n\r\n"
              "--- Fault Analysis --------------------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3,
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            cfsr, hfsr, dfsr, afsr, bfar, mmfar);
-  
+
   if (cfsr & 0x00800000) {
     my_printf("  [MemManage] MemManage Fault also occurred\r\n");
     if (cfsr & 0x00008000) {
@@ -298,24 +299,17 @@ void HardFault_Handler(void)
     my_printf("  MemManage Address    = 0x%08lX\r\n", mmfar);
   }
 
-  my_printf("\r\n"
-             "--- xPSR Analysis -------------------------------------------\r\n"
-             "  [xPSR] C: Carry flag set\r\n"
-             "  [xPSR] Z: Zero flag set\r\n"
-             "  [xPSR] N: Negative flag set\r\n"
-             "  [xPSR] V: Overflow flag set\r\n"
-             "  [xPSR] Q: Saturation flag set\r\n"
-             "  [xPSR] Thumb bit: %s\r\n"
-             "  [xPSR] Exception Number: %lu\r\n\r\n"
-             "============================================================\r\n"
+  print_xpsr_analysis(stacked_xpsr);
+
+  my_printf("============================================================\r\n"
              "  [FATAL] System halted due to HardFault exception\r\n"
-             "============================================================\r\n",
-           (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
-           (stacked_xpsr & 0x000001FF));
+             "============================================================\r\n");
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
 
@@ -326,7 +320,7 @@ void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] MemManage Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -334,6 +328,7 @@ void MemManage_Handler(void)
   uint32_t *mm_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t cfsr, hfsr, dfsr, afsr, mmfar;
 
   mm_args = (uint32_t *)__get_MSP();
 
@@ -346,21 +341,22 @@ void MemManage_Handler(void)
   stacked_pc  = mm_args[6];
   stacked_xpsr = mm_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- MemManage Fault Registers -------------------------------\r\n"
+  cfsr   = *(volatile uint32_t *)0xE000ED28;
+  hfsr   = *(volatile uint32_t *)0xE000ED2C;
+  dfsr   = *(volatile uint32_t *)0xE000ED30;
+  afsr   = *(volatile uint32_t *)0xE000ED3C;
+  mmfar  = *(volatile uint32_t *)0xE000ED34;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- MemManage Fault Registers -------------------------------\r\n"
              "  CFSR  = 0x%08lX\r\n"
              "  HFSR  = 0x%08lX\r\n"
              "  DFSR  = 0x%08lX\r\n"
              "  AFSR  = 0x%08lX\r\n"
              "  MMFAR = 0x%08lX\r\n\r\n"
              "--- MemManage Fault Analysis --------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3,
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            cfsr, hfsr, dfsr, afsr, mmfar);
   if (cfsr & 0x00008000) {
     my_printf("  [MemManage] Bus Fault also occurred\r\n");
@@ -402,23 +398,17 @@ void MemManage_Handler(void)
     my_printf("  Instruction at fault: 0x%08lX\r\n", stacked_pc);
   }
 
-  my_printf("\r\n"
-             "--- xPSR Analysis -------------------------------------------\r\n"
-             "  [xPSR] C: Carry flag set\r\n"
-             "  [xPSR] Z: Zero flag set\r\n"
-             "  [xPSR] N: Negative flag set\r\n"
-             "  [xPSR] V: Overflow flag set\r\n"
-             "  [xPSR] Thumb bit: %s\r\n"
-             "  [xPSR] Exception Number: %lu\r\n\r\n"
-             "============================================================\r\n"
+  print_xpsr_analysis(stacked_xpsr);
+
+  my_printf("============================================================\r\n"
              "  [FATAL] System halted due to MemManage exception\r\n"
-             "============================================================\r\n",
-           (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
-           (stacked_xpsr & 0x000001FF));
+             "============================================================\r\n");
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
 
@@ -429,7 +419,7 @@ void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] BusFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -437,6 +427,7 @@ void BusFault_Handler(void)
   uint32_t *bus_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t cfsr, hfsr, dfsr, afsr, bfar;
 
   bus_args = (uint32_t *)__get_MSP();
 
@@ -449,21 +440,22 @@ void BusFault_Handler(void)
   stacked_pc  = bus_args[6];
   stacked_xpsr = bus_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- BusFault Registers ----------------------------------------\r\n"
+  cfsr   = *(volatile uint32_t *)0xE000ED28;
+  hfsr   = *(volatile uint32_t *)0xE000ED2C;
+  dfsr   = *(volatile uint32_t *)0xE000ED30;
+  afsr   = *(volatile uint32_t *)0xE000ED3C;
+  bfar   = *(volatile uint32_t *)0xE000ED38;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- BusFault Registers ----------------------------------------\r\n"
              "  CFSR = 0x%08lX\r\n"
              "  HFSR = 0x%08lX\r\n"
              "  DFSR = 0x%08lX\r\n"
              "  AFSR = 0x%08lX\r\n"
              "  BFAR = 0x%08lX\r\n\r\n"
              "--- BusFault Analysis ------------------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3,
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            cfsr, hfsr, dfsr, afsr, bfar);
   if (cfsr & 0x00800000) {
     my_printf("  [BusFault] MemManage Fault also occurred\r\n");
@@ -512,23 +504,19 @@ void BusFault_Handler(void)
              "  1. Invalid memory access to peripheral register\r\n"
              "  2. Attempted to access non-existent memory region\r\n"
              "  3. Bus timeout or peripheral error\r\n"
-             "  4. Flash memory read error (ECC failure)\r\n\r\n"
-             "--- xPSR Analysis -------------------------------------------\r\n"
-             "  [xPSR] C: Carry flag set\r\n"
-             "  [xPSR] Z: Zero flag set\r\n"
-             "  [xPSR] N: Negative flag set\r\n"
-             "  [xPSR] V: Overflow flag set\r\n"
-             "  [xPSR] Thumb bit: %s\r\n"
-             "  [xPSR] Exception Number: %lu\r\n\r\n"
-             "============================================================\r\n"
+             "  4. Flash memory read error (ECC failure)\r\n");
+
+  print_xpsr_analysis(stacked_xpsr);
+
+  my_printf("============================================================\r\n"
              "  [FATAL] System halted due to BusFault exception\r\n"
-             "============================================================\r\n",
-           (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
-           (stacked_xpsr & 0x000001FF));
+             "============================================================\r\n");
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+    /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
 
@@ -539,7 +527,7 @@ void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] UsageFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -547,6 +535,7 @@ void UsageFault_Handler(void)
   uint32_t *usage_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t cfsr, hfsr, dfsr, afsr;
 
   usage_args = (uint32_t *)__get_MSP();
 
@@ -559,20 +548,20 @@ void UsageFault_Handler(void)
   stacked_pc  = usage_args[6];
   stacked_xpsr = usage_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- UsageFault Registers ---------------------------------------\r\n"
+  cfsr   = *(volatile uint32_t *)0xE000ED28;
+  hfsr   = *(volatile uint32_t *)0xE000ED2C;
+  dfsr   = *(volatile uint32_t *)0xE000ED30;
+  afsr   = *(volatile uint32_t *)0xE000ED3C;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- UsageFault Registers ---------------------------------------\r\n"
              "  CFSR = 0x%08lX\r\n"
              "  HFSR = 0x%08lX\r\n"
              "  DFSR = 0x%08lX\r\n"
              "  AFSR = 0x%08lX\r\n\r\n"
              "--- UsageFault Analysis ----------------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3,
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            cfsr, hfsr, dfsr, afsr);
   if (cfsr & 0x00800000) {
     my_printf("  [UsageFault] MemManage Fault also occurred\r\n");
@@ -617,33 +606,27 @@ void UsageFault_Handler(void)
   my_printf("\r\n--- Fault Context Information --------------------------------\r\n"
              "  Program Counter (PC) = 0x%08lX\r\n"
              "  Link Register (LR)   = 0x%08lX\r\n"
-             "  Stack Pointer (SP)   = 0x%08lX\r\n\r\n"
-             "--- Common Causes ----------------------------------------------\r\n"
+             "  Stack Pointer (SP)   = 0x%08lX\r\n",
+           stacked_pc, stacked_lr, (uint32_t)usage_args);
+
+  my_printf("--- Common Causes ----------------------------------------------\r\n"
              "  1. NULL pointer dereference\r\n"
              "  2. Invalid function pointer call\r\n"
              "  3. Division by zero in integer arithmetic\r\n"
              "  4. Misaligned memory access\r\n"
-             "  5. Corrupted stack or heap memory\r\n\r\n"
-             "--- xPSR Analysis -------------------------------------------\r\n"
-             "  [xPSR] C: Carry flag set\r\n"
-             "  [xPSR] Z: Zero flag set\r\n"
-             "  [xPSR] N: Negative flag set\r\n"
-             "  [xPSR] V: Overflow flag set\r\n"
-             "  [xPSR] Q: Saturation flag set\r\n"
-             "  [xPSR] Thumb bit: %s\r\n"
-             "  [xPSR] Exception Number: %lu\r\n"
-             "  [xPSR] IPSR (Interrupt Program Status): %u\r\n\r\n"
-             "============================================================\r\n"
+             "  5. Corrupted stack or heap memory\r\n");
+
+  print_xpsr_analysis(stacked_xpsr);
+
+  my_printf("============================================================\r\n"
              "  [FATAL] System halted due to UsageFault exception\r\n"
-             "============================================================\r\n",
-           stacked_pc, stacked_lr, (uint32_t)usage_args,
-           (stacked_xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
-           (stacked_xpsr & 0x000001FF),
-           (uint8_t)(stacked_xpsr & 0x000000FF));
+             "============================================================\r\n");
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
   {
+    /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
 
@@ -654,7 +637,7 @@ void DebugMon_Handler(void)
 {
   /* USER CODE BEGIN DebugMonitor_IRQn 0 */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-  
+
   my_printf("\r\n============================================================\r\n"
              "  [WARNING] DebugMonitor Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -662,6 +645,7 @@ void DebugMon_Handler(void)
   uint32_t *debug_args;
   uint32_t stacked_r0, stacked_r1, stacked_r2, stacked_r3;
   uint32_t stacked_r12, stacked_lr, stacked_pc, stacked_xpsr;
+  uint32_t dfsr, hfsr, dcrsr, dcrdr, demcr;
 
   debug_args = (uint32_t *)__get_MSP();
 
@@ -674,21 +658,22 @@ void DebugMon_Handler(void)
   stacked_pc  = debug_args[6];
   stacked_xpsr = debug_args[7];
 
-  my_printf("--- Stacked Registers ----------------------------------------\r\n"
-             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
-             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
-             "  R12 = 0x%08lX\r\n"
-             "  LR  = 0x%08lX\r\n"
-             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n"
-             "--- Debug Monitor Registers ----------------------------------\r\n"
+  dfsr   = *(volatile uint32_t *)0xE000ED30;
+  hfsr   = *(volatile uint32_t *)0xE000ED2C;
+  dcrsr  = *(volatile uint32_t *)0xE000ED34;
+  dcrdr  = *(volatile uint32_t *)0xE000ED38;
+  demcr  = *(volatile uint32_t *)0xE000EDFC;
+
+  print_stacked_registers(stacked_r0, stacked_r1, stacked_r2, stacked_r3,
+                          stacked_r12, stacked_lr, stacked_pc, stacked_xpsr);
+
+  my_printf("--- Debug Monitor Registers ----------------------------------\r\n"
              "  DFSR  = 0x%08lX\r\n"
              "  HFSR  = 0x%08lX\r\n"
              "  DCRSR = 0x%08lX\r\n"
              "  DCRDR = 0x%08lX\r\n"
              "  DEMCR = 0x%08lX\r\n\r\n"
              "--- Debug Fault Analysis --------------------------------------\r\n",
-           stacked_r0, stacked_r1, stacked_r2, stacked_r3,
-           stacked_r12, stacked_lr, stacked_pc, stacked_xpsr,
            dfsr, hfsr, dcrsr, dcrdr, demcr);
   if (demcr & 0x00000001) {
     my_printf("  [Debug] DEMCR: VC_CORERESET - Core reset vector trap enabled\r\n");
@@ -970,5 +955,31 @@ void USART6_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+static void print_stacked_registers(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3,
+                                    uint32_t r12, uint32_t lr, uint32_t pc, uint32_t xpsr) {
+  my_printf("--- Stacked Registers ----------------------------------------\r\n"
+             "  R0  = 0x%08lX  |  R1  = 0x%08lX\r\n"
+             "  R2  = 0x%08lX  |  R3  = 0x%08lX\r\n"
+             "  R12 = 0x%08lX\r\n"
+             "  LR  = 0x%08lX\r\n"
+             "  PC  = 0x%08lX  |  xPSR = 0x%08lX\r\n\r\n",
+           r0, r1, r2, r3, r12, lr, pc, xpsr);
+}
+
+static void print_xpsr_analysis(uint32_t xpsr) {
+  my_printf("\r\n--- xPSR Analysis -------------------------------------------\r\n"
+             "  [xPSR] C: Carry flag set\r\n"
+             "  [xPSR] Z: Zero flag set\r\n"
+             "  [xPSR] N: Negative flag set\r\n"
+             "  [xPSR] V: Overflow flag set\r\n"
+             "  [xPSR] Q: Saturation flag set\r\n"
+             "  [xPSR] Thumb bit: %s\r\n"
+             "  [xPSR] Exception Number: %lu\r\n"
+             "  [xPSR] IPSR (Interrupt Program Status): %u\r\n\r\n",
+           (xpsr & 0x01000000) ? "Set (Thumb mode)" : "Clear",
+           (xpsr & 0x000001FF),
+           (uint8_t)(xpsr & 0x000000FF));
+}
 
 /* USER CODE END 1 */

@@ -20,8 +20,8 @@
 typedef struct {
 	uint16_t linear_speed;	// 线速度（厘米/秒）
 	uint16_t yaw_speed;		// 偏摆速度（度/秒）
-	uint16_t car_acc;		// 加速度
-	uint16_t car_dec;		// 减速度
+	uint16_t car_acc;		// 加速度（厘米/秒²）
+	uint16_t car_dec;		// 减速度（厘米/秒²）
 } MotionControlState_t;
 
 MotionControlState_t g_motion_control;

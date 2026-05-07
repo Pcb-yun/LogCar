@@ -126,8 +126,8 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
         }
         logPrintln("Status: %s , Time: %d", mode_str, track.time);
     } else {
-        logPrintln("invalid command: %s", argv[1]);
-        logPrintln(TRACK_MODE_HELP);
+        logPrintln("invalid command: %s"
+                TRACK_MODE_HELP, argv[1]);
     }
 }
 
@@ -145,8 +145,8 @@ static void Track_Time_Sell(int argc, char *argv[]) {
     char *endptr;
     long val = strtol(argv[1], &endptr, 10);
     if(*endptr != '\0') {
-        logPrintln("invalid time value: %s", argv[1]);
-        logPrintln(TRACK_TIME_HELP);
+        logPrintln("invalid time value: %s"
+                TRACK_TIME_HELP, argv[1]);
         return;
     } else {
         track.time = (uint16_t)val;
@@ -162,8 +162,9 @@ static void Track_View_Sell(void) {
     char ch;
     extern Shell shell;
 
-    logPrintln("Track Data Viewer - Press ^C to exit");
-    logPrintln("Analog : - - - - - - - -\r\nDigital: - - - - - - - -");
+    logPrintln("Track Data Viewer - Press ^C to exit\r\n"
+            "Analog : - - - - - - - -\r\n"
+            "Digital: - - - - - - - -");
 
     for(;;) {
         if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 50) == osOK) {
@@ -187,20 +188,20 @@ static void Track_View_Sell(void) {
                             trackData.analogData[6], trackData.analogData[7]);
                     break;
                 case TRACK_ALL:
-                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d",
-                        trackData.analogData[0], trackData.analogData[1],
-                        trackData.analogData[2], trackData.analogData[3],
-                        trackData.analogData[4], trackData.analogData[5],
-                        trackData.analogData[6], trackData.analogData[7]);
-                    logPrintln("\033[2K\rDigital: %d %d %d %d %d %d %d %d",
-                        (trackData.digitalData & 0x80) ? 1 : 0,
-                        (trackData.digitalData & 0x40) ? 1 : 0,
-                        (trackData.digitalData & 0x20) ? 1 : 0,
-                        (trackData.digitalData & 0x10) ? 1 : 0,
-                        (trackData.digitalData & 0x08) ? 1 : 0,
-                        (trackData.digitalData & 0x04) ? 1 : 0,
-                        (trackData.digitalData & 0x02) ? 1 : 0,
-                        (trackData.digitalData & 0x01) ? 1 : 0);
+                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d\r\n"
+                            "\033[2K\rDigital: %d %d %d %d %d %d %d %d",
+                            trackData.analogData[0], trackData.analogData[1],
+                            trackData.analogData[2], trackData.analogData[3],
+                            trackData.analogData[4], trackData.analogData[5],
+                            trackData.analogData[6], trackData.analogData[7],
+                            (trackData.digitalData & 0x80) ? 1 : 0,
+                            (trackData.digitalData & 0x40) ? 1 : 0,
+                            (trackData.digitalData & 0x20) ? 1 : 0,
+                            (trackData.digitalData & 0x10) ? 1 : 0,
+                            (trackData.digitalData & 0x08) ? 1 : 0,
+                            (trackData.digitalData & 0x04) ? 1 : 0,
+                            (trackData.digitalData & 0x02) ? 1 : 0,
+                            (trackData.digitalData & 0x01) ? 1 : 0);
                     break;
             }
         }

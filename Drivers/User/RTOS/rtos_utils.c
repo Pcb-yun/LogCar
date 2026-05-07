@@ -20,13 +20,20 @@ static void Memory_Info(void) {
 
     vPortGetHeapStats(&xHeapStats);
 
-    logPrintln("Free heap: %u bytes", xHeapStats.xAvailableHeapSpaceInBytes);
-    logPrintln("Min ever free: %u bytes", xHeapStats.xMinimumEverFreeBytesRemaining);
-    logPrintln("Largest free block: %u bytes", xHeapStats.xSizeOfLargestFreeBlockInBytes);
-    logPrintln("Smallest free block: %u bytes", xHeapStats.xSizeOfSmallestFreeBlockInBytes);
-    logPrintln("Number of free blocks: %u", xHeapStats.xNumberOfFreeBlocks);
-    logPrintln("Successful allocations: %u", xHeapStats.xNumberOfSuccessfulAllocations);
-    logPrintln("Successful frees: %u", xHeapStats.xNumberOfSuccessfulFrees);
+    logPrintln("Free heap: %u bytes\r\n"
+               "Min ever free: %u bytes\r\n"
+               "Largest free block: %u bytes\r\n"
+               "Smallest free block: %u bytes\r\n"
+               "Number of free blocks: %u\r\n"
+               "Successful allocations: %u\r\n"
+               "Successful frees: %u",
+               xHeapStats.xAvailableHeapSpaceInBytes,
+               xHeapStats.xMinimumEverFreeBytesRemaining,
+               xHeapStats.xSizeOfLargestFreeBlockInBytes,
+               xHeapStats.xSizeOfSmallestFreeBlockInBytes,
+               xHeapStats.xNumberOfFreeBlocks,
+               xHeapStats.xNumberOfSuccessfulAllocations,
+               xHeapStats.xNumberOfSuccessfulFrees);
 }
 
 /**
@@ -36,8 +43,8 @@ static void Task_Info(void) {
     osThreadId_t task_ids[32];
     uint32_t task_count = osThreadEnumerate(task_ids, 32);
 
-    logPrintln("ID        Name          State       Priority    Stack Space    High Water    Runtime");
-    logPrintln("------------------------------------------------------------------------------------");
+    logPrintln("ID        Name          State       Priority    Stack Space    High Water    Runtime\r\n"
+               "------------------------------------------------------------------------------------");
 
     // 获取总运行时间
     uint32_t ulTotalRunTime;
@@ -103,19 +110,22 @@ static void Time_Info(void) {
     uint32_t seconds = (tick_count % (tick_freq * 60)) / tick_freq;
     uint32_t milliseconds = (tick_count % tick_freq) * 1000 / tick_freq;
 
-    logPrintln("Tick Frequency: %lu Hz", tick_freq);
-    logPrintln("System Tick: %lu", tick_count);
-    logPrintln("Uptime: %02lu:%02lu:%02lu.%03lu", hours, minutes, seconds, milliseconds);
+    logPrintln("Tick Frequency: %lu Hz\r\n"
+            "System Tick: %lu\r\n"
+            "Uptime: %02lu:%02lu:%02lu.%03lu",
+            tick_freq, tick_count, hours,
+            minutes, seconds, milliseconds);
 
     uint32_t sysclk = HAL_RCC_GetSysClockFreq();
     uint32_t hclk = HAL_RCC_GetHCLKFreq();
     uint32_t pclk1 = HAL_RCC_GetPCLK1Freq();
     uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
 
-    logPrintln("System Clock: %lu Hz", sysclk);
-    logPrintln("HCLK: %lu Hz", hclk);
-    logPrintln("PCLK1: %lu Hz", pclk1);
-    logPrintln("PCLK2: %lu Hz", pclk2);
+    logPrintln("System Clock: %lu Hz\r\n"
+            "HCLK: %lu Hz\r\n"
+            "PCLK1: %lu Hz\r\n"
+            "PCLK2: %lu Hz",
+            sysclk, hclk, pclk1, pclk2);
 }
 
 /**
@@ -136,8 +146,8 @@ static void OS_Tool_Shell(int argc, char *argv[]) {
     } else if(strcmp(argv[1], "time") == 0) {
         Time_Info();
     } else {
-        logPrintln("Invalid os command: %s", argv[1]);
-        logPrintln(OS_HELP);
+        logPrintln("Invalid os command: %s\r\n"
+                OS_HELP, argv[1]);
     }
 }
 SHELL_EXPORT_CMD(

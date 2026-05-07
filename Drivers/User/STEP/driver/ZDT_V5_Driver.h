@@ -23,8 +23,6 @@ extern "C" {
 #define __IO volatile
 #endif
 
-#define					ABS(x)							((x) > 0 ? (x) : -(x))
-
 /**
  * @brief 电机指令枚举
  * @note 后缀有(Y42)的为Y42新增指令，X42不支持
