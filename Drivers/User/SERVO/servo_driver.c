@@ -953,6 +953,24 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]) 
 #endif
 /*Ping命令*/
 #if SERVO_PING
+static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
+/**
+ * @brief 验证伺服数据包有效性
+ * @param pkg 数据包指针
+ * @return SERVO_STATUS 状态码
+ */
+static SERVO_STATUS Servo_IsValidResponsePackage(Package_t *pkg) {
+    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
+        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
+    if (pkg->cmdId > SERVO_CMD_NUM)
+        return SERVO_STATUS_UNKNOWN_CMD_ID;
+    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
+        return SERVO_STATUS_SIZE_TOO_BIG;
+    if (Servo_CalcChecksum(pkg) != pkg->checksum)
+        return SERVO_STATUS_CHECKSUM_ERROR;
+    return SERVO_STATUS_SUCCESS;
+}
+
 /**
  * @brief 接收伺服数据包
  * @param pkg 数据包指针
@@ -961,24 +979,26 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]) 
 static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     extern osMessageQueueId_t Servo_Rx_DataHandle;
     uint8_t byte;
-    uint16_t header = 0;
+    uint8_t header_byte1 = 0;
+    uint8_t header_byte2 = 0;
     uint32_t startTime = osKernelGetTickCount();
 
     // 超时等待（100ms）
-    while((osKernelGetTickCount() - startTime) < 100) {
+    while((osKernelGetTickCount() - startTime) < 1000) {
 
         // 1. 查找帧头（滑动窗口）
         while(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) == osOK) {
-            // 构建16位帧头
-            header = (header << 8) | byte;
-
-            if(header == SERVO_PACK_RESPONSE_HEADER) {  // 0x1C05
-                pkg->header = header;
+            if(header_byte1 == 0 && byte == 0x05) {
+                header_byte1 = byte;  // 收到第一个字节 0x05
+            } else if(header_byte1 == 0x05 && byte == 0x1C) {
+                pkg->header = 0x1C05;  // 帧头检测成功
                 break;
+            } else {
+                header_byte1 = 0;  // 不匹配，重置
             }
         }
 
-        if(header != SERVO_PACK_RESPONSE_HEADER) {
+        if(pkg->header != SERVO_PACK_RESPONSE_HEADER) {
             continue;  // 没找到帧头，继续
         }
 
@@ -1027,23 +1047,6 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     }
 
     return SERVO_STATUS_TIMEOUT;
-}
-
-/**
- * @brief 验证伺服数据包有效性
- * @param pkg 数据包指针
- * @return SERVO_STATUS 状态码
- */
-static SERVO_STATUS Servo_IsValidResponsePackage(Package_t *pkg) {
-    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
-        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
-    if (pkg->cmdId > SERVO_CMD_NUM)
-        return SERVO_STATUS_UNKNOWN_CMD_ID;
-    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
-        return SERVO_STATUS_SIZE_TOO_BIG;
-    if (Servo_CalcChecksum(pkg) != pkg->checksum)
-        return SERVO_STATUS_CHECKSUM_ERROR;
-    return SERVO_STATUS_SUCCESS;
 }
 
 /**

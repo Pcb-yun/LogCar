@@ -11,7 +11,6 @@
 #include "shell_cmd_group.h"
 #include "freeRTOS.h"
 #include "task.h"
-#include "cmsis_os.h"
 #include "Events.h"
 #include <string.h>
 #include <stdlib.h>
@@ -27,7 +26,7 @@
 bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
     if (id == 0 || id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
-        return false;
+        return false; 
     }
     ServoCmd_t cmd = {
         .cmdType = SERVO_CMD_SET_ANGLE_SHELL,

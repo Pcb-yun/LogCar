@@ -25,7 +25,7 @@ extern UART_HandleTypeDef huart3;
 #define SERVO_SYNC 0            // 同步命令
 #define SERVO_MONITOR 0         // 监控命令
 #define SERVO_SYNC_MONITOR 0    // 同步监控命令
-#define SERVO_PING 0            // Ping命令
+#define SERVO_PING 1            // Ping命令
 
 #define SERVO_TIMEOUT_MS 100    // 串口通讯超时设置
 #define SERVO_MAX_COUNT 2       // 最大舵机数量

@@ -109,7 +109,7 @@ const osThreadAttr_t OPS_Update_attributes = {
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for Servo_Tx */

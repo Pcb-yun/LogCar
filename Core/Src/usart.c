@@ -167,7 +167,7 @@ void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -696,17 +696,22 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart4, rx4Buf.data, USART4_RX_BUF_SIZE);
   } else if (huart->Instance == USART3) {
-    if(huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
+    // 舵机串口接收事件
+    if (huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
       extern osMessageQueueId_t Servo_Rx_DataHandle;
-
-      osStatus_t state;
-      for (uint16_t i = 0; i < Size; i++) {
-        state = osMessageQueuePut(Servo_Rx_DataHandle, &rx3Buffer[i], NULL, 0);
-        if (state != osOK) {
-          logWarning("Failed to put data into Servo message queue, code: %d", state);
-          break; // 如果队列满了，跳出循环
-        }
+      // 只有收到数据时才处理（IDLE 或 DMA 传输完成）
+      if(Size > 0) {
+        osStatus_t state;
+        for (uint16_t i = 0; i < Size; i++) {
+          state = osMessageQueuePut(Servo_Rx_DataHandle, &rx3Buffer[i], NULL, 0);
+          if (state != osOK) {
+            logWarning("Failed to put data into Servo message queue, code: %d", state);
+            break;
+            }
+         }
       }
+        
+      //启动接收
       HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
     }
   }
