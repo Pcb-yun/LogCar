@@ -13,100 +13,13 @@
 #include "Events.h"
 
 static uint8_t Servo_CalcChecksum(Package_t *pkg);
+static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
 
-
-#if SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
+#if SERVO_ADVANCED_MODE || SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
 ServoData servodata[SERVO_MAX_COUNT];
 #endif
-
-/*舵机其他功能*/
-#if SERVO_DLC
-/**
- * @brief 重置舵机的用户资料
- * @param servo_id 伺服ID
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_ResetUserData(uint8_t servo_id){
-	const uint8_t size = 1;
-	SERVO_STATUS statusCode;
-	// 发送请求包
-	Servo_SendPackage_Common(SERVO_CMD_RESET_USER_DATA, size, &servo_id,0);
-	// 接收重置结果
-	Package_t pkg;
-	statusCode = Servo_RecvPackage(&pkg);
-	if (statusCode == SERVO_STATUS_SUCCESS){
-		// 成功的接收到反馈数据
-		// 读取反馈数据中的result
-		uint8_t result = (uint8_t)pkg.content[1];
-		if (result == 1){
-			return SERVO_STATUS_SUCCESS;
-		}else{
-			return SERVO_STATUS_FAIL;
-		}
-	}
-	return statusCode;
-}
-
-/**
- * @brief 读取伺服数据
- * @param servo_id 伺服ID
- * @param address 地址
- * @param value 数据指针
- * @param size 数据大小指针
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_ReadData(uint8_t servo_id,  uint8_t address, uint8_t *value, uint8_t *size){
-    SERVO_STATUS statusCode;
-    uint8_t buffer[2] = {servo_id, address};
-    Servo_SendPackage_Common(SERVO_CMD_READ_DATA, 2, buffer,0);
-    Package_t pkg;
-    statusCode = Servo_RecvPackage(&pkg);
-    if(statusCode == SERVO_STATUS_SUCCESS){
-        // 读取数据
-		// 读取数据是多少个位
-		*size = pkg.size - 2; // content的长度减去servo_id跟address的长度
-		// 数据拷贝
-		for (int i=0; i<*size; i++){
-			value[i] = pkg.content[i+2];
-		}
-    }
-    return statusCode;
-}
-
-/**
- * @brief 写入伺服数据
- * @param servo_id 伺服ID
- * @param address 地址
- * @param value 数据指针
- * @param size 数据大小
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, uint8_t size){
-	SERVO_STATUS statusCode;
-	// 构造content
-	uint8_t buffer[size+2]; // 舵机ID + 地址位Address + 数据byte数
-	buffer[0] = servo_id;
-	buffer[1] = address;
-	// 拷贝数据
-	for (int i=0; i<size; i++){
-		buffer[i+2] = value[i];
-	}
-	// 发送请求数据
-	Servo_SendPackage_Common(SERVO_CMD_WRITE_DATA, size+2, buffer,0);
-	// 接收返回信息
-	Package_t pkg;
-	statusCode = Servo_RecvPackage(&pkg);
-	if (statusCode == SERVO_STATUS_SUCCESS){
-		uint8_t result = pkg.content[2];
-		if(result == 1){
-			statusCode = SERVO_STATUS_SUCCESS;
-		}else{
-			statusCode = SERVO_STATUS_FAIL;
-		}
-	}
-	return statusCode;
-}
-
+/*舵机进阶模式*/
+#if SERVO_ADVANCED_MODE
 /**
  * @brief 设置伺服角度(指定周期)
  * @param servo_id 伺服ID
@@ -211,81 +124,6 @@ SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
 	Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_BY_VELOCITY, size, content,0);
 
 	return SERVO_STATUS_SUCCESS;
-}
-
-/**
- * @brief 查询伺服角度
- * @param servo_id 伺服ID
- * @param angle 角度指针
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle){
-	const uint8_t size = 1; // 请求包content的长度
-	uint8_t ehcoServoId;
-	int16_t echoAngle;
-
-	// 发送舵机角度请求包
-	Servo_SendPackage_Common(SERVO_CMD_READ_ANGLE, size, &servo_id,0);
-	// 接收返回的Ping
-	Package_t pkg;
-	uint8_t statusCode = Servo_RecvPackage(&pkg);
-	if (statusCode == SERVO_STATUS_SUCCESS){
-		// 成功的获取到舵机角度回读数据
-		ehcoServoId = (uint8_t)pkg.content[0];
-		// 检测舵机ID是否匹配
-		if (ehcoServoId != servo_id){
-			// 反馈得到的舵机ID号不匹配
-			return SERVO_STATUS_ID_NOT_MATCH;
-		}
-
-		// 提取舵机角度
-		echoAngle = (int16_t)(pkg.content[1] | (pkg.content[2] << 8));
-		*angle = (float)echoAngle / 10.0f;
-	}
-  return statusCode;
-}
-
-/**
- * @brief 设置伺服角度(多圈模式)
- * @param servo_id 伺服ID
- * @param angle 角度
- * @param interval 时间间隔
- * @param power 功率
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
-	                                    uint32_t interval, uint16_t power){
-
-	const uint8_t size = 11;
-
-	// 数值约束
-	if(angle > 368640.0f){
-		angle = 368640.0f;
-	}else if(angle < -368640.0f){
-		angle = -368640.0f;
-	}
-	if(interval > 4096000){
-		interval = 4096000;
-	}
-
-    int32_t scaledAngle = (int32_t)(10*angle);
-
-	// 协议打包
-    uint8_t content[size];
-    content[0] = servo_id;
-    content[1] = scaledAngle & 0xFF;
-    content[2] = (scaledAngle >> 8) & 0xFF;
-    content[3] = (scaledAngle >> 16) & 0xFF;
-    content[4] = (scaledAngle >> 24) & 0xFF;
-    content[5] = interval & 0xFF;
-    content[6] = (interval >> 8) & 0xFF;
-    content[7] = (interval >> 16) & 0xFF;
-    content[8] = (interval >> 24) & 0xFF;
-    content[9] = power & 0xFF;
-    content[10] = (power >> 8) & 0xFF;
-
-    // 发送请求包
-    return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN, size, content,0);
 }
 
 /**
@@ -397,6 +235,128 @@ SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
     // 发送请求包
     return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN_BY_VELOCITY, size, content,0);
 }
+
+#endif
+/*舵机其他功能*/
+#if SERVO_DLC
+/**
+ * @brief 重置舵机的用户资料
+ * @param servo_id 伺服ID
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_ResetUserData(uint8_t servo_id){
+	const uint8_t size = 1;
+	SERVO_STATUS statusCode;
+	// 发送请求包
+	Servo_SendPackage_Common(SERVO_CMD_RESET_USER_DATA, size, &servo_id,0);
+	// 接收重置结果
+	Package_t pkg;
+	statusCode = Servo_RecvPackage(&pkg);
+	if (statusCode == SERVO_STATUS_SUCCESS){
+		// 成功的接收到反馈数据
+		// 读取反馈数据中的result
+		uint8_t result = (uint8_t)pkg.content[1];
+		if (result == 1){
+			return SERVO_STATUS_SUCCESS;
+		}else{
+			return SERVO_STATUS_FAIL;
+		}
+	}
+	return statusCode;
+}
+
+/**
+ * @brief 读取伺服数据
+ * @param servo_id 伺服ID
+ * @param address 地址
+ * @param value 数据指针
+ * @param size 数据大小指针
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_ReadData(uint8_t servo_id,  uint8_t address, uint8_t *value, uint8_t *size){
+    SERVO_STATUS statusCode;
+    uint8_t buffer[2] = {servo_id, address};
+    Servo_SendPackage_Common(SERVO_CMD_READ_DATA, 2, buffer,0);
+    Package_t pkg;
+    statusCode = Servo_RecvPackage(&pkg);
+    if(statusCode == SERVO_STATUS_SUCCESS){
+        // 读取数据
+		// 读取数据是多少个位
+		*size = pkg.size - 2; // content的长度减去servo_id跟address的长度
+		// 数据拷贝
+		for (int i=0; i<*size; i++){
+			value[i] = pkg.content[i+2];
+		}
+    }
+    return statusCode;
+}
+
+/**
+ * @brief 写入伺服数据
+ * @param servo_id 伺服ID
+ * @param address 地址
+ * @param value 数据指针
+ * @param size 数据大小
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, uint8_t size){
+	SERVO_STATUS statusCode;
+	// 构造content
+	uint8_t buffer[size+2]; // 舵机ID + 地址位Address + 数据byte数
+	buffer[0] = servo_id;
+	buffer[1] = address;
+	// 拷贝数据
+	for (int i=0; i<size; i++){
+		buffer[i+2] = value[i];
+	}
+	// 发送请求数据
+	Servo_SendPackage_Common(SERVO_CMD_WRITE_DATA, size+2, buffer,0);
+	// 接收返回信息
+	Package_t pkg;
+	statusCode = Servo_RecvPackage(&pkg);
+	if (statusCode == SERVO_STATUS_SUCCESS){
+		uint8_t result = pkg.content[2];
+		if(result == 1){
+			statusCode = SERVO_STATUS_SUCCESS;
+		}else{
+			statusCode = SERVO_STATUS_FAIL;
+		}
+	}
+	return statusCode;
+}
+
+/**
+ * @brief 查询伺服角度
+ * @param servo_id 伺服ID
+ * @param angle 角度指针
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle){
+	const uint8_t size = 1; // 请求包content的长度
+	uint8_t ehcoServoId;
+	int16_t echoAngle;
+
+	// 发送舵机角度请求包
+	Servo_SendPackage_Common(SERVO_CMD_READ_ANGLE, size, &servo_id,0);
+	// 接收返回的Ping
+	Package_t pkg;
+	uint8_t statusCode = Servo_RecvPackage(&pkg);
+	if (statusCode == SERVO_STATUS_SUCCESS){
+		// 成功的获取到舵机角度回读数据
+		ehcoServoId = (uint8_t)pkg.content[0];
+		// 检测舵机ID是否匹配
+		if (ehcoServoId != servo_id){
+			// 反馈得到的舵机ID号不匹配
+			return SERVO_STATUS_ID_NOT_MATCH;
+		}
+
+		// 提取舵机角度
+		echoAngle = (int16_t)(pkg.content[1] | (pkg.content[2] << 8));
+		*angle = (float)echoAngle / 10.0f;
+	}
+  return statusCode;
+}
+
 /**
  * @brief 查询舵机的角度(多圈模式)
  * @param servo_id 伺服ID
@@ -454,7 +414,7 @@ SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power){
  * @return SERVO_STATUS 状态码
  */
 SERVO_STATUS Servo_ResetServoMTurnAngle(uint8_t servo_id){
-    uint8_t statusCode; // 状态码
+    SERVO_STATUS statusCode; // 状态码
 	Package_t pkg;
 
 	Servo_SendPackage_Common(SERVO_CMD_RESET_ANGLE_MTURN, 1, &servo_id,0);
@@ -469,7 +429,7 @@ SERVO_STATUS Servo_ResetServoMTurnAngle(uint8_t servo_id){
  * @return SERVO_STATUS 状态码
  */
 SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id){
-	uint8_t statusCode; // 状态码
+	SERVO_STATUS statusCode; // 状态码
 	Package_t pkg;
 
 	Servo_SendPackage_Common(SERVO_CMD_SET_ORIGIN_POINT, 1, &servo_id,0);
@@ -980,11 +940,10 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     extern osMessageQueueId_t Servo_Rx_DataHandle;
     uint8_t byte;
     uint8_t header_byte1 = 0;
-    uint8_t header_byte2 = 0;
     uint32_t startTime = osKernelGetTickCount();
 
     // 超时等待（100ms）
-    while((osKernelGetTickCount() - startTime) < 1000) {
+    while((osKernelGetTickCount() - startTime) < 100) {
 
         // 1. 查找帧头（滑动窗口）
         while(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) == osOK) {
@@ -1055,7 +1014,7 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
  * @return SERVO_STATUS 状态码
  */
 SERVO_STATUS Servo_Ping(uint8_t servo_id){
-	uint8_t statusCode; // 状态码
+	SERVO_STATUS statusCode; // 状态码
 	uint8_t ehcoServoId; // PING得到的舵机ID
 	// printf("[PING]Send Ping Package\r\n");
 	// 发送请求包
@@ -1159,6 +1118,49 @@ SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interva
 
 	return Servo_SendPackage_Common(SERVO_CMD_ROTATE, size, content,0);
 
+}
+
+/**
+ * @brief 设置伺服角度(多圈模式)
+ * @param servo_id 伺服ID
+ * @param angle 角度
+ * @param interval 时间间隔
+ * @param power 功率
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
+	                                    uint32_t interval, uint16_t power){
+
+	const uint8_t size = 11;
+
+	// 数值约束
+	if(angle > 368640.0f){
+		angle = 368640.0f;
+	}else if(angle < -368640.0f){
+		angle = -368640.0f;
+	}
+	if(interval > 4096000){
+		interval = 4096000;
+	}
+
+    int32_t scaledAngle = (int32_t)(10*angle);
+
+	// 协议打包
+    uint8_t content[size];
+    content[0] = servo_id;
+    content[1] = scaledAngle & 0xFF;
+    content[2] = (scaledAngle >> 8) & 0xFF;
+    content[3] = (scaledAngle >> 16) & 0xFF;
+    content[4] = (scaledAngle >> 24) & 0xFF;
+    content[5] = interval & 0xFF;
+    content[6] = (interval >> 8) & 0xFF;
+    content[7] = (interval >> 16) & 0xFF;
+    content[8] = (interval >> 24) & 0xFF;
+    content[9] = power & 0xFF;
+    content[10] = (power >> 8) & 0xFF;
+
+    // 发送请求包
+    return Servo_SendPackage_Common(SERVO_CMD_SET_ANGLE_MTURN, size, content,0);
 }
 
 /**

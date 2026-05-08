@@ -17,18 +17,9 @@ extern "C" {
 #include "cmsis_os2.h"
 #include "freertos.h"
 #include "Events.h"
+#include "servo_cfg.h"
 
 extern UART_HandleTypeDef huart3;
-
-#define SERVO_DLC 0             // 舵机其他功能
-#define SERVO_ASYNC 0           // 异步命令
-#define SERVO_SYNC 0            // 同步命令
-#define SERVO_MONITOR 0         // 监控命令
-#define SERVO_SYNC_MONITOR 0    // 同步监控命令
-#define SERVO_PING 1            // Ping命令
-
-#define SERVO_TIMEOUT_MS 100    // 串口通讯超时设置
-#define SERVO_MAX_COUNT 2       // 最大舵机数量
 
 /**
  * @brief Fashion Star总线伺服舵机协议请求头
@@ -300,20 +291,10 @@ SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id);
 SERVO_STATUS Servo_ResetUserData(uint8_t servo_id);
 SERVO_STATUS Servo_ReadData(uint8_t servo_id,  uint8_t address, uint8_t *value, uint8_t *size);
 SERVO_STATUS Servo_WriteData(uint8_t servo_id, uint8_t address, uint8_t *value, uint8_t size);
-SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
-				float angle, uint16_t interval, uint16_t t_acc,
-				uint16_t t_dec, uint16_t  power);
-SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
-				float angle, float velocity, uint16_t t_acc,
-				uint16_t t_dec, uint16_t  power);
+
 SERVO_STATUS Servo_QueryServoAngle(uint8_t servo_id, float *angle);
-SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
-	                                uint32_t interval, uint16_t power);
-SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
-				uint32_t interval,  uint16_t t_acc,  uint16_t t_dec, uint16_t power);
-SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
-		    	float velocity, uint16_t t_acc,  uint16_t t_dec, uint16_t power);
 SERVO_STATUS Servo_QueryServoAngleMTurn(uint8_t servo_id, float *angle);
+
 SERVO_STATUS Servo_DampingMode(uint8_t servo_id, uint16_t power);
 SERVO_STATUS Servo_ResetServoMTurnAngle(uint8_t servo_id);
 
@@ -334,8 +315,22 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]);
 #if SERVO_PING
 SERVO_STATUS Servo_Ping(uint8_t servo_id);
 #endif
+#if SERVO_ADVANCED_MODE
+SERVO_STATUS Servo_SetServoAngleByInterval(uint8_t servo_id,
+				float angle, uint16_t interval, uint16_t t_acc,
+				uint16_t t_dec, uint16_t  power);
+SERVO_STATUS Servo_SetServoAngleByVelocity(uint8_t servo_id,
+				float angle, float velocity, uint16_t t_acc,
+				uint16_t t_dec, uint16_t  power);
 
+SERVO_STATUS Servo_SetServoAngleMTurnByVelocity(uint8_t servo_id, float angle,
+		    	float velocity, uint16_t t_acc,  uint16_t t_dec, uint16_t power);
+SERVO_STATUS Servo_SetServoAngleMTurnByInterval(uint8_t servo_id, float angle,
+				uint32_t interval,  uint16_t t_acc,  uint16_t t_dec, uint16_t power);
+#endif
 SERVO_STATUS Servo_SetServoAngle(uint8_t servo_id, float angle, uint16_t interval, uint16_t power);
+SERVO_STATUS Servo_SetServoAngleMTurn(uint8_t servo_id, float angle,
+	                                uint32_t interval, uint16_t power);
 SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t power);
 
 #ifdef __cplusplus

@@ -346,7 +346,7 @@ void MX_FREERTOS_Init(void) {
   Servo_CmdHandle = osMessageQueueNew (5, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
 
   /* creation of Servo_Tx_Data */
-  Servo_Tx_DataHandle = osMessageQueueNew (5, sizeof(Package_t), &Servo_Tx_Data_attributes);
+  Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
   /* creation of Servo_Rx_Data */
   Servo_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Servo_Rx_Data_attributes);
