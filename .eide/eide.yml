@@ -113,6 +113,11 @@ virtualFolder:
       files:
         - path: Drivers/User/TRACK/track.c
       folders: []
+    - name: scan
+      files:
+        - path: Drivers/User/SCANNER/scan_driver.c
+        - path: Drivers/User/SCANNER/scan_port.c
+      folders: []
     - name: ::CMSIS
       files: []
       folders: []
@@ -127,7 +132,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F407xx
         - STM32_THREAD_SAFE_STRATEGY=4
-        - USE_WG=0
+        - USE_WG=1
       incList:
         - Core/Inc
         - Drivers/STM32F4xx_HAL_Driver/Inc
@@ -149,12 +154,12 @@ targets:
         - Drivers/User/STEP/driver
         - Drivers/User/STEP/motion
         - Drivers/User/TRACK
+        - Drivers/User/SCANNER
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings:
-      debugger: cortex-debug
+    settings: {}
     toolchain: AC5
     toolchainConfigMap:
       AC5:

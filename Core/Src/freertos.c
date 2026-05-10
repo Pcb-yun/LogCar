@@ -119,6 +119,13 @@ const osThreadAttr_t Servo_Tx_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal7,
 };
+/* Definitions for Scan_Get */
+osThreadId_t Scan_GetHandle;
+const osThreadAttr_t Scan_Get_attributes = {
+  .name = "Scan_Get",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal1,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -169,6 +176,11 @@ osMessageQueueId_t Servo_Rx_DataHandle;
 const osMessageQueueAttr_t Servo_Rx_Data_attributes = {
   .name = "Servo_Rx_Data"
 };
+/* Definitions for Scan_Rx_Data */
+osMessageQueueId_t Scan_Rx_DataHandle;
+const osMessageQueueAttr_t Scan_Rx_Data_attributes = {
+  .name = "Scan_Rx_Data"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -189,6 +201,7 @@ extern void Motor_Update_Task(void *argument);
 extern void OPS_Update_Task(void *argument);
 extern void Servo_Ctrl_Task(void *argument);
 extern void Servo_Tx_Task(void *argument);
+extern void Scan_Get_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -351,6 +364,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Servo_Rx_Data */
   Servo_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Servo_Rx_Data_attributes);
 
+  /* creation of Scan_Rx_Data */
+  Scan_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Scan_Rx_Data_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -382,6 +398,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Servo_Tx */
   Servo_TxHandle = osThreadNew(Servo_Tx_Task, NULL, &Servo_Tx_attributes);
+
+  /* creation of Scan_Get */
+  Scan_GetHandle = osThreadNew(Scan_Get_Task, NULL, &Scan_Get_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -438,6 +457,11 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
   extern void OPS_Init(void);
   OPS_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Scan Module");
+  extern void Scan_Init(void);
+  Scan_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");

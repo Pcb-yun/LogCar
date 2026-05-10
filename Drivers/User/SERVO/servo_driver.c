@@ -942,8 +942,8 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     uint8_t header_byte1 = 0;
     uint32_t startTime = osKernelGetTickCount();
 
-    // 超时等待（100ms）
-    while((osKernelGetTickCount() - startTime) < 100) {
+    // 超时等待（SERVO_TIMEOUT_MS）
+    while((osKernelGetTickCount() - startTime) < SERVO_TIMEOUT_MS) {
 
         // 1. 查找帧头（滑动窗口）
         while(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) == osOK) {

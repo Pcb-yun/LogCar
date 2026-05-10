@@ -85,6 +85,10 @@ void Error_Handler(void);
 #define Terminal_RX_GPIO_Port GPIOA
 #define OPS_TX_Pin GPIO_PIN_10
 #define OPS_TX_GPIO_Port GPIOC
+#define SCAN_TX_Pin GPIO_PIN_12
+#define SCAN_TX_GPIO_Port GPIOC
+#define SCAN_RX_Pin GPIO_PIN_2
+#define SCAN_RX_GPIO_Port GPIOD
 #define Tracking_KEY_Pin GPIO_PIN_13
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14

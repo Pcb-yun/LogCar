@@ -183,7 +183,6 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -337,7 +336,7 @@
               <MiscControls />
               <Define>USE_HAL_DRIVER,STM32F407xx,STM32_THREAD_SAFE_STRATEGY=4,USE_WG=1</Define>
               <Undefine />
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/STEP/motion;../Drivers/User/TRACK</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/letter_shell;../Applications/letter_shell/src;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/STEP/motion;../Drivers/User/TRACK;../Drivers/User/SCANNER</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -892,6 +891,21 @@
               <FileName>track.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\TRACK\track.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>scan</GroupName>
+          <Files>
+            <File>
+              <FileName>scan_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\SCANNER\scan_driver.c</FilePath>
+            </File>
+            <File>
+              <FileName>scan_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\SCANNER\scan_port.c</FilePath>
             </File>
           </Files>
         </Group>
