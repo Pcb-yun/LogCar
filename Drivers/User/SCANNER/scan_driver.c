@@ -10,6 +10,13 @@
 #include <string.h>
 #include <stdbool.h>
 
+/**
+ * @brief 从接收缓冲区提取可打印字符
+ * @param src 输入缓冲区
+ * @param src_len 输入缓冲区长度
+ * @param dst 输出缓冲区
+ * @return 实际提取的字符数
+ */
 static uint16_t extract_printable(const uint8_t *src, uint16_t src_len, uint8_t *dst)
 {
     uint16_t dst_len = 0;
@@ -21,6 +28,9 @@ static uint16_t extract_printable(const uint8_t *src, uint16_t src_len, uint8_t 
     return dst_len;
 }
 
+/**
+ * @brief 清空接收缓冲区
+ */
 static void Scan_Clear_Buffer(void)
 {
     rx.len = 0;
@@ -76,6 +86,11 @@ static void flush_pending(uint32_t now)
     }
 }
 
+/**
+ * @brief 处理接收到的字节
+ * @param byte 接收到的字节
+ * @param now 当前时间戳
+ */
 static void process_byte(uint8_t byte, uint32_t now)
 {
     rx.last_time = now;
@@ -96,8 +111,9 @@ static void process_byte(uint8_t byte, uint32_t now)
     }
 }
 
-// ==================== 对外接口 ====================
-
+/**
+ * @brief 初始化扫描器驱动层
+ */
 void Scan_Init(void)
 {
     MX_UART5_Init();
@@ -105,6 +121,10 @@ void Scan_Init(void)
     memset(&pending, 0, sizeof(pending));
 }
 
+/**
+ * @brief 接收任务，处理接收到的字节
+ * @param argument 任务参数（未使用）
+ */
 void Scan_Get_Task(void *argument)
 {
     (void)argument;
