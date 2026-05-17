@@ -23,6 +23,7 @@
                 "Drivers/User/STEP/driver",
                 "Drivers/User/STEP/motion",
                 "Drivers/User/TRACK",
+                "Drivers/User/SCANNER",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"
             ],

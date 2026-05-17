@@ -1,6 +1,6 @@
 /**
  * @file scan_driver.c
- * @brief 扫描器驱动层
+ * @brief 扫描器驱动层（StreamBuffer 版）
  */
 
 #include "scan_driver.h"
@@ -8,27 +8,30 @@
 #include "log.h"
 #include "usart.h"
 #include <string.h>
-#include <stdbool.h>
 
-static bool scan_output_enabled = true;   // 默认开启输出
-static bool pending_output = false;       // 标记 pending 是否已通过日志输出
+/* ========== 全局变量定义 ========== */
+StreamBufferHandle_t Scan_Rx_Stream = NULL;
+
+Scan_Rx_t       rx;
+Scan_Pending_t  pending;
+
+static bool scan_output_enabled = true;
+static bool pending_output      = false;
+
+/* ========== 内部函数 ========== */
 
 /**
- * @brief 从接收缓冲区提取可打印字符
- * @param src 输入缓冲区
- * @param src_len 输入缓冲区长度
- * @param dst 输出缓冲区
- * @return 实际提取的字符数
+ * @brief 从缓冲区提取可打印 ASCII 字符
  */
 static uint16_t extract_printable(const uint8_t *src, uint16_t src_len, uint8_t *dst)
 {
-    uint16_t dst_len = 0;
-    for (uint16_t i = 0; i < src_len && dst_len < SCAN_BARCODE_MAX_LEN; i++) {
+    uint16_t n = 0;
+    for (uint16_t i = 0; i < src_len && n < SCAN_BARCODE_MAX_LEN; i++) {
         if (src[i] >= 0x20 && src[i] <= 0x7E) {
-            dst[dst_len++] = src[i];
+            dst[n++] = src[i];
         }
     }
-    return dst_len;
+    return n;
 }
 
 /**
@@ -42,30 +45,26 @@ static void Scan_Clear_Buffer(void)
 }
 
 /**
- * @brief 解析条码并暂存（不立即输出）
+ * @brief 解析条码并暂存（覆盖窗口内之前的结果）
  *
- * 帧格式: 0x02 | 0x00 | LEN | DATA(LEN字节) | [ETX] | CR
- *   - [0] STX   (0x02)
- *   - [1] Status(0x00)
- *   - [2] 数据长度
- *   - [3..3+LEN-1] 条码数据
- *
- * 扫描器每次触发会重发历史结果 + 真正结果，
- * 间隔仅 2~3ms。暂存机制让后者覆盖前者，
- * 等窗口超时后只输出最后一个（即真正结果）。
+ * 帧格式: 0x02 | 0x00 | LEN | DATA(LEN 字节) | CR/LF
+ *   [0] STX   = 0x02
+ *   [1] 状态   = 0x00
+ *   [2] 数据长度
+ *   [3 .. 3+LEN-1] 条码数据
  */
 static void parse_and_store(void)
 {
     if (rx.len == 0) return;
 
-    uint8_t barcode[SCAN_BARCODE_MAX_LEN + 1] = {0};
+    uint8_t  barcode[SCAN_BARCODE_MAX_LEN + 1] = {0};
     uint16_t barcode_len = 0;
 
-    /* ---- 协议帧解析 ---- */
+    /* ---- 协议帧 ---- */
     if (rx.len >= 4 && rx.buf[0] == 0x02 && rx.buf[1] == 0x00) {
-        uint8_t data_len = rx.buf[2];                    // ← 修正：从 buf[3] 改为 buf[2]
-        if (data_len > 0 && 3 + data_len <= rx.len) {    // ← 修正：偏移 3 而非 4
-            barcode_len = extract_printable(rx.buf + 3, data_len, barcode);  // ← 修正
+        uint8_t data_len = rx.buf[2];
+        if (data_len > 0 && (uint16_t)(3 + data_len) <= rx.len) {
+            barcode_len = extract_printable(rx.buf + 3, data_len, barcode);
         }
     }
 
@@ -78,34 +77,74 @@ static void parse_and_store(void)
         barcode[barcode_len] = '\0';
         strncpy(pending.data, (char *)barcode, SCAN_BARCODE_MAX_LEN);
         pending.data[SCAN_BARCODE_MAX_LEN] = '\0';
-        pending.time = HAL_GetTick();
-        pending.valid = true;
+        pending.time   = HAL_GetTick();
+        pending.valid  = true;
         pending_output = false;
     }
 
     Scan_Clear_Buffer();
 }
 
-
 /**
- * @brief 分组窗口超时后输出暂存的条码
+ * @brief 分组窗口超时 → 输出暂存条码
  */
 static void flush_pending(uint32_t now)
 {
-    if (pending.valid && (now - pending.time) >= SCAN_GROUP_WINDOW_MS) {
-        if (scan_output_enabled && !pending_output) {
+    if (pending.valid && !pending_output &&
+        (now - pending.time) >= SCAN_GROUP_WINDOW_MS) {
+        if (scan_output_enabled) {
             logPrintln("[SCAN] %s", pending.data);
-            pending_output = true;
         }
-        // pending.valid = false;
+        pending_output = true;
     }
 }
 
 /**
- * @brief 获取最新扫描到的条码（直接从暂存区 pending 读取）
- * @param buf  输出缓冲区
- * @param size 缓冲区大小
- * @return true: 获取成功，false: 暂无有效条码
+ * @brief 处理单个字节（状态机）
+ *
+ * CR(0x0D) / LF(0x0A) / 帧间超时 → 触发一次解析
+ */
+static void process_byte(uint8_t byte, uint32_t now)
+{
+    rx.last_time = now;
+
+    /* 行终止符：帧结束 */
+    if (byte == 0x0D || byte == 0x0A) {
+        if (rx.len > 0) {
+            parse_and_store();
+        }
+        return;  // 丢弃孤立的 CR/LF
+    }
+
+    /* 正常存储 */
+    if (rx.len < SCAN_FRAME_MAX_SIZE - 1) {
+        rx.buf[rx.len++] = byte;
+    } else {
+        /* 缓冲区满：先解析当前内容，再开始新帧 */
+        parse_and_store();
+        rx.buf[0] = byte;
+        rx.len    = 1;
+    }
+}
+
+/* ========== 公开 API ========== */
+
+/**
+ * @brief 初始化扫描器驱动层
+ */
+void Scan_Init(void)
+{
+    MX_UART5_Init();
+    memset(&rx, 0, sizeof(rx));
+    memset(&pending, 0, sizeof(pending));
+
+    Scan_Rx_Stream = xStreamBufferCreate(SCAN_STREAM_BUF_SIZE,
+                                         SCAN_STREAM_TRIGGER_LVL);
+    configASSERT(Scan_Rx_Stream != NULL);
+}
+
+/**
+ * @brief 获取最新扫描到的条码
  */
 bool Scan_GetLatestBarcode(char *buf, uint16_t size)
 {
@@ -116,79 +155,52 @@ bool Scan_GetLatestBarcode(char *buf, uint16_t size)
     return true;
 }
 
-static void process_byte(uint8_t byte, uint32_t now)
-{
-    rx.last_time = now;
-
-    // CR / LF → 一帧结束
-    if (byte == 0x0D || byte == 0x0A) {
-        if (rx.len > 0) {
-            parse_and_store();
-        }
-        return;
-    }
-
-    if (rx.len < SCAN_FRAME_MAX_SIZE - 1) {
-        rx.buf[rx.len++] = byte;
-    } else {
-        parse_and_store();
-        rx.buf[0] = byte;
-        rx.len = 1;
-    }
-}
-
 /**
- * @brief 初始化扫描器驱动层
- */
-void Scan_Init(void)
-{
-    MX_UART5_Init();
-    memset(&rx, 0, sizeof(rx));
-    memset(&pending, 0, sizeof(pending));
-}
-
-/**
- * @brief 接收任务，处理接收到的字节
- * @param argument 任务参数（未使用）
+ * @brief 扫描器接收任务
+ *
+ * 事件驱动：
+ *   ISR 写入 StreamBuffer → xStreamBufferReceive 自动唤醒
+ *   无数据时阻塞（带超时兜底处理不完整帧）
  */
 void Scan_Get_Task(void *argument)
 {
     (void)argument;
-    uint8_t byte;
+    uint8_t buf[64];
     uint32_t now;
 
     while (1) {
+        /*
+         * 阻塞读取：最多等 FRAME_TIMEOUT_MS
+         *   - 有数据到达 → 立即返回，批量取出
+         *   - 超时 → 返回 0，进入兜底逻辑
+         */
+        size_t n = xStreamBufferReceive(Scan_Rx_Stream,
+                                        buf, sizeof(buf),
+                                        pdMS_TO_TICKS(FRAME_TIMEOUT_MS));
         now = HAL_GetTick();
 
-        // 读取队列中所有字节
-        while (osMessageQueueGet(Scan_Rx_DataHandle, &byte, NULL, 0) == osOK) {
-            process_byte(byte, now);
+        if (n > 0) {
+            for (size_t i = 0; i < n; i++) {
+                process_byte(buf[i], now);
+            }
         }
 
-        // 帧超时兜底
-        if (rx.len > 0 && (now - rx.last_time) >= FRAME_TIMEOUT_MS) {
+        /* 帧超时兜底：不完整帧也触发解析 */
+        if (rx.len > 0 && (HAL_GetTick() - rx.last_time) >= FRAME_TIMEOUT_MS) {
             parse_and_store();
         }
 
-        // 分组窗口超时 → 输出最后暂存的条码
-        flush_pending(now);
-
-        osDelay(1);
+        /* 分组窗口超时 → 输出暂存条码 */
+        flush_pending(HAL_GetTick());
     }
 }
 
-/**
- * @brief 扫描器 Shell 命令：控制条码输出开关
- * @param argc 参数个数
- * @param argv 参数数组
- * @note 用法：
- *       scan on   - 开启条码输出到终端
- *       scan off  - 关闭条码输出到终端
- */
+/* ========== Shell 命令 ========== */
+
 static void Scan_Shell(int argc, char *argv[])
 {
     if (argc < 2) {
-        logPrintln("Usage: scan [on|off]");
+        logPrintln("Usage: scan [on|off|status]");
         return;
     }
 
@@ -198,18 +210,22 @@ static void Scan_Shell(int argc, char *argv[])
     } else if (strcmp(argv[1], "off") == 0) {
         scan_output_enabled = false;
         logPrintln("Scan output: OFF");
+    } else if (strcmp(argv[1], "status") == 0) {
+        logPrintln("Output : %s", scan_output_enabled ? "ON" : "OFF");
+        logPrintln("Pending: %s (age=%lums)",
+                   pending.valid ? pending.data : "(none)",
+                   pending.valid ? HAL_GetTick() - pending.time : 0UL);
+        logPrintln("Stream : %u bytes available",
+                   (unsigned)xStreamBufferBytesAvailable(Scan_Rx_Stream));
     } else {
         logPrintln("Invalid argument: %s", argv[1]);
-        logPrintln("Usage: scan [on|off]");
+        logPrintln("Usage: scan [on|off|status]");
     }
 }
 
-/**
- * @brief 导出 Shell 命令：scan
- */
 SHELL_EXPORT_CMD(
     SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
     scan,
     Scan_Shell,
-    "scan control commands (on/off)"
+    "scan control: on | off | status"
 );

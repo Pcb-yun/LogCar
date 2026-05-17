@@ -116,7 +116,6 @@ virtualFolder:
     - name: scan
       files:
         - path: Drivers/User/SCANNER/scan_driver.c
-        - path: Drivers/User/SCANNER/scan_port.c
       folders: []
     - name: ::CMSIS
       files: []

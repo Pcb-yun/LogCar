@@ -176,11 +176,6 @@ osMessageQueueId_t Servo_Rx_DataHandle;
 const osMessageQueueAttr_t Servo_Rx_Data_attributes = {
   .name = "Servo_Rx_Data"
 };
-/* Definitions for Scan_Rx_Data */
-osMessageQueueId_t Scan_Rx_DataHandle;
-const osMessageQueueAttr_t Scan_Rx_Data_attributes = {
-  .name = "Scan_Rx_Data"
-};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -363,9 +358,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Servo_Rx_Data */
   Servo_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Servo_Rx_Data_attributes);
-
-  /* creation of Scan_Rx_Data */
-  Scan_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Scan_Rx_Data_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

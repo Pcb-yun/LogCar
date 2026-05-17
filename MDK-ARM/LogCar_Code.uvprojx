@@ -902,11 +902,6 @@
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\SCANNER\scan_driver.c</FilePath>
             </File>
-            <File>
-              <FileName>scan_port.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Drivers\User\SCANNER\scan_port.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
