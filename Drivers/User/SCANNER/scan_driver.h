@@ -42,6 +42,7 @@ static struct {
 
 void Scan_Init(void);
 void Scan_Get_Task(void *argument);
+bool Scan_GetLatestBarcode(char *buf, uint16_t size);
 
 #ifdef __cplusplus
 }

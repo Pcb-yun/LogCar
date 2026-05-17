@@ -844,23 +844,32 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
     }
   } else if (huart->Instance == UART5) {
-    if (huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
-      extern osMessageQueueId_t Scan_Rx_DataHandle;
-      //logPrintln("Scan_Rx_DataHandle: %p", Scan_Rx_DataHandle);
-      // 只有收到数据时才处理（IDLE 或 DMA 传输完成）
-      if(Size > 0) {
-        osStatus_t state;
-        for (uint16_t i = 0; i < Size; i++) {
-          state = osMessageQueuePut(Scan_Rx_DataHandle, &rx5Buffer[i], NULL, 0);
-          if (state != osOK) {
-            logWarning("Failed to put data into Scan message queue, code: %d", state);
-            break;
+    extern osMessageQueueId_t Scan_Rx_DataHandle;
+    /*
+     * HT  : 半满通知，DMA 仍在运行，数据还在缓冲区里，
+     *       等 IDLE/TC 触发时会一并带出 → 无需处理，不重启
+     * TC  : 缓冲区满，DMA 已停止 → 必须转发数据 + 重启
+     * IDLE: 总线空闲，DMA 已停止 → 必须转发数据 + 重启
+     *
+     * TC 和 IDLE 互斥（TC 触发后 HAL 会关闭 IDLE 中断），
+     * 所以不会重复转发。
+     */
+    if (huart->RxEventType == HAL_UART_RXEVENT_TC ||
+        huart->RxEventType == HAL_UART_RXEVENT_IDLE) {
+
+        if (Size > 0) {
+            for (uint16_t i = 0; i < Size; i++) {
+                if (osMessageQueuePut(Scan_Rx_DataHandle, &rx5Buffer[i], NULL, 0) != osOK) {
+                    logWarning("Scan queue full, dropped %u bytes", Size - i);
+                    break;
+                }
             }
-         }
-      } 
-      //启动接收
-      HAL_UARTEx_ReceiveToIdle_DMA(&huart5, rx5Buffer, USART5_RX_BUF_SIZE);
+        }
+
+        // DMA 已停止，必须重启
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart5, rx5Buffer, USART5_RX_BUF_SIZE);
     }
+    // HAL_UART_RXEVENT_HT → DMA 仍在运行，数据不丢，不重启
   }
 }
 /**
