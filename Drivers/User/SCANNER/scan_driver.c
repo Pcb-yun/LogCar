@@ -10,6 +10,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+static bool scan_output_enabled = true;   // 默认开启输出
+
 /**
  * @brief 从接收缓冲区提取可打印字符
  * @param src 输入缓冲区
@@ -81,7 +83,9 @@ static void parse_and_store(void)
 static void flush_pending(uint32_t now)
 {
     if (pending.valid && (now - pending.time) >= SCAN_GROUP_WINDOW_MS) {
-        logPrintln("[SCAN] %s", pending.data);
+        if (scan_output_enabled) {
+            logPrintln("[SCAN] %s", pending.data);
+        }
         pending.valid = false;
     }
 }
@@ -150,3 +154,40 @@ void Scan_Get_Task(void *argument)
         osDelay(1);
     }
 }
+
+/**
+ * @brief 扫描器 Shell 命令：控制条码输出开关
+ * @param argc 参数个数
+ * @param argv 参数数组
+ * @note 用法：
+ *       scan on   - 开启条码输出到终端
+ *       scan off  - 关闭条码输出到终端
+ */
+static void Scan_Shell(int argc, char *argv[])
+{
+    if (argc < 2) {
+        logPrintln("Usage: scan [on|off]");
+        return;
+    }
+
+    if (strcmp(argv[1], "on") == 0) {
+        scan_output_enabled = true;
+        logPrintln("Scan output: ON");
+    } else if (strcmp(argv[1], "off") == 0) {
+        scan_output_enabled = false;
+        logPrintln("Scan output: OFF");
+    } else {
+        logPrintln("Invalid argument: %s", argv[1]);
+        logPrintln("Usage: scan [on|off]");
+    }
+}
+
+/**
+ * @brief 导出 Shell 命令：scan
+ */
+SHELL_EXPORT_CMD(
+    SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
+    scan,
+    Scan_Shell,
+    "scan control commands (on/off)"
+);
