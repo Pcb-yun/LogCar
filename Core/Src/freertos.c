@@ -33,6 +33,7 @@
 #include "usart.h"
 #include "step_port.h"
 #include "ops.h"
+#include "servo_driver.h"
 #include "servo_port.h"
 
 /* USER CODE END Includes */
@@ -163,11 +164,6 @@ const osMessageQueueAttr_t Servo_Cmd_attributes = {
 osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
   .name = "Servo_Tx_Data"
-};
-/* Definitions for Servo_Rx_Data */
-osMessageQueueId_t Servo_Rx_DataHandle;
-const osMessageQueueAttr_t Servo_Rx_Data_attributes = {
-  .name = "Servo_Rx_Data"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -347,9 +343,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Servo_Tx_Data */
   Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
-
-  /* creation of Servo_Rx_Data */
-  Servo_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Servo_Rx_Data_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
