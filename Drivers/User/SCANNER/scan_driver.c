@@ -21,7 +21,11 @@ static bool pending_output      = false;
 /* ========== 内部函数 ========== */
 
 /**
- * @brief 从缓冲区提取可打印 ASCII 字符
+ * @brief 从缓冲区提取可打印 ASCII 字符（过滤控制字符）
+ * @param src  输入缓冲区指针
+ * @param src_len 输入缓冲区长度
+ * @param dst  输出缓冲区指针
+ * @return 实际提取的字符数（包含 '\0'）
  */
 static uint16_t extract_printable(const uint8_t *src, uint16_t src_len, uint8_t *dst)
 {
@@ -87,6 +91,7 @@ static void parse_and_store(void)
 
 /**
  * @brief 分组窗口超时 → 输出暂存条码
+ * @param now 当前时间戳（毫秒）
  */
 static void flush_pending(uint32_t now)
 {
@@ -101,7 +106,9 @@ static void flush_pending(uint32_t now)
 
 /**
  * @brief 处理单个字节（状态机）
- *
+ * @param byte 接收到的字节
+ * @param now  当前时间戳（毫秒）
+ * *
  * CR(0x0D) / LF(0x0A) / 帧间超时 → 触发一次解析
  */
 static void process_byte(uint8_t byte, uint32_t now)
@@ -145,6 +152,10 @@ void Scan_Init(void)
 
 /**
  * @brief 获取最新扫描到的条码
+ * @param buf  存储条码的缓冲区
+ * @param size 缓冲区大小（包含终止符 '\0'）
+ * @return true 成功获取条码
+ * @return false 无新条码
  */
 bool Scan_GetLatestBarcode(char *buf, uint16_t size)
 {
@@ -197,6 +208,11 @@ void Scan_Get_Task(void *argument)
 
 /* ========== Shell 命令 ========== */
 
+/**
+ * @brief 扫描器控制命令
+ * @param argc 命令参数数量
+ * @param argv 命令参数数组
+ */
 static void Scan_Shell(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -223,6 +239,9 @@ static void Scan_Shell(int argc, char *argv[])
     }
 }
 
+/**
+ * @brief 导出 Shell 命令
+ */
 SHELL_EXPORT_CMD(
     SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
     scan,
