@@ -287,6 +287,7 @@ typedef enum {
     MODE_Query_SERVO_Monitor = 7
 } ServoMode;
 
+void Servo_Init(void);
 
 #if SERVO_DLC
 SERVO_STATUS Servo_SetOriginPoint(uint8_t servo_id);

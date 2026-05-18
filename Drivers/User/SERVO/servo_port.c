@@ -16,8 +16,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-StreamBufferHandle_t Servo_Rx_StreamHandle = NULL;
-
 /**
  * @brief 舵机单圈角度控制接口（非阻塞式API）
  * @param id 舵机ID (1-254)
@@ -98,7 +96,7 @@ static void Servo_Mturn_Shell(int argc, char *argv[]){
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
         return;
     }
-    
+
     float angle = (float)atof(argv[2]);
     uint32_t interval = (uint32_t)atoi(argv[3]);
     uint16_t power = (uint16_t)atoi(argv[4]);  // 修复：使用用户输入的power值
@@ -656,16 +654,4 @@ void Servo_Ctrl_Task(void *argument) {
             Servo_ExecuteCommand(&cmd);
         }
     }
-}
-
-/**
- * @brief 舵机模块初始化
- * @note 初始化串口，设置波特率为115200
- */
-void Servo_Init(void) {
-    MX_USART3_UART_Init();
-    Servo_Rx_StreamHandle = xStreamBufferCreate(512, 1);
-    configASSERT(Servo_Rx_StreamHandle != NULL);
-    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
-    osEventFlagsClear(System_StatusHandle, UART3_RX_IDLE);
 }

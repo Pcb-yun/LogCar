@@ -33,6 +33,7 @@
 #include "usart.h"
 #include "step_port.h"
 #include "ops.h"
+#include "servo_driver.h"
 #include "servo_port.h"
 
 /* USER CODE END Includes */

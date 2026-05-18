@@ -15,7 +15,7 @@
 
 static uint8_t Servo_CalcChecksum(Package_t *pkg);
 static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
-extern StreamBufferHandle_t Servo_Rx_StreamHandle;
+StreamBufferHandle_t Servo_Rx_StreamHandle = NULL;
 
 #if SERVO_ADVANCED_MODE || SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
 ServoData servodata[SERVO_MAX_COUNT];
@@ -1278,4 +1278,16 @@ void Servo_Tx_Task(void *argument) {
             Servo_Uart_Send(txBuffer, len);
         }
     }
+}
+
+/**
+ * @brief 舵机模块初始化
+ * @note 初始化串口，设置波特率为115200
+ */
+void Servo_Init(void) {
+    MX_USART3_UART_Init();
+    Servo_Rx_StreamHandle = xStreamBufferCreate(512, 1);
+    configASSERT(Servo_Rx_StreamHandle != NULL);
+    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
+    osEventFlagsClear(System_StatusHandle, UART3_RX_IDLE);
 }
