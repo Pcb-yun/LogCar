@@ -7,7 +7,7 @@
 #include "servo_driver.h"
 #include "log.h"
 #include "stream_buffer.h"
-
+#include "usart.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -954,6 +954,9 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     uint8_t byte  = 0;
     uint8_t header_byte1 = 0;
     uint32_t startTime = osKernelGetTickCount();
+
+    memset(pkg, 0, sizeof(Package_t));
+    
     while ((osKernelGetTickCount() - startTime) < 100) {
      /* 1. 查找帧头 —— [CHANGE] 内层循环加总超时检查，防止死循环 */
         while ((osKernelGetTickCount() - startTime) < 100 &&
@@ -1264,8 +1267,8 @@ void Servo_Tx_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Servo_Tx_DataHandle;
 
-    Package_t pkg;
-    uint8_t txBuffer[256];
+    static Package_t pkg;
+    static uint8_t txBuffer[256];
     uint16_t len;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);

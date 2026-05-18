@@ -117,7 +117,7 @@ const osThreadAttr_t Servo_Ctrl_attributes = {
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
   .name = "Servo_Tx",
-  .stack_size = 512 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal7,
 };
 /* Definitions for Usart1_Rx_Data */
