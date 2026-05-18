@@ -14,7 +14,6 @@
 /* ========== 缓冲区配置 ========== */
 #define SCAN_FRAME_MAX_SIZE      128
 #define SCAN_BARCODE_MAX_LEN     64
-#define USART5_RX_BUF_SIZE       256
 
 /* ========== 超时配置（ms）========== */
 #define FRAME_TIMEOUT_MS         20    // 字节间超时：超过此间隔视为一帧结束

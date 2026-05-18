@@ -158,7 +158,8 @@ targets:
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings: {}
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:

@@ -123,7 +123,7 @@ const osThreadAttr_t Servo_Tx_attributes = {
 osThreadId_t Scan_GetHandle;
 const osThreadAttr_t Scan_Get_attributes = {
   .name = "Scan_Get",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal1,
 };
 /* Definitions for Usart1_Rx_Data */
