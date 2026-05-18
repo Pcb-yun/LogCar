@@ -84,6 +84,8 @@ virtualFolder:
         - path: Applications/letter_shell/src/shell_ext.c
         - path: Applications/letter_shell/log/log.c
         - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
+        - path: Applications/letter_shell/game/game.c
+        - path: Applications/letter_shell/game/2048.c
       folders: []
     - name: misc
       files:
@@ -127,7 +129,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F407xx
         - STM32_THREAD_SAFE_STRATEGY=4
-        - USE_WG=0
+        - USE_WG=1
       incList:
         - Core/Inc
         - Drivers/STM32F4xx_HAL_Driver/Inc
@@ -153,8 +155,7 @@ targets:
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings:
-      debugger: cortex-debug
+    settings: {}
     toolchain: AC5
     toolchainConfigMap:
       AC5:
