@@ -17,7 +17,7 @@ static uint8_t Servo_CalcChecksum(Package_t *pkg);
 static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
 StreamBufferHandle_t Servo_Rx_StreamHandle = NULL;
 
-#if SERVO_ADVANCED_MODE || SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
+#if SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR 
 ServoData servodata[SERVO_MAX_COUNT];
 #endif
 
