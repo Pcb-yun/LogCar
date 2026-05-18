@@ -16,6 +16,11 @@ extern "C" {
 #include "servo_driver.h"
 #include "cmsis_os2.h"
 
+/**
+ * @brief 舵机接收数据流缓冲区句柄
+ */
+extern StreamBufferHandle_t Servo_Rx_StreamHandle;
+
 // 基础使用说明
 #define SERVO_CMD_USAGE \
     "Usage: servo COMMAND\r\n" \

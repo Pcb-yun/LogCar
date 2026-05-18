@@ -18,8 +18,10 @@ extern "C" {
 #include "freertos.h"
 #include "Events.h"
 #include "servo_cfg.h"
+#include "stream_buffer.h"
 
 extern UART_HandleTypeDef huart3;
+extern StreamBufferHandle_t Servo_Rx_StreamHandle;
 
 /**
  * @brief Fashion Star总线伺服舵机协议请求头
