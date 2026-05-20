@@ -11,6 +11,7 @@
 
 /* ========== 全局变量定义 ========== */
 StreamBufferHandle_t Scan_Rx_Stream = NULL;
+static bool is_init = false;
 
 Scan_Rx_t       rx;
 Scan_Pending_t  pending;
@@ -139,15 +140,26 @@ static void process_byte(uint8_t byte, uint32_t now)
 /**
  * @brief 初始化扫描器驱动层
  */
-void Scan_Init(void)
+bool Scan_Init(void)
 {
+    bool status = true;
+    
     MX_UART5_Init();
     memset(&rx, 0, sizeof(rx));
     memset(&pending, 0, sizeof(pending));
 
     Scan_Rx_Stream = xStreamBufferCreate(SCAN_STREAM_BUF_SIZE,
                                          SCAN_STREAM_TRIGGER_LVL);
-    configASSERT(Scan_Rx_Stream != NULL);
+    
+    if (Scan_Rx_Stream == NULL) {
+        status = false;
+        is_init = false;
+        configASSERT(Scan_Rx_Stream != NULL);
+    } else {
+        is_init = true;
+    }
+    
+    return status;
 }
 
 /**

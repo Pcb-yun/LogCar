@@ -43,7 +43,7 @@ extern Scan_Rx_t            rx;
 extern Scan_Pending_t       pending;
 
 /* ========== API ========== */
-void Scan_Init(void);
+bool Scan_Init(void);
 void Scan_Get_Task(void *argument);
 bool Scan_GetLatestBarcode(char *buf, uint16_t size);
 

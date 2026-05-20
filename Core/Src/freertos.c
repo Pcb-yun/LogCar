@@ -34,6 +34,7 @@
 #include "step_port.h"
 #include "ops.h"
 #include "servo_port.h"
+#include "scan_driver.h"
 
 /* USER CODE END Includes */
 
@@ -452,9 +453,11 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Scan Module");
-  extern void Scan_Init(void);
-  Scan_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  if (!Scan_Init()) {
+    SHOW_DMESG(dmesg_fail, NULL);
+  } else {
+    SHOW_DMESG(dmesg_ok, NULL);
+  }
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
