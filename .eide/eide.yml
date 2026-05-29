@@ -123,7 +123,11 @@ virtualFolder:
       folders: []
     - name: battery
       files:
-        - path: Drivers/User/ADC/Battery.c
+        - path: Drivers/User/ADC/battery.c
+      folders: []
+    - name: nav
+      files:
+        - path: Applications/nav/nav_sys.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -162,6 +166,7 @@ targets:
         - Drivers/User/STEP/motion
         - Drivers/User/TRACK
         - Drivers/User/ADC
+        - Applications/nav
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

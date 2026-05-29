@@ -437,9 +437,9 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Battery Module");
-  extern void Battery_Init(void);
-  Battery_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  extern bool Battery_Init(void);
+  if (!Battery_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);

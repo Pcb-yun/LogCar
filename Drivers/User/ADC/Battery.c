@@ -1,4 +1,4 @@
-#include "Battery.h"
+#include "battery.h"
 #include "adc.h"               // 包含 hadc1, MX_ADC1_Init
 #include "shell.h"
 #include "log.h"
@@ -8,11 +8,14 @@
 #include "shell_cmd_group.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
 
 /* -------------------------- 静态变量 -------------------------- */
 static uint16_t battery_adc_raw = 0;          // DMA 实时更新的原始值 (0~4095)
 static float battery_voltage = 0.0f;          // 实际电压（已考虑分压比）
 static uint16_t battery_interval_ms = 500;    // 任务间隔（ms），可动态修改
+static bool is_init = false;
 
 /**
  * @brief 电池电压监控模块的配置宏
@@ -59,7 +62,7 @@ SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_M
 /**
  * @brief 初始化电池电压监控模块
  */
-void Battery_Init(void)
+bool Battery_Init(void)
 {
     // 1. 初始化 ADC 硬件（时钟、GPIO、DMA 等，由 CubeMX 生成）
     MX_ADC1_Init();
@@ -67,6 +70,10 @@ void Battery_Init(void)
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&battery_adc_raw, 1);
 
     Battery_UpdateVoltage();
+    if (battery_voltage != 0.0f) {
+        is_init = true;
+    }
+    return is_init;
 }
 
 /**
@@ -103,7 +110,7 @@ static void Battery_ShowVoltage(void)
     logPrintln("Battery Voltage: %.2f V", battery_voltage);
 }
 
-/* 实时刷新显示（类似 top 命令，按 Ctrl+C 退出） */
+/* 实时刷新显示（按 Ctrl+C 退出） */
 static void Battery_ViewRealtime(void)
 {
     extern Shell shell;
@@ -136,6 +143,9 @@ static void Battery_Cmd_Show(int argc, char *argv[])
     Battery_ShowVoltage();
 }
 
+/**
+ * @brief 获取或设置电池电压采样间隔（ms）
+ */
 static void Battery_Cmd_Interval(int argc, char *argv[])
 {
     if (argc == 1) {
@@ -154,6 +164,9 @@ static void Battery_Cmd_Interval(int argc, char *argv[])
     }
 }
 
+/**
+ * @brief 实时刷新显示电池电压（按 Ctrl+C 退出）
+ */
 static void Battery_Cmd_View(int argc, char *argv[])
 {
     (void)argc;
@@ -161,17 +174,25 @@ static void Battery_Cmd_View(int argc, char *argv[])
     Battery_ViewRealtime();
 }
 
-/* -------------------------- 对外接口 -------------------------- */
+/**
+ * @brief 获取当前电池电压（V）
+ */
 float Battery_GetVoltage(void)
 {
     return battery_voltage;
 }
 
+/**
+ * @brief 设置电池电压采样间隔（ms）
+ */
 void Battery_SetInterval(uint16_t ms)
 {
     battery_interval_ms = ms;
 }
 
+/**
+ * @brief 获取当前电池电压采样间隔（ms）
+ */
 uint16_t Battery_GetInterval(void)
 {
     return battery_interval_ms;

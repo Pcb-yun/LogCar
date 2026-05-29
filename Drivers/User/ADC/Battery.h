@@ -6,9 +6,10 @@ extern "C" {
 #endif
 
 #include "main.h"
+#include <stdbool.h>
 
 /* 初始化电池管理模块（会自动创建 FreeRTOS 任务） */
-void Battery_Init(void);
+bool Battery_Init(void);
 
 /* 获取当前电池电压（单位：伏特） */
 float Battery_GetVoltage(void);
