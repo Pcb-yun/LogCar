@@ -853,10 +853,10 @@ ARM Macro Assembler    Page 14
 2F4xx_HAL_Driver/Inc/Legacy -I../Middlewares/Third_Party/FreeRTOS/Source/includ
 e -I../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 -I../Middlewares/T
 hird_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I../Drivers/CMSIS/Device/ST/
-STM32F4xx/Include -I../Drivers/CMSIS/Include -I.\RTE\_LogCar_Code -IE:\Keil_v5\
-ARM\Packs\ARM\CMSIS\6.3.0\CMSIS\Core\Include --predefine="__UVISION_VERSION SET
-A 538" --predefine="_RTE_ SETA 1" --predefine="STM32F407xx SETA 1" --predefine=
-"_RTE_ SETA 1" --list=startup_stm32f407xx.lst startup_stm32f407xx.s
+STM32F4xx/Include -I../Drivers/CMSIS/Include -I.\RTE\_LogCar_Code -ID:\devtool\
+keil\ARM\CMSIS\5.7.0\CMSIS\Core\Include --predefine="__UVISION_VERSION SETA 534
+" --predefine="_RTE_ SETA 1" --predefine="STM32F407xx SETA 1" --predefine="_RTE
+_ SETA 1" --list=startup_stm32f407xx.lst startup_stm32f407xx.s
 
 
 

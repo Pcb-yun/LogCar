@@ -67,10 +67,6 @@ void Error_Handler(void);
 #define KEY_UP_GPIO_Port GPIOA
 #define OPS_RX_Pin GPIO_PIN_1
 #define OPS_RX_GPIO_Port GPIOA
-#define Tracking_TX_Pin GPIO_PIN_2
-#define Tracking_TX_GPIO_Port GPIOA
-#define Tracking_RX_Pin GPIO_PIN_3
-#define Tracking_RX_GPIO_Port GPIOA
 #define SERVO_TX_Pin GPIO_PIN_10
 #define SERVO_TX_GPIO_Port GPIOB
 #define SERVO_RX_Pin GPIO_PIN_11
@@ -89,6 +85,10 @@ void Error_Handler(void);
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14
 #define Tracking_RST_GPIO_Port GPIOG
+#define Tracking_SCL_Pin GPIO_PIN_6
+#define Tracking_SCL_GPIO_Port GPIOB
+#define Tracking_SDA_Pin GPIO_PIN_7
+#define Tracking_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

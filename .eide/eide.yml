@@ -25,6 +25,7 @@ virtualFolder:
                 - path: Core/Src/gpio.c
                 - path: Core/Src/freertos.c
                 - path: Core/Src/dma.c
+                - path: Core/Src/i2c.c
                 - path: Core/Src/iwdg.c
                 - path: Core/Src/tim.c
                 - path: Core/Src/usart.c
@@ -52,6 +53,8 @@ virtualFolder:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_iwdg.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
           folders: []
@@ -155,7 +158,8 @@ targets:
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
     excludeList: []
-    settings: {}
+    settings:
+      debugger: cortex-debug
     toolchain: AC5
     toolchainConfigMap:
       AC5:

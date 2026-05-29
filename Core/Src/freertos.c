@@ -125,11 +125,6 @@ osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
   .name = "Usart1_Rx_Data"
 };
-/* Definitions for Usart2_Rx_Data */
-osMessageQueueId_t Usart2_Rx_DataHandle;
-const osMessageQueueAttr_t Usart2_Rx_Data_attributes = {
-  .name = "Usart2_Rx_Data"
-};
 /* Definitions for Track_Data */
 osMessageQueueId_t Track_DataHandle;
 const osMessageQueueAttr_t Track_Data_attributes = {
@@ -319,9 +314,6 @@ void MX_FREERTOS_Init(void) {
   /* Create the queue(s) */
   /* creation of Usart1_Rx_Data */
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
-
-  /* creation of Usart2_Rx_Data */
-  Usart2_Rx_DataHandle = osMessageQueueNew (64, sizeof(uint8_t), &Usart2_Rx_Data_attributes);
 
   /* creation of Track_Data */
   Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);

@@ -1,7 +1,6 @@
 /**
  * @file track.c
- * @author Pcb-yun (pcbyinyun@163.com)
- * @brief 巡线模块源文件
+ * @brief 巡线模块源文件 - I2C版本（仅数字量）
  */
 
 #include "track.h"
@@ -10,24 +9,23 @@
 #include "freeRTOS.h"
 #include "task.h"
 #include "cmsis_os.h"
-#include "usart.h"
 #include "shell_cmd_group.h"
 #include <string.h>
 #include <stdlib.h>
 #include "Events.h"
 
 static Track_t track;
-static uint8_t trackBuffer[TRACK_ALL_LEN];
 
 static void Track_Reset(void);
 static void Track_Key(void);
-static uint8_t Track_Get_Size(void);
-static void Track_Parse(uint8_t *buffer, TrackData_t *data);
-
+static void Track_Parse(uint8_t digital, TrackData_t *data);
+static uint8_t I2C_ReadDigital(void);
+static void I2C_EnterCalibration(void);
+static void I2C_ExitCalibration(void);
 
 /**
- * @brief 巡线模块获取任务
-*/
+ * @brief 巡线模块获取任务（I2C方式）
+ */
 void Track_Get_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Track_DataHandle;
@@ -37,64 +35,61 @@ void Track_Get_Task(void *argument) {
 
     for(;;) {
         osDelay(track.time);
-        switch(track.mode) {
-            case TRACK_STOP:
-                HAL_UART_Transmit(&huart2, TRACK_CMD_STOP, 7, TRACK_TIMEOUT); continue;
-            case TRACK_DIGITAL:
-                HAL_UART_Transmit(&huart2, TRACK_CMD_DIGITAL, 7, TRACK_TIMEOUT); break;
-            case TRACK_ANALOG:
-                HAL_UART_Transmit(&huart2, TRACK_CMD_ANALOG, 7, TRACK_TIMEOUT); break;
-            case TRACK_ALL:
-                HAL_UART_Transmit(&huart2, TRACK_CMD_ALL, 7, TRACK_TIMEOUT); break;
-            default: continue;
+
+        if (track.mode == TRACK_STOP) {
+            continue;   // 停止模式不读取数据
         }
 
-        HAL_UART_Receive_DMA(&huart2, trackBuffer, Track_Get_Size());
-        osEventFlagsWait(System_StatusHandle, UART2_RX_CPLT, osFlagsWaitAny, osWaitForever);
-        HAL_UART_Transmit(&huart2, TRACK_CMD_STOP, 7, TRACK_TIMEOUT);
-        osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
-
-        Track_Parse(trackBuffer, &trackData);
-        osMessageQueueReset(Track_DataHandle);
-        osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
+        // 通过I2C读取数字量
+        uint8_t digital = I2C_ReadDigital();
+        if (digital != 0xFF) { // 0xFF表示读取失败
+            Track_Parse(digital, &trackData);
+            osMessageQueueReset(Track_DataHandle);
+            osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
+        }
     }
 }
 
 /**
  * @brief 设置巡线模块模式
- * @param mode 巡线模块模式枚举值
+ * @param mode 模式枚举值
  */
 static void Track_Set_Mode(TrackSet_t mode) {
     char ch;
     extern Shell shell;
-    track.mode = mode;
 
-    if(mode == TRACK_CAL) {
-        HAL_UART_Transmit(&huart2, TRACK_CMD_CAL, 7, TRACK_TIMEOUT);
+    if (mode == TRACK_CAL) {
+        // 1. 通过I2C进入校准模式
+        I2C_EnterCalibration();
         logPrintln(TRACK_CAL_HELP_1);
 
         do {
-            while (shell.read(&ch, 1) == 0) {
-                osDelay(100);
-            }
+            while (shell.read(&ch, 1) == 0) { osDelay(100); }
         } while(ch != '\r');
+        Track_Key();          // 模拟按下按键，采样黑线
 
-        Track_Key();
         logPrintln(TRACK_CAL_HELP_2);
-
         do {
-            while (shell.read(&ch, 1) == 0) {
-                osDelay(100);
-            }
+            while (shell.read(&ch, 1) == 0) { osDelay(100); }
         } while(ch != '\r');
+        Track_Key();          // 模拟按下按键，采样白线
 
-        Track_Key();
+        // 退出校准模式（实际校准成功后模块会自动退出，但此处确保退出）
+        I2C_ExitCalibration();
         logPrintln(TRACK_CAL_HELP_3);
+        track.mode = TRACK_STOP;   // 校准完成后停止数据发送
+    } 
+    else if (mode == TRACK_ANALOG || mode == TRACK_ALL) {
+        logPrintln("Warning: I2C mode does NOT support analog data, force to DIGITAL mode.");
+        track.mode = TRACK_DIGITAL;
+    }
+    else {
+        track.mode = mode;
     }
 }
 
 /**
- * @brief 设置巡线模块模式
+ * @brief Shell命令：设置巡线模块模式
  */
 static void Track_Mode_Shell(int argc, char *argv[]) {
     if(argc != 2) {
@@ -118,35 +113,32 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
     } else if(strcmp(argv[1], "sta") == 0) {
         switch(track.mode) {
             case TRACK_CAL: mode_str = "Calibration"; break;
-            case TRACK_ANALOG: mode_str = "Analog"; break;
+            case TRACK_ANALOG: mode_str = "Analog (not supported)"; break;
             case TRACK_DIGITAL: mode_str = "Digital"; break;
-            case TRACK_ALL: mode_str = "All"; break;
+            case TRACK_ALL: mode_str = "All (fallback to Digital)"; break;
             case TRACK_STOP: mode_str = "Stop"; break;
             default: mode_str = "Unknown"; break;
         }
-        logPrintln("Status: %s , Time: %d", mode_str, track.time);
+        logPrintln("Status: %s , Time: %d ms", mode_str, track.time);
     } else {
-        logPrintln("invalid command: %s"
-                TRACK_MODE_HELP, argv[1]);
+        logPrintln("invalid command: %s\n%s", argv[1], TRACK_MODE_HELP);
     }
 }
 
 /**
  * @brief 查看或设置巡线模块发送时间间隔
  */
-static void Track_Time_Sell(int argc, char *argv[]) {
+static void Track_Time_Shell(int argc, char *argv[]) {
     if(argc > 2) {
         logPrintln(TRACK_TIME_HELP); return;
     } else if(argc == 1) {
         logPrintln("current time: %d ms", track.time); return;
     }
 
-    // 判断参数是否为数字
     char *endptr;
     long val = strtol(argv[1], &endptr, 10);
     if(*endptr != '\0') {
-        logPrintln("invalid time value: %s"
-                TRACK_TIME_HELP, argv[1]);
+        logPrintln("invalid time value: %s\n%s", argv[1], TRACK_TIME_HELP);
         return;
     } else {
         track.time = (uint16_t)val;
@@ -154,179 +146,123 @@ static void Track_Time_Sell(int argc, char *argv[]) {
 }
 
 /**
- * @brief 实时刷新巡线模块数据
+ * @brief 实时刷新巡线模块数据（仅数字量）
  */
-static void Track_View_Sell(void) {
+static void Track_View_Shell(void) {
     extern osMessageQueueId_t Track_DataHandle;
     TrackData_t trackData;
     char ch;
     extern Shell shell;
 
-    logPrintln("Track Data Viewer - Press ^C to exit\r\n"
-            "Analog : - - - - - - - -\r\n"
-            "Digital: - - - - - - - -");
+    logPrintln("Track Data Viewer (Digital only) - Press ^C to exit\r\n"
+               "Digital: - - - - - - - -");
 
     for(;;) {
         if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 50) == osOK) {
-            switch(trackData.mode) {
-                case TRACK_DIGITAL:
-                    logPrintln("\033[1A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
-                            (trackData.digitalData & 0x80) ? 1 : 0,
-                            (trackData.digitalData & 0x40) ? 1 : 0,
-                            (trackData.digitalData & 0x20) ? 1 : 0,
-                            (trackData.digitalData & 0x10) ? 1 : 0,
-                            (trackData.digitalData & 0x08) ? 1 : 0,
-                            (trackData.digitalData & 0x04) ? 1 : 0,
-                            (trackData.digitalData & 0x02) ? 1 : 0,
-                            (trackData.digitalData & 0x01) ? 1 : 0);
-                    break;
-                case TRACK_ANALOG:
-                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d\r\n",
-                            trackData.analogData[0], trackData.analogData[1],
-                            trackData.analogData[2], trackData.analogData[3],
-                            trackData.analogData[4], trackData.analogData[5],
-                            trackData.analogData[6], trackData.analogData[7]);
-                    break;
-                case TRACK_ALL:
-                    logPrintln("\033[2A\033[2K\rAnalog : %d %d %d %d %d %d %d %d\r\n"
-                            "\033[2K\rDigital: %d %d %d %d %d %d %d %d",
-                            trackData.analogData[0], trackData.analogData[1],
-                            trackData.analogData[2], trackData.analogData[3],
-                            trackData.analogData[4], trackData.analogData[5],
-                            trackData.analogData[6], trackData.analogData[7],
-                            (trackData.digitalData & 0x80) ? 1 : 0,
-                            (trackData.digitalData & 0x40) ? 1 : 0,
-                            (trackData.digitalData & 0x20) ? 1 : 0,
-                            (trackData.digitalData & 0x10) ? 1 : 0,
-                            (trackData.digitalData & 0x08) ? 1 : 0,
-                            (trackData.digitalData & 0x04) ? 1 : 0,
-                            (trackData.digitalData & 0x02) ? 1 : 0,
-                            (trackData.digitalData & 0x01) ? 1 : 0);
-                    break;
-            }
+            logPrintln("\033[1A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
+                       (trackData.digitalData & 0x80) ? 1 : 0,
+                       (trackData.digitalData & 0x40) ? 1 : 0,
+                       (trackData.digitalData & 0x20) ? 1 : 0,
+                       (trackData.digitalData & 0x10) ? 1 : 0,
+                       (trackData.digitalData & 0x08) ? 1 : 0,
+                       (trackData.digitalData & 0x04) ? 1 : 0,
+                       (trackData.digitalData & 0x02) ? 1 : 0,
+                       (trackData.digitalData & 0x01) ? 1 : 0);
         }
 
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break; // ^C
         }
     }
-    logPrintln("\033[3A\033[J\033[2A");
+    logPrintln("\033[1A\033[J");
 }
 
-ShellCommand TrackGroup[] =
-{
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, set track mode),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Sell, view or set track time),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Sell, view track data),
+ShellCommand TrackGroup[] = {
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, "set track mode (cal/d/a/all/stop/rst/sta)"),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Shell, "view or set track time interval (ms)"),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Shell, "view track data"),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-track, TrackGroup, Track Tool Group);
+                       track, TrackGroup, "Track Tool Group (I2C)");
 
 /**
- * @brief 初始化巡线模块
+ * @brief 初始化巡线模块（I2C版本）
  */
 void Track_Init(void) {
-    MX_USART2_UART_Init();
-    osEventFlagsClear(System_StatusHandle, UART2_RX_CPLT);
+    // 初始化I2C接口
+    MX_I2C1_Init();
+    
 
     track.mode = TRACK_STOP;
     track.time = 100;
+
+    // 确保退出校准模式，进入正常检测模式
+    I2C_ExitCalibration();
 }
 
 /**
- * @brief 获取巡线模块当前模式的发送数据长度
- * @return 发送数据长度
- */
-static uint8_t Track_Get_Size(void) {
-    switch(track.mode) {
-        case TRACK_DIGITAL: return TRACK_DIGITAL_LEN;
-        case TRACK_ANALOG: return TRACK_ANALOG_LEN;
-        case TRACK_ALL: return TRACK_ALL_LEN;
-        default: return TRACK_DIGITAL_LEN;
-    }
-}
-
-/**
- * @brief 重置巡线模块
+ * @brief 重置巡线模块（通过GPIO复位）
  */
 static void Track_Reset(void) {
-    HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_Pin, GPIO_PIN_RESET);
     osDelay(500);
-    HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_Pin, GPIO_PIN_SET);
+    // 复位后等待稳定
+    osDelay(100);
 }
 
 /**
- * @brief 按下巡线模块按键
+ * @brief 模拟按下巡线模块按键（KEY1）
  */
 static void Track_Key(void) {
-    HAL_GPIO_WritePin(TRACK_KEY_Port, TRACK_KEY_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(TRACK_KEY_Port, TRACK_KEY_Pin, GPIO_PIN_RESET);
     osDelay(100);
-    HAL_GPIO_WritePin(TRACK_KEY_Port, TRACK_KEY_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(TRACK_KEY_Port, TRACK_KEY_Pin,    GPIO_PIN_SET);
+    osDelay(100);
 }
 
 /**
- * @brief 解析巡线模块数据
- * @param buffer 接收缓冲区
- * @param data 解析后的数据结构体
+ * @brief 解析数字量数据（I2C读取的一个字节）
+ * @param digital I2C读取的原始值（bit7~bit0对应探头1~8）
+ * @param data 输出数据结构体
  */
-static void Track_Parse(uint8_t *buffer, TrackData_t *data) {
-    char *ptr = (char *)buffer;
-    uint8_t index;
+static void Track_Parse(uint8_t digital, TrackData_t *data) {
     data->mode = track.mode;
-
-    switch(track.mode) {
-        case TRACK_DIGITAL:
-            if (ptr[0] == '$' && ptr[1] == 'D') {
-                data->digitalData = 0;
-                if (ptr[6 ] == '1') data->digitalData |= (1 << 7);
-                if (ptr[11] == '1') data->digitalData |= (1 << 6);
-                if (ptr[16] == '1') data->digitalData |= (1 << 5);
-                if (ptr[21] == '1') data->digitalData |= (1 << 4);
-                if (ptr[26] == '1') data->digitalData |= (1 << 3);
-                if (ptr[31] == '1') data->digitalData |= (1 << 2);
-                if (ptr[36] == '1') data->digitalData |= (1 << 1);
-                if (ptr[41] == '1') data->digitalData |= (1 << 0);
-            } break;
-        case TRACK_ANALOG:
-            if (ptr[0] == '$' && ptr[1] == 'A') {
-                ptr += 3;
-                for (index = 0; index < 8; index++) {
-                    while (*ptr != ':') ptr++;
-                    ptr++;
-                    data->analogData[index] = 0;
-                    while (*ptr >= '0' && *ptr <= '9') {
-                        data->analogData[index] = data->analogData[index] * 10 + (*ptr - '0');
-                        ptr++;
-                    }
-                    if (*ptr == ',') ptr++;
-                }
-            } break;
-        case TRACK_ALL:
-            if (ptr[0] == '$' && ptr[1] == 'A') {
-                ptr += 3;
-                for (index = 0; index < 8; index++) {
-                    while (*ptr != ':') ptr++;
-                    ptr++;
-                    data->analogData[index] = 0;
-                    while (*ptr >= '0' && *ptr <= '9') {
-                        data->analogData[index] = data->analogData[index] * 10 + (*ptr - '0');
-                        ptr++;
-                    }
-                    if (*ptr == ',') ptr++;
-                }
-                while (*ptr != '$' && *ptr != '\0') ptr++;
-            }
-            if (*ptr == '$' && *(ptr + 1) == 'D') {
-                data->digitalData = 0;
-                if (ptr[6 ] == '1') data->digitalData |= (1 << 7);
-                if (ptr[11] == '1') data->digitalData |= (1 << 6);
-                if (ptr[16] == '1') data->digitalData |= (1 << 5);
-                if (ptr[21] == '1') data->digitalData |= (1 << 4);
-                if (ptr[26] == '1') data->digitalData |= (1 << 3);
-                if (ptr[31] == '1') data->digitalData |= (1 << 2);
-                if (ptr[36] == '1') data->digitalData |= (1 << 1);
-                if (ptr[41] == '1') data->digitalData |= (1 << 0);
-            } break;
+    data->digitalData = digital;   // 保持与原串口解析一致的位映射
+    // 模拟量数组清零（I2C不支持）
+    for (int i = 0; i < 8; i++) {
+        data->analogData[i] = 0;
     }
+}
+
+/**
+ * @brief 通过I2C读取数字量寄存器（0x30）
+ * @return 读取到的数字值，失败返回0xFF
+ */
+static uint8_t I2C_ReadDigital(void) {
+    uint8_t reg = 0x30;
+    uint8_t value = 0;
+    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100) != HAL_OK) {
+        return 0xFF;
+    }
+    return value;
+}
+
+/**
+ * @brief 进入校准模式（写寄存器0x01 = 1）
+ */
+static void I2C_EnterCalibration(void) {
+    uint8_t reg = 0x01;
+    uint8_t value = 0x01;
+    HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
+}
+
+/**
+ * @brief 退出校准模式（写寄存器0x01 = 0）
+ */
+static void I2C_ExitCalibration(void) {
+    uint8_t reg = 0x01;
+    uint8_t value = 0x00;
+    HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
 }
