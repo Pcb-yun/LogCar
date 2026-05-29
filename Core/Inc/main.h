@@ -67,6 +67,8 @@ void Error_Handler(void);
 #define KEY_UP_GPIO_Port GPIOA
 #define OPS_RX_Pin GPIO_PIN_1
 #define OPS_RX_GPIO_Port GPIOA
+#define BATTERY_Pin GPIO_PIN_4
+#define BATTERY_GPIO_Port GPIOA
 #define SERVO_TX_Pin GPIO_PIN_10
 #define SERVO_TX_GPIO_Port GPIOB
 #define SERVO_RX_Pin GPIO_PIN_11

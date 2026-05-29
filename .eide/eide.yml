@@ -24,6 +24,7 @@ virtualFolder:
                 - path: Core/Src/main.c
                 - path: Core/Src/gpio.c
                 - path: Core/Src/freertos.c
+                - path: Core/Src/adc.c
                 - path: Core/Src/dma.c
                 - path: Core/Src/i2c.c
                 - path: Core/Src/iwdg.c
@@ -40,6 +41,8 @@ virtualFolder:
           files:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c
@@ -118,6 +121,10 @@ virtualFolder:
       files:
         - path: Drivers/User/TRACK/track.c
       folders: []
+    - name: battery
+      files:
+        - path: Drivers/User/ADC/Battery.c
+      folders: []
     - name: ::CMSIS
       files: []
       folders: []
@@ -154,6 +161,7 @@ targets:
         - Drivers/User/STEP/driver
         - Drivers/User/STEP/motion
         - Drivers/User/TRACK
+        - Drivers/User/ADC
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []
