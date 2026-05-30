@@ -142,7 +142,6 @@ static void process_byte(uint8_t byte, uint32_t now)
  */
 bool Scan_Init(void)
 {
-    bool status = true;
     
     MX_UART5_Init();
     memset(&rx, 0, sizeof(rx));
@@ -152,14 +151,12 @@ bool Scan_Init(void)
                                          SCAN_STREAM_TRIGGER_LVL);
     
     if (Scan_Rx_Stream == NULL) {
-        status = false;
-        is_init = false;
         configASSERT(Scan_Rx_Stream != NULL);
     } else {
         is_init = true;
     }
     
-    return status;
+    return is_init;
 }
 
 /**
