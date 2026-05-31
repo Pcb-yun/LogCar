@@ -125,7 +125,7 @@ osThreadId_t Battery_GetHandle;
 const osThreadAttr_t Battery_Get_attributes = {
   .name = "Battery_Get",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal4,
+  .priority = (osPriority_t) osPriorityLow4,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;

@@ -57,16 +57,10 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define KEY0_Pin GPIO_PIN_4
-#define KEY0_GPIO_Port GPIOE
 #define LED_Red_Pin GPIO_PIN_9
 #define LED_Red_GPIO_Port GPIOF
-#define LED_Green_Pin GPIO_PIN_10
-#define LED_Green_GPIO_Port GPIOF
 #define KEY_UP_Pin GPIO_PIN_0
 #define KEY_UP_GPIO_Port GPIOA
-#define OPS_RX_Pin GPIO_PIN_1
-#define OPS_RX_GPIO_Port GPIOA
 #define BATTERY_Pin GPIO_PIN_4
 #define BATTERY_GPIO_Port GPIOA
 #define SERVO_TX_Pin GPIO_PIN_10
@@ -83,6 +77,8 @@ void Error_Handler(void);
 #define Terminal_RX_GPIO_Port GPIOA
 #define OPS_TX_Pin GPIO_PIN_10
 #define OPS_TX_GPIO_Port GPIOC
+#define OPS_RX_Pin GPIO_PIN_11
+#define OPS_RX_GPIO_Port GPIOC
 #define Tracking_KEY_Pin GPIO_PIN_13
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14

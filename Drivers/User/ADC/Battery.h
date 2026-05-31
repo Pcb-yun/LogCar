@@ -3,25 +3,24 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
-#include "main.h"
 #include <stdbool.h>
+#include <stdint.h>
 
-/* 初始化电池管理模块（会自动创建 FreeRTOS 任务） */
+/**
+ * @brief 电池电压监控模块的配置宏
+ */
+#define BATTERY_DIVIDER_RATIO   5.0f        // 分压比
+#define ADC_VREF_MV             3300        // ADC 参考电压 (VREF+)，通常为 3300mV
+#define ADC_RESOLUTION          4096.0f     // ADC 分辨率
+
+
 bool Battery_Init(void);
 
-/* 获取当前电池电压（单位：伏特） */
-float Battery_GetVoltage(void);
-
-/* 动态修改采样间隔（毫秒） */
-void Battery_SetInterval(uint16_t ms);
-
-/* 获取当前采样间隔（毫秒） */
-uint16_t Battery_GetInterval(void);
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 
-#endif
+#endif /* __BATTERY_H__ */

@@ -13,18 +13,27 @@
 #include <string.h>
 #include <stdlib.h>
 #include "Events.h"
+#include "i2c.h"
 
 static Track_t track;
 
 static void Track_Reset(void);
 static void Track_Key(void);
-static void Track_Parse(uint8_t digital, TrackData_t *data);
-static uint8_t I2C_ReadDigital(void);
-static void I2C_EnterCalibration(void);
-static void I2C_ExitCalibration(void);
+static int16_t I2C_ReadDigital(void);
+
 
 /**
- * @brief 巡线模块获取任务（I2C方式）
+ * @brief 初始化巡线模块
+ */
+void Track_Init(void) {
+    MX_I2C1_Init();
+
+    track.mode = TRACK_STOP;
+    track.time = 100;
+}
+
+/**
+ * @brief 巡线模块获取任务
  */
 void Track_Get_Task(void *argument) {
     (void)argument;
@@ -36,14 +45,14 @@ void Track_Get_Task(void *argument) {
     for(;;) {
         osDelay(track.time);
 
-        if (track.mode == TRACK_STOP) {
-            continue;   // 停止模式不读取数据
+        if (track.mode != TRACK_DIGITAL) {
+            continue;
         }
 
         // 通过I2C读取数字量
-        uint8_t digital = I2C_ReadDigital();
-        if (digital != 0xFF) { // 0xFF表示读取失败
-            Track_Parse(digital, &trackData);
+        int16_t digital = I2C_ReadDigital();
+        if (digital != -1) {
+            trackData.digitalData = digital;
             osMessageQueueReset(Track_DataHandle);
             osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
         }
@@ -57,10 +66,12 @@ void Track_Get_Task(void *argument) {
 static void Track_Set_Mode(TrackSet_t mode) {
     char ch;
     extern Shell shell;
+    uint8_t value;
 
     if (mode == TRACK_CAL) {
         // 1. 通过I2C进入校准模式
-        I2C_EnterCalibration();
+        value = 0x01;
+        HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x01, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
         logPrintln(TRACK_CAL_HELP_1);
 
         do {
@@ -75,21 +86,17 @@ static void Track_Set_Mode(TrackSet_t mode) {
         Track_Key();          // 模拟按下按键，采样白线
 
         // 退出校准模式（实际校准成功后模块会自动退出，但此处确保退出）
-        I2C_ExitCalibration();
+        value = 0x00;
+        HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x01, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
         logPrintln(TRACK_CAL_HELP_3);
         track.mode = TRACK_STOP;   // 校准完成后停止数据发送
-    } 
-    else if (mode == TRACK_ANALOG || mode == TRACK_ALL) {
-        logPrintln("Warning: I2C mode does NOT support analog data, force to DIGITAL mode.");
-        track.mode = TRACK_DIGITAL;
-    }
-    else {
+    } else {
         track.mode = mode;
     }
 }
 
 /**
- * @brief Shell命令：设置巡线模块模式
+ * @brief 设置巡线模块模式
  */
 static void Track_Mode_Shell(int argc, char *argv[]) {
     if(argc != 2) {
@@ -102,10 +109,6 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
         Track_Set_Mode(TRACK_CAL);
     } else if(strcmp(argv[1], "d") == 0) {
         Track_Set_Mode(TRACK_DIGITAL);
-    } else if(strcmp(argv[1], "a") == 0) {
-        Track_Set_Mode(TRACK_ANALOG);
-    } else if(strcmp(argv[1], "all") == 0) {
-        Track_Set_Mode(TRACK_ALL);
     } else if(strcmp(argv[1], "stop") == 0) {
         Track_Set_Mode(TRACK_STOP);
     } else if(strcmp(argv[1], "rst") == 0) {
@@ -113,9 +116,7 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
     } else if(strcmp(argv[1], "sta") == 0) {
         switch(track.mode) {
             case TRACK_CAL: mode_str = "Calibration"; break;
-            case TRACK_ANALOG: mode_str = "Analog (not supported)"; break;
             case TRACK_DIGITAL: mode_str = "Digital"; break;
-            case TRACK_ALL: mode_str = "All (fallback to Digital)"; break;
             case TRACK_STOP: mode_str = "Stop"; break;
             default: mode_str = "Unknown"; break;
         }
@@ -146,7 +147,7 @@ static void Track_Time_Shell(int argc, char *argv[]) {
 }
 
 /**
- * @brief 实时刷新巡线模块数据（仅数字量）
+ * @brief 实时刷新巡线模块数据
  */
 static void Track_View_Shell(void) {
     extern osMessageQueueId_t Track_DataHandle;
@@ -154,7 +155,7 @@ static void Track_View_Shell(void) {
     char ch;
     extern Shell shell;
 
-    logPrintln("Track Data Viewer (Digital only) - Press ^C to exit\r\n"
+    logPrintln("Track Data Viewer - Press ^C to exit\r\n"
                "Digital: - - - - - - - -");
 
     for(;;) {
@@ -174,41 +175,25 @@ static void Track_View_Shell(void) {
             if (ch == 0x03) break; // ^C
         }
     }
-    logPrintln("\033[1A\033[J");
+    logPrintln("\033[3A\033[J\033[2A");
 }
 
 ShellCommand TrackGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, "set track mode (cal/d/a/all/stop/rst/sta)"),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Shell, "view or set track time interval (ms)"),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Shell, "view track data"),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, mode, Track_Mode_Shell, set track mode),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, Track_Time_Shell, view or set track time),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, Track_View_Shell, view track data),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-                       track, TrackGroup, "Track Tool Group (I2C)");
+                       track, TrackGroup, Track Tool Group);
 
 /**
- * @brief 初始化巡线模块（I2C版本）
- */
-void Track_Init(void) {
-    // 初始化I2C接口
-    MX_I2C1_Init();
-    
-
-    track.mode = TRACK_STOP;
-    track.time = 100;
-
-    // 确保退出校准模式，进入正常检测模式
-    I2C_ExitCalibration();
-}
-
-/**
- * @brief 重置巡线模块（通过GPIO复位）
+ * @brief 重置巡线模块
  */
 static void Track_Reset(void) {
     HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_Pin, GPIO_PIN_RESET);
     osDelay(500);
     HAL_GPIO_WritePin(TRACK_RST_Port, TRACK_RST_Pin, GPIO_PIN_SET);
-    // 复位后等待稳定
     osDelay(100);
 }
 
@@ -223,46 +208,13 @@ static void Track_Key(void) {
 }
 
 /**
- * @brief 解析数字量数据（I2C读取的一个字节）
- * @param digital I2C读取的原始值（bit7~bit0对应探头1~8）
- * @param data 输出数据结构体
- */
-static void Track_Parse(uint8_t digital, TrackData_t *data) {
-    data->mode = track.mode;
-    data->digitalData = digital;   // 保持与原串口解析一致的位映射
-    // 模拟量数组清零（I2C不支持）
-    for (int i = 0; i < 8; i++) {
-        data->analogData[i] = 0;
-    }
-}
-
-/**
  * @brief 通过I2C读取数字量寄存器（0x30）
- * @return 读取到的数字值，失败返回0xFF
+ * @return 读取到的数字值，失败返回-1
  */
-static uint8_t I2C_ReadDigital(void) {
-    uint8_t reg = 0x30;
-    uint8_t value = 0;
-    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100) != HAL_OK) {
-        return 0xFF;
+static int16_t I2C_ReadDigital(void) {
+    int16_t value = 0;
+    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x30, I2C_MEMADD_SIZE_8BIT, (uint8_t*)&value, 1, 100) != HAL_OK) {
+        return -1;
     }
     return value;
-}
-
-/**
- * @brief 进入校准模式（写寄存器0x01 = 1）
- */
-static void I2C_EnterCalibration(void) {
-    uint8_t reg = 0x01;
-    uint8_t value = 0x01;
-    HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
-}
-
-/**
- * @brief 退出校准模式（写寄存器0x01 = 0）
- */
-static void I2C_ExitCalibration(void) {
-    uint8_t reg = 0x01;
-    uint8_t value = 0x00;
-    HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
 }

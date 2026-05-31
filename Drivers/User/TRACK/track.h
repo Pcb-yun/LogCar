@@ -11,7 +11,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "i2c.h"   // 使用HAL I2C驱动
 
 // ==================== 用户配置区 ====================
 #define TRACK_I2C_HANDLE    &hi2c1      // 请根据实际I2C外设修改
@@ -20,9 +19,7 @@ extern "C" {
 
 typedef enum {
     TRACK_CAL = 0,
-    TRACK_ANALOG,
     TRACK_DIGITAL,
-    TRACK_ALL,
     TRACK_STOP,
 } TrackSet_t;
 
@@ -33,7 +30,6 @@ typedef struct {
 
 typedef struct {
     uint8_t digitalData;        // 数字量（bit7~bit0对应探头1~8）
-    uint16_t analogData[8];     // 模拟量（I2C不支持，始终为0）
     TrackSet_t mode;
 } TrackData_t;
 
