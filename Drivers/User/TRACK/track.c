@@ -1,6 +1,6 @@
 /**
  * @file track.c
- * @brief 巡线模块源文件 - I2C版本（仅数字量）
+ * @brief 巡线模块源文件
  */
 
 #include "track.h"
@@ -15,7 +15,7 @@
 #include "Events.h"
 #include "i2c.h"
 
-static Track_t track;
+static Track_t *g_track = NULL;
 
 static void Track_Reset(void);
 static void Track_Key(void);
@@ -25,11 +25,17 @@ static int16_t I2C_ReadDigital(void);
 /**
  * @brief 初始化巡线模块
  */
-void Track_Init(void) {
+bool Track_Init(void) {
     MX_I2C1_Init();
+    if (g_track == NULL) {
+        g_track = malloc(sizeof(Track_t));
+    }
+    memset(g_track, 0, sizeof(Track_t));
 
-    track.mode = TRACK_STOP;
-    track.time = 100;
+    g_track->mode = TRACK_STOP;
+    g_track->time = 100;
+
+    return true;
 }
 
 /**
@@ -43,9 +49,9 @@ void Track_Get_Task(void *argument) {
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
 
     for(;;) {
-        osDelay(track.time);
+        osDelay(g_track->time);
 
-        if (track.mode != TRACK_DIGITAL) {
+        if (g_track->mode != TRACK_DIGITAL) {
             continue;
         }
 
@@ -53,6 +59,7 @@ void Track_Get_Task(void *argument) {
         int16_t digital = I2C_ReadDigital();
         if (digital != -1) {
             trackData.digitalData = digital;
+            trackData.timestamp = xTaskGetTickCount();
             osMessageQueueReset(Track_DataHandle);
             osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
         }
@@ -89,9 +96,9 @@ static void Track_Set_Mode(TrackSet_t mode) {
         value = 0x00;
         HAL_I2C_Mem_Write(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x01, I2C_MEMADD_SIZE_8BIT, &value, 1, 100);
         logPrintln(TRACK_CAL_HELP_3);
-        track.mode = TRACK_STOP;   // 校准完成后停止数据发送
+        g_track->mode = TRACK_STOP;   // 校准完成后停止数据发送
     } else {
-        track.mode = mode;
+        g_track->mode = mode;
     }
 }
 
@@ -114,13 +121,13 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
     } else if(strcmp(argv[1], "rst") == 0) {
         Track_Reset();
     } else if(strcmp(argv[1], "sta") == 0) {
-        switch(track.mode) {
+        switch(g_track->mode) {
             case TRACK_CAL: mode_str = "Calibration"; break;
             case TRACK_DIGITAL: mode_str = "Digital"; break;
             case TRACK_STOP: mode_str = "Stop"; break;
             default: mode_str = "Unknown"; break;
         }
-        logPrintln("Status: %s , Time: %d ms", mode_str, track.time);
+        logPrintln("Status: %s , Time: %d ms", mode_str, g_track->time);
     } else {
         logPrintln("invalid command: %s\n%s", argv[1], TRACK_MODE_HELP);
     }
@@ -133,7 +140,7 @@ static void Track_Time_Shell(int argc, char *argv[]) {
     if(argc > 2) {
         logPrintln(TRACK_TIME_HELP); return;
     } else if(argc == 1) {
-        logPrintln("current time: %d ms", track.time); return;
+        logPrintln("current time: %d ms", g_track->time); return;
     }
 
     char *endptr;
@@ -142,7 +149,7 @@ static void Track_Time_Shell(int argc, char *argv[]) {
         logPrintln("invalid time value: %s\n%s", argv[1], TRACK_TIME_HELP);
         return;
     } else {
-        track.time = (uint16_t)val;
+        g_track->time = (uint16_t)val;
     }
 }
 
@@ -160,7 +167,7 @@ static void Track_View_Shell(void) {
 
     for(;;) {
         if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 50) == osOK) {
-            logPrintln("\033[1A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
+            logPrintln("\033[2A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
                        (trackData.digitalData & 0x80) ? 1 : 0,
                        (trackData.digitalData & 0x40) ? 1 : 0,
                        (trackData.digitalData & 0x20) ? 1 : 0,
@@ -169,13 +176,13 @@ static void Track_View_Shell(void) {
                        (trackData.digitalData & 0x04) ? 1 : 0,
                        (trackData.digitalData & 0x02) ? 1 : 0,
                        (trackData.digitalData & 0x01) ? 1 : 0);
+            logPrintln("Timestamp: %d", trackData.timestamp);
         }
-
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break; // ^C
         }
     }
-    logPrintln("\033[3A\033[J\033[2A");
+    logPrintln("\033[4A\033[J\033[2A");
 }
 
 ShellCommand TrackGroup[] = {

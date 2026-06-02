@@ -1,6 +1,6 @@
 /**
  * @file track.h
- * @brief 巡线模块头文件 - I2C版本
+ * @brief 巡线模块头文件
  */
 
 #ifndef __TRACK_H__
@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // ==================== 用户配置区 ====================
 #define TRACK_I2C_HANDLE    &hi2c1      // 请根据实际I2C外设修改
@@ -30,10 +31,11 @@ typedef struct {
 
 typedef struct {
     uint8_t digitalData;        // 数字量（bit7~bit0对应探头1~8）
+    uint32_t timestamp;         // 时间戳（ms）
     TrackSet_t mode;
 } TrackData_t;
 
-void Track_Init(void);
+bool Track_Init(void);
 
 // GPIO引脚定义（与原保持一致）
 #define TRACK_KEY_Port  GPIOG

@@ -93,6 +93,16 @@ virtualFolder:
         - path: Applications/letter_shell/game/game.c
         - path: Applications/letter_shell/game/2048.c
       folders: []
+    - name: nav
+      files:
+        - path: Applications/nav/localization/nav_local.c
+        - path: Applications/nav/trajectory_tracking/nav_tracker.c
+        - path: Applications/nav/utils/nav_math.c
+      folders: []
+    - name: battery
+      files:
+        - path: Drivers/User/ADC/battery.c
+      folders: []
     - name: misc
       files:
         - path: Drivers/User/MISC/message.c
@@ -120,14 +130,6 @@ virtualFolder:
     - name: track
       files:
         - path: Drivers/User/TRACK/track.c
-      folders: []
-    - name: battery
-      files:
-        - path: Drivers/User/ADC/battery.c
-      folders: []
-    - name: nav
-      files:
-        - path: Applications/nav/nav_sys.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -157,6 +159,11 @@ targets:
         - Applications/letter_shell/src
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
+        - Applications/nav
+        - Applications/nav/localization
+        - Applications/nav/trajectory_tracking
+        - Applications/nav/utils
+        - Drivers/User/ADC
         - Drivers/User/MISC
         - Drivers/User/OPS
         - Drivers/User/RTOS
@@ -165,8 +172,6 @@ targets:
         - Drivers/User/STEP/driver
         - Drivers/User/STEP/motion
         - Drivers/User/TRACK
-        - Drivers/User/ADC
-        - Applications/nav
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

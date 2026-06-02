@@ -1,3 +1,8 @@
+/**
+ * @file Battery.h
+ * @brief 电池电压监控模块头文件
+ */
+
 #ifndef __BATTERY_H__
 #define __BATTERY_H__
 
@@ -6,7 +11,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdbool.h>
-#include <stdint.h>
 
 /**
  * @brief 电池电压监控模块的配置宏

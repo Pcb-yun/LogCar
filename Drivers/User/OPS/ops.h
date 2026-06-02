@@ -12,27 +12,30 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "ops_cfg.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief 定位数据结构体
  */
 typedef struct {
 #if OPS_USE_POS
-    float x;
-    float y;
+    float x;        // X坐标
+    float y;        // Y坐标
 #endif
 #if OPS_USE_YAW
-    float yaw;
+    float yaw;      // 航向
 #endif
 #if OPS_USE_PITCH
-    float pitch;
+    float pitch;    // 俯仰
 #endif
 #if OPS_USE_ROLL
-    float roll;
+    float roll;     // 滚转
 #endif
 #if OPS_USE_ANG_VEL
-    float w_z;
+    float w_z;      // 角速度
 #endif
+    uint32_t timestamp; // 时间戳
 } OPSData_t;
 
 

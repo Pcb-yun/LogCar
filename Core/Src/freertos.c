@@ -35,6 +35,7 @@
 #include "ops.h"
 #include "servo_driver.h"
 #include "servo_port.h"
+#include "nav_common.h"
 
 /* USER CODE END Includes */
 
@@ -83,49 +84,63 @@ osThreadId_t Motor_Get_StaHandle;
 const osThreadAttr_t Motor_Get_Sta_attributes = {
   .name = "Motor_Get_Sta",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh1,
 };
 /* Definitions for Motor_Ctrl */
 osThreadId_t Motor_CtrlHandle;
 const osThreadAttr_t Motor_Ctrl_attributes = {
   .name = "Motor_Ctrl",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for Motor_Update */
 osThreadId_t Motor_UpdateHandle;
 const osThreadAttr_t Motor_Update_attributes = {
   .name = "Motor_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh5,
 };
 /* Definitions for OPS_Update */
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime3,
+  .priority = (osPriority_t) osPriorityHigh5,
 };
 /* Definitions for Servo_Ctrl */
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityAboveNormal4,
 };
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
   .name = "Servo_Tx",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal7,
+  .priority = (osPriority_t) osPriorityAboveNormal5,
 };
 /* Definitions for Battery_Get */
 osThreadId_t Battery_GetHandle;
 const osThreadAttr_t Battery_Get_attributes = {
   .name = "Battery_Get",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow4,
+  .priority = (osPriority_t) osPriorityLow3,
+};
+/* Definitions for Loc_Update */
+osThreadId_t Loc_UpdateHandle;
+const osThreadAttr_t Loc_Update_attributes = {
+  .name = "Loc_Update",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityRealtime4,
+};
+/* Definitions for Nav_Track */
+osThreadId_t Nav_TrackHandle;
+const osThreadAttr_t Nav_Track_attributes = {
+  .name = "Nav_Track",
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -167,6 +182,11 @@ osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
   .name = "Servo_Tx_Data"
 };
+/* Definitions for Nav_TRAJ */
+osMessageQueueId_t Nav_TRAJHandle;
+const osMessageQueueAttr_t Nav_TRAJ_attributes = {
+  .name = "Nav_TRAJ"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -188,6 +208,8 @@ extern void OPS_Update_Task(void *argument);
 extern void Servo_Ctrl_Task(void *argument);
 extern void Servo_Tx_Task(void *argument);
 extern void Battery_Get_Task(void *argument);
+extern void Loc_Update_Task(void *argument);
+extern void Nav_Track_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -344,6 +366,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Servo_Tx_Data */
   Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
+  /* creation of Nav_TRAJ */
+  Nav_TRAJHandle = osMessageQueueNew (4, sizeof(TRAJData_t), &Nav_TRAJ_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -378,6 +403,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Battery_Get */
   Battery_GetHandle = osThreadNew(Battery_Get_Task, NULL, &Battery_Get_attributes);
+
+  /* creation of Loc_Update */
+  Loc_UpdateHandle = osThreadNew(Loc_Update_Task, NULL, &Loc_Update_attributes);
+
+  /* creation of Nav_Track */
+  Nav_TrackHandle = osThreadNew(Nav_Track_Task, NULL, &Nav_Track_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -428,11 +459,10 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Tracking Module");
-  Track_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  if (!Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
-  extern void OPS_Init(void);
   OPS_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 
@@ -462,4 +492,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

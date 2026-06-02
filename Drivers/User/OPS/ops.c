@@ -48,6 +48,7 @@ void OPS_Update_Task(void *argument) {
     for (;;) {
         osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, osWaitForever);
 
+        ops_data.timestamp = xTaskGetTickCount();
         for (uint8_t j = 0; j < rx_buf.len; j++) {
             Data_Analyse(rx_buf.data[j], &ops_data);
         }
@@ -191,9 +192,9 @@ static void OPS_View_Shell(void) {
             char buf[128];
             int len = 0;
 #if OPS_USE_POS
-            len += sprintf(buf + len, "\033[2K\rX: %.2f  Y: %.2f\r\n", ops_data.x, ops_data.y);
+            len += sprintf(buf + len, "X: %.2f  Y: %.2f\r\n", ops_data.x, ops_data.y);
 #else
-            len += sprintf(buf + len, "\033[2K\rX: ------.--  Y: ------.--\r\n");
+            len += sprintf(buf + len, "X: ------.--  Y: ------.--\r\n");
 #endif
 #if OPS_USE_YAW
             len += sprintf(buf + len, "Yaw: %.2f  ", ops_data.yaw);
@@ -215,6 +216,7 @@ static void OPS_View_Shell(void) {
 #else
             len += sprintf(buf + len, "Wz: ---.-- dps");
 #endif
+            len += sprintf(buf + len, "Timestamp: %u\033[3A\033[2K\r", ops_data.timestamp);
             logPrintln("%s", buf);
         }
 
