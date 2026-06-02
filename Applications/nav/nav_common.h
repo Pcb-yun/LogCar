@@ -10,7 +10,7 @@
 #include "stdint.h"
 
 /**
- * @brief 导航位姿结构体
+ * @brief 当前导航位姿结构体
  * */
 typedef struct {
     float x;              // X坐标 (cm)

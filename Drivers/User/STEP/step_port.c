@@ -12,14 +12,13 @@
 #include "usart.h"
 #include "Events.h"
 #include "ZDT_V5_Driver.h"
-#include "motion_control.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 extern osMessageQueueId_t Usart6_Rx_DataHandle;
 extern osMessageQueueId_t MotorCmdsHandle;
-extern MotorStatusShared_t g_motor_status;
+MotorStatusShared_t *g_motor_status;
 static bool is_init = false;    // 电机模块是否初始化
 static uint16_t update_time;    // 电机状态更新时间间隔 (ms)
 
@@ -31,6 +30,11 @@ bool Motor_Init(void) {
     extern uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
     MX_USART6_UART_Init();
     update_time = 100;
+
+    g_motor_status = pvPortMalloc(sizeof(MotorStatusShared_t));
+    if (!g_motor_status) {
+        return false;
+    }
 
     for (uint8_t i = 0; i < 4; i++) {
 #if USE_HEARTBEAT
@@ -84,13 +88,17 @@ void Motor_Ctrl_Task(void *argument) {
 void Motor_Get_Sta_Task(void *argument) {
     (void)argument;
     Usart6_RxBuf_t rxBuf;
+    extern osMutexId_t Motor_MutexHandle;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
     for(;;) {
         if (osMessageQueueGet(Usart6_Rx_DataHandle, &rxBuf, NULL, osWaitForever) == osOK) {
-            Motor_Receive(rxBuf.data, rxBuf.len);
+            if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+                Motor_Receive(rxBuf.data, rxBuf.len);
+                osMutexRelease(Motor_MutexHandle);
+            }
         }
     }
 }
@@ -110,10 +118,6 @@ void Motor_Update_Task(void *argument) {
         osDelay(update_time);
         for(uint8_t i = 0; i < 4; i++) {
             cmd.motor_id = i + 1;
-#if USE_HEARTBEAT
-            cmd.op_type = OP_HEARTBEAT;
-            Motor_Send_Cmd(&cmd);
-#endif /* USE_HEARTBEAT */
 #if USE_VIEW
             cmd.op_type = OP_PARAM_READ;
         #if MOTOR_ELECTRICAL
@@ -160,6 +164,9 @@ void Motor_Update_Task(void *argument) {
             cmd.type.param.type = PARAM_COMM;
             Motor_Send_Cmd(&cmd);
         #endif
+#elif USE_HEARTBEAT
+            cmd.op_type = OP_HEARTBEAT;
+            Motor_Send_Cmd(&cmd);
 #endif /* USE_VIEW */
         }
     }
@@ -171,7 +178,7 @@ void Motor_Update_Task(void *argument) {
  * @return true 电机在线，false 电机不在线
  */
 static bool Motor_isonline(uint8_t motor_id) {
-    MotorStatus_t *motor = &g_motor_status.motors[motor_id - 1];
+    MotorStatus_t *motor = &g_motor_status->motors[motor_id - 1];
     motor->is_online = false;
     ZDT_V5_Read_Motor_ID(motor_id);
     osDelay(update_time + 50);
@@ -448,120 +455,120 @@ ShellCommand StepGroup[] = {
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 step, StepGroup, Step Control CMD Group);
 
-#if MOTOR_CMD_POSITION
-/**
- * @brief 将车移动指定距离
- */
-static void Car_Move(int argc, char *argv[]) {
-    if (!is_init) {
-        logWarning("Motor module not initialized"); return;
-    }
-
-    if (argc != 4) {
-        logPrintln("Usage: car pos [x_offset] [y_offset] [yaw_offset]"); return;
-    }
-
-    int32_t x_offset = atoi(argv[1]);
-    int32_t y_offset = atoi(argv[2]);
-    int32_t yaw_offset = atoi(argv[3]);
-
-    MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
-}
-#endif /* MOTOR_CMD_POSITION */
-
-#if MOTOR_CMD_VELOCITY
-/**
- * @brief 按键遥控
- */
-static void Car_Key(void) {
-    if (!is_init) {
-        logWarning("Motor module not initialized"); return;
-    }
-
-	Shell *shell = shellGetCurrent();
-	logPrintln("Key control started. WASD=move, QE=rotate, ^C=exit");
-
-	char prev_key = 0;
-	char key;
-
-	for (;;) {
-        osDelay(10);
-		short ret = shell->read(&key, 1);
-
-		if (ret <= 0) {	// 超时无输入
-			if (prev_key != 0) {
-				MotionControl_Stop();
-				prev_key = 0;
-			} continue;
-		}
-
-		if (key == 0x03) {	// ^C 退出
-			MotionControl_Stop(); break;
-		}
-
-		if (key == prev_key) continue;
-
-		int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
-		bool valid_key = true;
-
-		switch (key) {
-		case 'w': case 'W': x_comp = 127;   break;	// 前进
-		case 's': case 'S': x_comp = -127;  break;	// 后退
-		case 'a': case 'A': y_comp = 127;   break;	// 左移
-		case 'd': case 'D': y_comp = -127;  break;	// 右移
-		case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
-		case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
-		default: valid_key = false; break;
-		}
-
-		if (valid_key) {
-			MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
-		}
-
-		prev_key = key;
-	}
-    logPrintln("\033[%dA\033[J\033[2A", 1);
-}
-#endif /* MOTOR_CMD_VELOCITY */
-
-/**
- * @brief 设置车的运动参数
- */
-static void Car_Params(int argc, char *argv[]) {
-    uint16_t linear_speed;
-    uint16_t yaw_speed;
-    uint16_t acc;
-    uint16_t dec;
-
-    if (argc == 1) {
-        MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
-        logPrintln("Current params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec); return;
-    } else if (argc != 5) {
-        logPrintln("Usage: car par [linear_speed] [yaw_speed] [acc] [dec]"); return;
-    }
-
-    linear_speed = atoi(argv[2]);
-    yaw_speed = atoi(argv[3]);
-    acc = atoi(argv[4]);
-    dec = atoi(argv[5]);
-
-    MotionControl_SetMotionParams(linear_speed, yaw_speed, acc, dec);
-    logPrintln("Set params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec);
-}
-
-
-ShellCommand MoveGroup[] = {
-#if MOTOR_CMD_POSITION
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
-#endif
-#if MOTOR_CMD_VELOCITY
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
-#endif
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, par, Car_Params, Set Car Motion Params),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-car, MoveGroup, Car Control CMD Group);
+// #if MOTOR_CMD_POSITION
+// /**
+//  * @brief 将车移动指定距离
+//  */
+// static void Car_Move(int argc, char *argv[]) {
+//     if (!is_init) {
+//         logWarning("Motor module not initialized"); return;
+//     }
+//
+//     if (argc != 4) {
+//         logPrintln("Usage: car pos [x_offset] [y_offset] [yaw_offset]"); return;
+//     }
+//
+//     int32_t x_offset = atoi(argv[1]);
+//     int32_t y_offset = atoi(argv[2]);
+//     int32_t yaw_offset = atoi(argv[3]);
+//
+//     MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
+// }
+// #endif /* MOTOR_CMD_POSITION */
+//
+// #if MOTOR_CMD_VELOCITY
+// /**
+//  * @brief 按键遥控
+//  */
+// static void Car_Key(void) {
+//     if (!is_init) {
+//         logWarning("Motor module not initialized"); return;
+//     }
+//
+// 	Shell *shell = shellGetCurrent();
+// 	logPrintln("Key control started. WASD=move, QE=rotate, ^C=exit");
+//
+// 	char prev_key = 0;
+// 	char key;
+//
+// 	for (;;) {
+//         osDelay(10);
+// 		short ret = shell->read(&key, 1);
+//
+// 		if (ret <= 0) {	// 超时无输入
+// 			if (prev_key != 0) {
+// 				MotionControl_Stop();
+// 				prev_key = 0;
+// 			} continue;
+// 		}
+//
+// 		if (key == 0x03) {	// ^C 退出
+// 			MotionControl_Stop(); break;
+// 		}
+//
+// 		if (key == prev_key) continue;
+//
+// 		int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
+// 		bool valid_key = true;
+//
+// 		switch (key) {
+// 		case 'w': case 'W': x_comp = 127;   break;	// 前进
+// 		case 's': case 'S': x_comp = -127;  break;	// 后退
+// 		case 'a': case 'A': y_comp = 127;   break;	// 左移
+// 		case 'd': case 'D': y_comp = -127;  break;	// 右移
+// 		case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
+// 		case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
+// 		default: valid_key = false; break;
+// 		}
+//
+// 		if (valid_key) {
+// 			MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
+// 		}
+//
+// 		prev_key = key;
+// 	}
+//     logPrintln("\033[%dA\033[J\033[2A", 1);
+// }
+// #endif /* MOTOR_CMD_VELOCITY */
+//
+// /**
+//  * @brief 设置车的运动参数
+//  */
+// static void Car_Params(int argc, char *argv[]) {
+//     uint16_t linear_speed;
+//     uint16_t yaw_speed;
+//     uint16_t acc;
+//     uint16_t dec;
+//
+//     if (argc == 1) {
+//         MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
+//         logPrintln("Current params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec); return;
+//     } else if (argc != 5) {
+//         logPrintln("Usage: car par [linear_speed] [yaw_speed] [acc] [dec]"); return;
+//     }
+//
+//     linear_speed = atoi(argv[2]);
+//     yaw_speed = atoi(argv[3]);
+//     acc = atoi(argv[4]);
+//     dec = atoi(argv[5]);
+//
+//     MotionControl_SetMotionParams(linear_speed, yaw_speed, acc, dec);
+//     logPrintln("Set params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec);
+// }
+//
+//
+// ShellCommand MoveGroup[] = {
+// #if MOTOR_CMD_POSITION
+//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
+// #endif
+// #if MOTOR_CMD_VELOCITY
+//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
+// #endif
+//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, par, Car_Params, Set Car Motion Params),
+//     SHELL_CMD_GROUP_END()
+// };
+// SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+// car, MoveGroup, Car Control CMD Group);
 
 
 #if USE_VIEW
@@ -579,7 +586,7 @@ static const char* motor_type_str(uint8_t t) {
 	if (t == 25) return "1.8"; if (t == 50) return "0.9";
 #if CURRENT_FIRMWARE == FIRMWARE_X
 	if (t == 0) {
-		uint8_t opt = g_motor_status.motors[0].option_params;
+		uint8_t opt = g_motor_status->motors[0].option_params;
 		return (opt & 0x01) ? "0.9" : "1.8";
 	}
 #endif
@@ -767,39 +774,39 @@ static void Motor_View_Shell(void) {
     for(;;) {
         logPrintln("\033[%dA\033[2K\r  ID | %3d   | %3d   | %3d   | %3d   |",
                 line_count,
-                g_motor_status.motors[0].motor_id,
-                g_motor_status.motors[1].motor_id,
-                g_motor_status.motors[2].motor_id,
-                g_motor_status.motors[3].motor_id);
+                g_motor_status->motors[0].motor_id,
+                g_motor_status->motors[1].motor_id,
+                g_motor_status->motors[2].motor_id,
+                g_motor_status->motors[3].motor_id);
 #if MOTOR_ELECTRICAL
         logPrintln("\033[2K\rV(mV)|%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].voltage,
-                g_motor_status.motors[1].voltage,
-                g_motor_status.motors[2].voltage,
-                g_motor_status.motors[3].voltage);
+                g_motor_status->motors[0].voltage,
+                g_motor_status->motors[1].voltage,
+                g_motor_status->motors[2].voltage,
+                g_motor_status->motors[3].voltage);
 #if CURRENT_FIRMWARE == FIRMWARE_X
         logPrintln("\033[2K\rBusI|%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].bus_current,
-                g_motor_status.motors[1].bus_current,
-                g_motor_status.motors[2].bus_current,
-                g_motor_status.motors[3].bus_current);
+                g_motor_status->motors[0].bus_current,
+                g_motor_status->motors[1].bus_current,
+                g_motor_status->motors[2].bus_current,
+                g_motor_status->motors[3].bus_current);
 #endif
         logPrintln("\033[2K\rPhI  |%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rTemp | %4d  | %4d  | %4d  | %4d  |",
-                g_motor_status.motors[0].phase_current,
-                g_motor_status.motors[1].phase_current,
-                g_motor_status.motors[2].phase_current,
-                g_motor_status.motors[3].phase_current,
-                g_motor_status.motors[0].temp,
-                g_motor_status.motors[1].temp,
-                g_motor_status.motors[2].temp,
-                g_motor_status.motors[3].temp);
+                g_motor_status->motors[0].phase_current,
+                g_motor_status->motors[1].phase_current,
+                g_motor_status->motors[2].phase_current,
+                g_motor_status->motors[3].phase_current,
+                g_motor_status->motors[0].temp,
+                g_motor_status->motors[1].temp,
+                g_motor_status->motors[2].temp,
+                g_motor_status->motors[3].temp);
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
         logPrintln("\033[2K\rBatV |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].battery_voltage,
-                g_motor_status.motors[1].battery_voltage,
-                g_motor_status.motors[2].battery_voltage,
-                g_motor_status.motors[3].battery_voltage);
+                g_motor_status->motors[0].battery_voltage,
+                g_motor_status->motors[1].battery_voltage,
+                g_motor_status->motors[2].battery_voltage,
+                g_motor_status->motors[3].battery_voltage);
 #endif
 #endif /* MOTOR_ELECTRICAL */
 #if MOTOR_MOTION
@@ -807,70 +814,70 @@ static void Motor_View_Shell(void) {
                 "\033[2K\rPos  |%7s|%7s|%7s|%7s|\r\n"
                 "\033[2K\rTPos |%7s|%7s|%7s|%7s|\r\n"
                 "\033[2K\rErr  |%7s|%7s|%7s|%7s|",
-                g_motor_status.motors[0].vel,
-                g_motor_status.motors[1].vel,
-                g_motor_status.motors[2].vel,
-                g_motor_status.motors[3].vel,
-                fmt_int(g_motor_status.motors[0].pos),
-                fmt_int(g_motor_status.motors[1].pos),
-                fmt_int(g_motor_status.motors[2].pos),
-                fmt_int(g_motor_status.motors[3].pos),
-                fmt_int(g_motor_status.motors[0].target_pos),
-                fmt_int(g_motor_status.motors[1].target_pos),
-                fmt_int(g_motor_status.motors[2].target_pos),
-                fmt_int(g_motor_status.motors[3].target_pos),
-                fmt_int(g_motor_status.motors[0].pos_error),
-                fmt_int(g_motor_status.motors[1].pos_error),
-                fmt_int(g_motor_status.motors[2].pos_error),
-                fmt_int(g_motor_status.motors[3].pos_error));
+                g_motor_status->motors[0].vel,
+                g_motor_status->motors[1].vel,
+                g_motor_status->motors[2].vel,
+                g_motor_status->motors[3].vel,
+                fmt_int(g_motor_status->motors[0].pos),
+                fmt_int(g_motor_status->motors[1].pos),
+                fmt_int(g_motor_status->motors[2].pos),
+                fmt_int(g_motor_status->motors[3].pos),
+                fmt_int(g_motor_status->motors[0].target_pos),
+                fmt_int(g_motor_status->motors[1].target_pos),
+                fmt_int(g_motor_status->motors[2].target_pos),
+                fmt_int(g_motor_status->motors[3].target_pos),
+                fmt_int(g_motor_status->motors[0].pos_error),
+                fmt_int(g_motor_status->motors[1].pos_error),
+                fmt_int(g_motor_status->motors[2].pos_error),
+                fmt_int(g_motor_status->motors[3].pos_error));
 #endif
 #if MOTOR_ENCODER
-        logPrintln("\033[2K\rEncL |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].encoder_linear,
-                g_motor_status.motors[1].encoder_linear,
-                g_motor_status.motors[2].encoder_linear,
-                g_motor_status.motors[3].encoder_linear);
+                logPrintln("\033[2K\rEncL |%7d|%7d|%7d|%7d|",
+                g_motor_status->motors[0].encoder_linear,
+                g_motor_status->motors[1].encoder_linear,
+                g_motor_status->motors[2].encoder_linear,
+                g_motor_status->motors[3].encoder_linear);
 #if CURRENT_FIRMWARE == FIRMWARE_X
-        logPrintln("\033[2K\rEncR |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].encoder_raw,
-                g_motor_status.motors[1].encoder_raw,
-                g_motor_status.motors[2].encoder_raw,
-                g_motor_status.motors[3].encoder_raw);
+                logPrintln("\033[2K\rEncR |%7d|%7d|%7d|%7d|",
+                g_motor_status->motors[0].encoder_raw,
+                g_motor_status->motors[1].encoder_raw,
+                g_motor_status->motors[2].encoder_raw,
+                g_motor_status->motors[3].encoder_raw);
 #endif
 #endif
 #if MOTOR_STATUS_FLAGS
         logPrintln("\033[2K\rSta  |  %04X |  %04X |  %04X |  %04X |\r\n"
                 "\033[2K\rHom  |  %04X |  %04X |  %04X |  %04X |\r\n"
                 "\033[2K\rPin  |  %04X |  %04X |  %04X |  %04X |",
-                g_motor_status.motors[0].status,
-                g_motor_status.motors[1].status,
-                g_motor_status.motors[2].status,
-                g_motor_status.motors[3].status,
-                g_motor_status.motors[0].home_status,
-                g_motor_status.motors[1].home_status,
-                g_motor_status.motors[2].home_status,
-                g_motor_status.motors[3].home_status,
-                g_motor_status.motors[0].pin_status,
-                g_motor_status.motors[1].pin_status,
-                g_motor_status.motors[2].pin_status,
-                g_motor_status.motors[3].pin_status);
+                g_motor_status->motors[0].status,
+                g_motor_status->motors[1].status,
+                g_motor_status->motors[2].status,
+                g_motor_status->motors[3].status,
+                g_motor_status->motors[0].home_status,
+                g_motor_status->motors[1].home_status,
+                g_motor_status->motors[2].home_status,
+                g_motor_status->motors[3].home_status,
+                g_motor_status->motors[0].pin_status,
+                g_motor_status->motors[1].pin_status,
+                g_motor_status->motors[2].pin_status,
+                g_motor_status->motors[3].pin_status);
 #endif
 #if MOTOR_MOTION
         logPrintln("\033[2K\rSPos |%7s|%7s|%7s|%7s|\r\n"
                 "\033[2K\rPuls |%7s|%7s|%7s|%7s|",
-                fmt_int(g_motor_status.motors[0].set_pos),
-                fmt_int(g_motor_status.motors[1].set_pos),
-                fmt_int(g_motor_status.motors[2].set_pos),
-                fmt_int(g_motor_status.motors[3].set_pos),
-                fmt_int(g_motor_status.motors[0].input_pulses),
-                fmt_int(g_motor_status.motors[1].input_pulses),
-                fmt_int(g_motor_status.motors[2].input_pulses),
-                fmt_int(g_motor_status.motors[3].input_pulses));
+                fmt_int(g_motor_status->motors[0].set_pos),
+                fmt_int(g_motor_status->motors[1].set_pos),
+                fmt_int(g_motor_status->motors[2].set_pos),
+                fmt_int(g_motor_status->motors[3].set_pos),
+                fmt_int(g_motor_status->motors[0].input_pulses),
+                fmt_int(g_motor_status->motors[1].input_pulses),
+                fmt_int(g_motor_status->motors[2].input_pulses),
+                fmt_int(g_motor_status->motors[3].input_pulses));
 #endif
 #if MOTOR_SYSTEM
     {   static char fw[4][8];
         for (int _i = 0; _i < 4; _i++) {
-            uint16_t v = g_motor_status.motors[_i].firmware_version;
+            uint16_t v = g_motor_status->motors[_i].firmware_version;
             sprintf(fw[_i], "%d.%02d", v / 100, v % 100);
         }
         logPrintln("\033[2K\rFWVer|%7s|%7s|%7s|%7s|",
@@ -881,26 +888,26 @@ static void Motor_View_Shell(void) {
                 "\033[2K\rInd  |%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rOpt  |  %04X |  %04X |  %04X |  %04X |\r\n"
                 "\033[2K\rLockL|  %4d  |  %4d  |  %4d  |  %4d  |",
-                g_motor_status.motors[0].hardware_version,
-                g_motor_status.motors[1].hardware_version,
-                g_motor_status.motors[2].hardware_version,
-                g_motor_status.motors[3].hardware_version,
-                g_motor_status.motors[0].phase_resistance,
-                g_motor_status.motors[1].phase_resistance,
-                g_motor_status.motors[2].phase_resistance,
-                g_motor_status.motors[3].phase_resistance,
-                g_motor_status.motors[0].phase_inductance,
-                g_motor_status.motors[1].phase_inductance,
-                g_motor_status.motors[2].phase_inductance,
-                g_motor_status.motors[3].phase_inductance,
-                g_motor_status.motors[0].option_params,
-                g_motor_status.motors[1].option_params,
-                g_motor_status.motors[2].option_params,
-                g_motor_status.motors[3].option_params,
-                g_motor_status.motors[0].lock_level,
-                g_motor_status.motors[1].lock_level,
-                g_motor_status.motors[2].lock_level,
-                g_motor_status.motors[3].lock_level);
+                g_motor_status->motors[0].hardware_version,
+                g_motor_status->motors[1].hardware_version,
+                g_motor_status->motors[2].hardware_version,
+                g_motor_status->motors[3].hardware_version,
+                g_motor_status->motors[0].phase_resistance,
+                g_motor_status->motors[1].phase_resistance,
+                g_motor_status->motors[2].phase_resistance,
+                g_motor_status->motors[3].phase_resistance,
+                g_motor_status->motors[0].phase_inductance,
+                g_motor_status->motors[1].phase_inductance,
+                g_motor_status->motors[2].phase_inductance,
+                g_motor_status->motors[3].phase_inductance,
+                g_motor_status->motors[0].option_params,
+                g_motor_status->motors[1].option_params,
+                g_motor_status->motors[2].option_params,
+                g_motor_status->motors[3].option_params,
+                g_motor_status->motors[0].lock_level,
+                g_motor_status->motors[1].lock_level,
+                g_motor_status->motors[2].lock_level,
+                g_motor_status->motors[3].lock_level);
 #endif
 #if MOTOR_CONTROL
         logPrintln("\033[2K\rKp   |%7d|%7d|%7d|%7d|\r\n"
@@ -908,26 +915,26 @@ static void Motor_View_Shell(void) {
             "\033[2K\rKd   |%7d|%7d|%7d|%7d|\r\n"
             "\033[2K\rPosW |%7d|%7d|%7d|%7d|\r\n"
             "\033[2K\rIntL |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].kp,
-                g_motor_status.motors[1].kp,
-                g_motor_status.motors[2].kp,
-                g_motor_status.motors[3].kp,
-                g_motor_status.motors[0].ki,
-                g_motor_status.motors[1].ki,
-                g_motor_status.motors[2].ki,
-                g_motor_status.motors[3].ki,
-                g_motor_status.motors[0].kd,
-                g_motor_status.motors[1].kd,
-                g_motor_status.motors[2].kd,
-                g_motor_status.motors[3].kd,
-                g_motor_status.motors[0].pos_window,
-                g_motor_status.motors[1].pos_window,
-                g_motor_status.motors[2].pos_window,
-                g_motor_status.motors[3].pos_window,
-                g_motor_status.motors[0].integral_limit,
-                g_motor_status.motors[1].integral_limit,
-                g_motor_status.motors[2].integral_limit,
-                g_motor_status.motors[3].integral_limit);
+                g_motor_status->motors[0].kp,
+                g_motor_status->motors[1].kp,
+                g_motor_status->motors[2].kp,
+                g_motor_status->motors[3].kp,
+                g_motor_status->motors[0].ki,
+                g_motor_status->motors[1].ki,
+                g_motor_status->motors[2].ki,
+                g_motor_status->motors[3].ki,
+                g_motor_status->motors[0].kd,
+                g_motor_status->motors[1].kd,
+                g_motor_status->motors[2].kd,
+                g_motor_status->motors[3].kd,
+                g_motor_status->motors[0].pos_window,
+                g_motor_status->motors[1].pos_window,
+                g_motor_status->motors[2].pos_window,
+                g_motor_status->motors[3].pos_window,
+                g_motor_status->motors[0].integral_limit,
+                g_motor_status->motors[1].integral_limit,
+                g_motor_status->motors[2].integral_limit,
+                g_motor_status->motors[3].integral_limit);
 #endif
 #if MOTOR_PROTECTION
         logPrintln("\033[2K\rTempT|%7d|%7d|%7d|%7d|\r\n"
@@ -935,48 +942,48 @@ static void Motor_View_Shell(void) {
                 "\033[2K\rProtT|%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rHearT|%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rColA |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].temp_threshold,
-                g_motor_status.motors[1].temp_threshold,
-                g_motor_status.motors[2].temp_threshold,
-                g_motor_status.motors[3].temp_threshold,
-                g_motor_status.motors[0].current_threshold,
-                g_motor_status.motors[1].current_threshold,
-                g_motor_status.motors[2].current_threshold,
-                g_motor_status.motors[3].current_threshold,
-                g_motor_status.motors[0].protect_time,
-                g_motor_status.motors[1].protect_time,
-                g_motor_status.motors[2].protect_time,
-                g_motor_status.motors[3].protect_time,
-                g_motor_status.motors[0].heartbeat_time,
-                g_motor_status.motors[1].heartbeat_time,
-                g_motor_status.motors[2].heartbeat_time,
-                g_motor_status.motors[3].heartbeat_time,
-                g_motor_status.motors[0].collision_angle,
-                g_motor_status.motors[1].collision_angle,
-                g_motor_status.motors[2].collision_angle,
-                g_motor_status.motors[3].collision_angle);
+                g_motor_status->motors[0].temp_threshold,
+                g_motor_status->motors[1].temp_threshold,
+                g_motor_status->motors[2].temp_threshold,
+                g_motor_status->motors[3].temp_threshold,
+                g_motor_status->motors[0].current_threshold,
+                g_motor_status->motors[1].current_threshold,
+                g_motor_status->motors[2].current_threshold,
+                g_motor_status->motors[3].current_threshold,
+                g_motor_status->motors[0].protect_time,
+                g_motor_status->motors[1].protect_time,
+                g_motor_status->motors[2].protect_time,
+                g_motor_status->motors[3].protect_time,
+                g_motor_status->motors[0].heartbeat_time,
+                g_motor_status->motors[1].heartbeat_time,
+                g_motor_status->motors[2].heartbeat_time,
+                g_motor_status->motors[3].heartbeat_time,
+                g_motor_status->motors[0].collision_angle,
+                g_motor_status->motors[1].collision_angle,
+                g_motor_status->motors[2].collision_angle,
+                g_motor_status->motors[3].collision_angle);
 #endif
 #if MOTOR_CLOG
         logPrintln("\033[2K\rClogE| %-5s | %-5s | %-5s | %-5s |\r\n",
                 "\033[2K\rClogR|%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rClogC|%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rClogT|%7d|%7d|%7d|%7d|",
-                onoff_str(g_motor_status.motors[0].clog_enable),
-                onoff_str(g_motor_status.motors[1].clog_enable),
-                onoff_str(g_motor_status.motors[2].clog_enable),
-                onoff_str(g_motor_status.motors[3].clog_enable),
-                g_motor_status.motors[0].clog_rpm,
-                g_motor_status.motors[1].clog_rpm,
-                g_motor_status.motors[2].clog_rpm,
-                g_motor_status.motors[3].clog_rpm,
-                g_motor_status.motors[0].clog_current,
-                g_motor_status.motors[1].clog_current,
-                g_motor_status.motors[2].clog_current,
-                g_motor_status.motors[3].clog_current,
-                g_motor_status.motors[0].clog_time,
-                g_motor_status.motors[1].clog_time,
-                g_motor_status.motors[2].clog_time,
-                g_motor_status.motors[3].clog_time);
+                onoff_str(g_motor_status->motors[0].clog_enable),
+                onoff_str(g_motor_status->motors[1].clog_enable),
+                onoff_str(g_motor_status->motors[2].clog_enable),
+                onoff_str(g_motor_status->motors[3].clog_enable),
+                g_motor_status->motors[0].clog_rpm,
+                g_motor_status->motors[1].clog_rpm,
+                g_motor_status->motors[2].clog_rpm,
+                g_motor_status->motors[3].clog_rpm,
+                g_motor_status->motors[0].clog_current,
+                g_motor_status->motors[1].clog_current,
+                g_motor_status->motors[2].clog_current,
+                g_motor_status->motors[3].clog_current,
+                g_motor_status->motors[0].clog_time,
+                g_motor_status->motors[1].clog_time,
+                g_motor_status->motors[2].clog_time,
+                g_motor_status->motors[3].clog_time);
 #endif
 #if MOTOR_HOME
         logPrintln("\033[2K\rHomeM| %-4s  | %-4s  | %-4s  | %-4s  |\r\n",
@@ -987,58 +994,58 @@ static void Motor_View_Shell(void) {
                 "\033[2K\rColR |%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rColC |%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rColT |%7d|%7d|%7d|%7d|",
-                home_mode_str(g_motor_status.motors[0].home_mode),
-                home_mode_str(g_motor_status.motors[1].home_mode),
-                home_mode_str(g_motor_status.motors[2].home_mode),
-                home_mode_str(g_motor_status.motors[3].home_mode),
-                dir_str(g_motor_status.motors[0].home_dir),
-                dir_str(g_motor_status.motors[1].home_dir),
-                dir_str(g_motor_status.motors[2].home_dir),
-                dir_str(g_motor_status.motors[3].home_dir),
-                g_motor_status.motors[0].home_speed,
-                g_motor_status.motors[1].home_speed,
-                g_motor_status.motors[2].home_speed,
-                g_motor_status.motors[3].home_speed,
-                g_motor_status.motors[0].home_timeout,
-                g_motor_status.motors[1].home_timeout,
-                g_motor_status.motors[2].home_timeout,
-                g_motor_status.motors[3].home_timeout,
-                onoff_str(g_motor_status.motors[0].home_auto_enable),
-                onoff_str(g_motor_status.motors[1].home_auto_enable),
-                onoff_str(g_motor_status.motors[2].home_auto_enable),
-                onoff_str(g_motor_status.motors[3].home_auto_enable),
-                g_motor_status.motors[0].collision_rpm,
-                g_motor_status.motors[1].collision_rpm,
-                g_motor_status.motors[2].collision_rpm,
-                g_motor_status.motors[3].collision_rpm,
-                g_motor_status.motors[0].collision_current,
-                g_motor_status.motors[1].collision_current,
-                g_motor_status.motors[2].collision_current,
-                g_motor_status.motors[3].collision_current,
-                g_motor_status.motors[0].collision_time,
-                g_motor_status.motors[1].collision_time,
-                g_motor_status.motors[2].collision_time,
-                g_motor_status.motors[3].collision_time);
+                home_mode_str(g_motor_status->motors[0].home_mode),
+                home_mode_str(g_motor_status->motors[1].home_mode),
+                home_mode_str(g_motor_status->motors[2].home_mode),
+                home_mode_str(g_motor_status->motors[3].home_mode),
+                dir_str(g_motor_status->motors[0].home_dir),
+                dir_str(g_motor_status->motors[1].home_dir),
+                dir_str(g_motor_status->motors[2].home_dir),
+                dir_str(g_motor_status->motors[3].home_dir),
+                g_motor_status->motors[0].home_speed,
+                g_motor_status->motors[1].home_speed,
+                g_motor_status->motors[2].home_speed,
+                g_motor_status->motors[3].home_speed,
+                g_motor_status->motors[0].home_timeout,
+                g_motor_status->motors[1].home_timeout,
+                g_motor_status->motors[2].home_timeout,
+                g_motor_status->motors[3].home_timeout,
+                onoff_str(g_motor_status->motors[0].home_auto_enable),
+                onoff_str(g_motor_status->motors[1].home_auto_enable),
+                onoff_str(g_motor_status->motors[2].home_auto_enable),
+                onoff_str(g_motor_status->motors[3].home_auto_enable),
+                g_motor_status->motors[0].collision_rpm,
+                g_motor_status->motors[1].collision_rpm,
+                g_motor_status->motors[2].collision_rpm,
+                g_motor_status->motors[3].collision_rpm,
+                g_motor_status->motors[0].collision_current,
+                g_motor_status->motors[1].collision_current,
+                g_motor_status->motors[2].collision_current,
+                g_motor_status->motors[3].collision_current,
+                g_motor_status->motors[0].collision_time,
+                g_motor_status->motors[1].collision_time,
+                g_motor_status->motors[2].collision_time,
+                g_motor_status->motors[3].collision_time);
 #endif
 #if MOTOR_DRIVER
         logPrintln("\033[2K\rCtrlM| %-4s  | %-4s  | %-4s  | %-4s  |\r\n"
                 "\033[2K\rMotTp| %-4s | %-4s | %-4s | %-4s |\r\n"
                 "\033[2K\rMotD | %-4s | %-4s | %-4s | %-4s |",
-                ctrl_str(g_motor_status.motors[0].control_mode),
-                ctrl_str(g_motor_status.motors[1].control_mode),
-                ctrl_str(g_motor_status.motors[2].control_mode),
-                ctrl_str(g_motor_status.motors[3].control_mode),
-                motor_type_str(g_motor_status.motors[0].motor_type),
-                motor_type_str(g_motor_status.motors[1].motor_type),
-                motor_type_str(g_motor_status.motors[2].motor_type),
-                motor_type_str(g_motor_status.motors[3].motor_type),
-                dir_str(g_motor_status.motors[0].motor_direction),
-                dir_str(g_motor_status.motors[1].motor_direction),
-                dir_str(g_motor_status.motors[2].motor_direction),
-                dir_str(g_motor_status.motors[3].motor_direction));
+                ctrl_str(g_motor_status->motors[0].control_mode),
+                ctrl_str(g_motor_status->motors[1].control_mode),
+                ctrl_str(g_motor_status->motors[2].control_mode),
+                ctrl_str(g_motor_status->motors[3].control_mode),
+                motor_type_str(g_motor_status->motors[0].motor_type),
+                motor_type_str(g_motor_status->motors[1].motor_type),
+                motor_type_str(g_motor_status->motors[2].motor_type),
+                motor_type_str(g_motor_status->motors[3].motor_type),
+                dir_str(g_motor_status->motors[0].motor_direction),
+                dir_str(g_motor_status->motors[1].motor_direction),
+                dir_str(g_motor_status->motors[2].motor_direction),
+                dir_str(g_motor_status->motors[3].motor_direction));
     {   static char ms[4][6];
         for (int _i = 0; _i < 4; _i++) {
-            uint8_t v = g_motor_status.motors[_i].micro_step;
+            uint8_t v = g_motor_status->motors[_i].micro_step;
             sprintf(ms[_i], v == 0 ? "256" : "%d", v);
         }
         logPrintln("\033[2K\rMicro| %-4s | %-4s | %-4s | %-4s |",
@@ -1047,30 +1054,30 @@ static void Motor_View_Shell(void) {
         logPrintln("\033[2K\rInter| %-4s | %-4s | %-4s | %-4s |\r\n",
                 "\033[2K\rOpenI|%7d|%7d|%7d|%7d|\r\n"
                 "\033[2K\rClosI|%7d|%7d|%7d|%7d|",
-                onoff_str(g_motor_status.motors[0].interpolation),
-                onoff_str(g_motor_status.motors[1].interpolation),
-                onoff_str(g_motor_status.motors[2].interpolation),
-                onoff_str(g_motor_status.motors[3].interpolation),
-                g_motor_status.motors[0].open_current,
-                g_motor_status.motors[1].open_current,
-                g_motor_status.motors[2].open_current,
-                g_motor_status.motors[3].open_current,
-                g_motor_status.motors[0].close_current,
-                g_motor_status.motors[1].close_current,
-                g_motor_status.motors[2].close_current,
-                g_motor_status.motors[3].close_current);
+                onoff_str(g_motor_status->motors[0].interpolation),
+                onoff_str(g_motor_status->motors[1].interpolation),
+                onoff_str(g_motor_status->motors[2].interpolation),
+                onoff_str(g_motor_status->motors[3].interpolation),
+                g_motor_status->motors[0].open_current,
+                g_motor_status->motors[1].open_current,
+                g_motor_status->motors[2].open_current,
+                g_motor_status->motors[3].open_current,
+                g_motor_status->motors[0].close_current,
+                g_motor_status->motors[1].close_current,
+                g_motor_status->motors[2].close_current,
+                g_motor_status->motors[3].close_current);
 #if CURRENT_FIRMWARE == FIRMWARE_EMM
         logPrintln("\033[2K\rMaxV |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].max_output_voltage,
-                g_motor_status.motors[1].max_output_voltage,
-                g_motor_status.motors[2].max_output_voltage,
-                g_motor_status.motors[3].max_output_voltage);
+                g_motor_status->motors[0].max_output_voltage,
+                g_motor_status->motors[1].max_output_voltage,
+                g_motor_status->motors[2].max_output_voltage,
+                g_motor_status->motors[3].max_output_voltage);
 #elif CURRENT_FIRMWARE == FIRMWARE_X
         logPrintln("\033[2K\rMaxS |%7d|%7d|%7d|%7d|",
-                g_motor_status.motors[0].max_speed,
-                g_motor_status.motors[1].max_speed,
-                g_motor_status.motors[2].max_speed,
-                g_motor_status.motors[3].max_speed);
+                g_motor_status->motors[0].max_speed,
+                g_motor_status->motors[1].max_speed,
+                g_motor_status->motors[2].max_speed,
+                g_motor_status->motors[3].max_speed);
 #endif
 #endif /* MOTOR_DRIVER */
 #if MOTOR_COMM
@@ -1078,28 +1085,28 @@ static void Motor_View_Shell(void) {
                 "\033[2K\rCan  | %-6s | %-6s | %-6s | %-6s |\r\n"
                 "\033[2K\rVrfy | %-5s | %-5s | %-5s | %-5s |\r\n"
                 "\033[2K\rResp | %-6s | %-6s | %-6s | %-6s |"
-                uart_baud_str(g_motor_status.motors[0].uart_baudrate),
-                uart_baud_str(g_motor_status.motors[1].uart_baudrate),
-                uart_baud_str(g_motor_status.motors[2].uart_baudrate),
-                uart_baud_str(g_motor_status.motors[3].uart_baudrate),
-                can_baud_str(g_motor_status.motors[0].can_baudrate),
-                can_baud_str(g_motor_status.motors[1].can_baudrate),
-                can_baud_str(g_motor_status.motors[2].can_baudrate),
-                can_baud_str(g_motor_status.motors[3].can_baudrate),
-                verify_str(g_motor_status.motors[0].verify_mode),
-                verify_str(g_motor_status.motors[1].verify_mode),
-                verify_str(g_motor_status.motors[2].verify_mode),
-                verify_str(g_motor_status.motors[3].verify_mode),
-                respond_str(g_motor_status.motors[0].response_mode),
-                respond_str(g_motor_status.motors[1].response_mode),
-                respond_str(g_motor_status.motors[2].response_mode),
-                respond_str(g_motor_status.motors[3].response_mode));
+                uart_baud_str(g_motor_status->motors[0].uart_baudrate),
+                uart_baud_str(g_motor_status->motors[1].uart_baudrate),
+                uart_baud_str(g_motor_status->motors[2].uart_baudrate),
+                uart_baud_str(g_motor_status->motors[3].uart_baudrate),
+                can_baud_str(g_motor_status->motors[0].can_baudrate),
+                can_baud_str(g_motor_status->motors[1].can_baudrate),
+                can_baud_str(g_motor_status->motors[2].can_baudrate),
+                can_baud_str(g_motor_status->motors[3].can_baudrate),
+                verify_str(g_motor_status->motors[0].verify_mode),
+                verify_str(g_motor_status->motors[1].verify_mode),
+                verify_str(g_motor_status->motors[2].verify_mode),
+                verify_str(g_motor_status->motors[3].verify_mode),
+                respond_str(g_motor_status->motors[0].response_mode),
+                respond_str(g_motor_status->motors[1].response_mode),
+                respond_str(g_motor_status->motors[2].response_mode),
+                respond_str(g_motor_status->motors[3].response_mode));
 #if CURRENT_FIRMWARE == FIRMWARE_X
         logPrintln("\033[2K\rPScl | %-4s | %-4s | %-4s | %-4s |",
-                onoff_str(g_motor_status.motors[0].pos_scale),
-                onoff_str(g_motor_status.motors[1].pos_scale),
-                onoff_str(g_motor_status.motors[2].pos_scale),
-                onoff_str(g_motor_status.motors[3].pos_scale));
+                onoff_str(g_motor_status->motors[0].pos_scale),
+                onoff_str(g_motor_status->motors[1].pos_scale),
+                onoff_str(g_motor_status->motors[2].pos_scale),
+                onoff_str(g_motor_status->motors[3].pos_scale));
 #endif
 #endif /* MOTOR_COMM */
         osDelay(update_time);

@@ -9,6 +9,7 @@
 #include "log.h"
 #include "cmsis_os2.h"
 #include "stm32f4xx_hal.h"
+#include "Events.h"
 #include <string.h>
 
 
@@ -129,6 +130,77 @@ static void Time_Info(void) {
 }
 
 /**
+ * @brief 显示消息队列信息
+ */
+static void Queue_Info(void) {
+    logPrintln("Message Queue information:");
+
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    extern osMessageQueueId_t MotorCmdsHandle;
+    extern osMessageQueueId_t Usart6_Rx_DataHandle;
+    extern osMessageQueueId_t Uart4_Rx_DataHandle;
+    extern osMessageQueueId_t Servo_CmdHandle;
+    extern osMessageQueueId_t Servo_Tx_DataHandle;
+
+    logPrintln("ID        Name                  Count/Max    MsgSize");
+    logPrintln("----------------------------------------------------");
+
+    if (Usart1_Rx_DataHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(Usart1_Rx_DataHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(Usart1_Rx_DataHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(Usart1_Rx_DataHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Usart1_Rx_DataHandle, "Usart1_Rx_Data",
+                  count, capacity, msg_size);
+    }
+
+    if (MotorCmdsHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(MotorCmdsHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(MotorCmdsHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(MotorCmdsHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  MotorCmdsHandle, "MotorCmds",
+                  count, capacity, msg_size);
+    }
+
+    if (Usart6_Rx_DataHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(Usart6_Rx_DataHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(Usart6_Rx_DataHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(Usart6_Rx_DataHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Usart6_Rx_DataHandle, "Usart6_Rx_Data",
+                  count, capacity, msg_size);
+    }
+
+    if (Uart4_Rx_DataHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(Uart4_Rx_DataHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(Uart4_Rx_DataHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(Uart4_Rx_DataHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Uart4_Rx_DataHandle, "Uart4_Rx_Data",
+                  count, capacity, msg_size);
+    }
+
+    if (Servo_CmdHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(Servo_CmdHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(Servo_CmdHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(Servo_CmdHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Servo_CmdHandle, "Servo_Cmd",
+                  count, capacity, msg_size);
+    }
+
+    if (Servo_Tx_DataHandle != NULL) {
+        uint32_t count = osMessageQueueGetCount(Servo_Tx_DataHandle);
+        uint32_t capacity = osMessageQueueGetCapacity(Servo_Tx_DataHandle);
+        uint32_t msg_size = osMessageQueueGetMsgSize(Servo_Tx_DataHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Servo_Tx_DataHandle, "Servo_Tx_Data",
+                  count, capacity, msg_size);
+    }
+}
+
+/**
  * @brief OS命令处理函数
  * @param argc 参数数量
  * @param argv 参数列表
@@ -145,8 +217,10 @@ static void OS_Tool_Shell(int argc, char *argv[]) {
         Task_Info();
     } else if(strcmp(argv[1], "time") == 0) {
         Time_Info();
+    } else if(strcmp(argv[1], "queue") == 0) {
+        Queue_Info();
     } else {
-        logPrintln("Invalid os command: %s\r\n"
+        logPrintln("Invalid command: %s\r\n"
                 OS_HELP, argv[1]);
     }
 }

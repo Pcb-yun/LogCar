@@ -8,11 +8,7 @@
 #define __NAV_LOCAL_H__
 
 #include "stdbool.h"
-
-void Loc_Update_Task(void *argument);
-
-
-
+#include "nav_common.h"
 
 
 

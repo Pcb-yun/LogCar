@@ -147,11 +147,6 @@ osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
   .name = "Usart1_Rx_Data"
 };
-/* Definitions for Track_Data */
-osMessageQueueId_t Track_DataHandle;
-const osMessageQueueAttr_t Track_Data_attributes = {
-  .name = "Track_Data"
-};
 /* Definitions for MotorCmds */
 osMessageQueueId_t MotorCmdsHandle;
 const osMessageQueueAttr_t MotorCmds_attributes = {
@@ -167,11 +162,6 @@ osMessageQueueId_t Uart4_Rx_DataHandle;
 const osMessageQueueAttr_t Uart4_Rx_Data_attributes = {
   .name = "Uart4_Rx_Data"
 };
-/* Definitions for OPS_Data */
-osMessageQueueId_t OPS_DataHandle;
-const osMessageQueueAttr_t OPS_Data_attributes = {
-  .name = "OPS_Data"
-};
 /* Definitions for Servo_Cmd */
 osMessageQueueId_t Servo_CmdHandle;
 const osMessageQueueAttr_t Servo_Cmd_attributes = {
@@ -182,10 +172,25 @@ osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
   .name = "Servo_Tx_Data"
 };
-/* Definitions for Nav_TRAJ */
-osMessageQueueId_t Nav_TRAJHandle;
-const osMessageQueueAttr_t Nav_TRAJ_attributes = {
-  .name = "Nav_TRAJ"
+/* Definitions for Pose_Mutex */
+osMutexId_t Pose_MutexHandle;
+const osMutexAttr_t Pose_Mutex_attributes = {
+  .name = "Pose_Mutex"
+};
+/* Definitions for Track_Mutex */
+osMutexId_t Track_MutexHandle;
+const osMutexAttr_t Track_Mutex_attributes = {
+  .name = "Track_Mutex"
+};
+/* Definitions for Motor_Mutex */
+osMutexId_t Motor_MutexHandle;
+const osMutexAttr_t Motor_Mutex_attributes = {
+  .name = "Motor_Mutex"
+};
+/* Definitions for OPS_Mutex */
+osMutexId_t OPS_MutexHandle;
+const osMutexAttr_t OPS_Mutex_attributes = {
+  .name = "OPS_Mutex"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -328,6 +333,18 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of Pose_Mutex */
+  Pose_MutexHandle = osMutexNew(&Pose_Mutex_attributes);
+
+  /* creation of Track_Mutex */
+  Track_MutexHandle = osMutexNew(&Track_Mutex_attributes);
+
+  /* creation of Motor_Mutex */
+  Motor_MutexHandle = osMutexNew(&Motor_Mutex_attributes);
+
+  /* creation of OPS_Mutex */
+  OPS_MutexHandle = osMutexNew(&OPS_Mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -345,9 +362,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of Usart1_Rx_Data */
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
-  /* creation of Track_Data */
-  Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
-
   /* creation of MotorCmds */
   MotorCmdsHandle = osMessageQueueNew (8, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
@@ -357,17 +371,11 @@ void MX_FREERTOS_Init(void) {
   /* creation of Uart4_Rx_Data */
   Uart4_Rx_DataHandle = osMessageQueueNew (3, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
 
-  /* creation of OPS_Data */
-  OPS_DataHandle = osMessageQueueNew (1, sizeof(OPSData_t), &OPS_Data_attributes);
-
   /* creation of Servo_Cmd */
   Servo_CmdHandle = osMessageQueueNew (5, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
 
   /* creation of Servo_Tx_Data */
   Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
-
-  /* creation of Nav_TRAJ */
-  Nav_TRAJHandle = osMessageQueueNew (4, sizeof(TRAJData_t), &Nav_TRAJ_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -414,7 +422,6 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* Create the event(s) */
   /* creation of System_Status */
   System_StatusHandle = osEventFlagsNew(&System_Status_attributes);
 
@@ -463,8 +470,8 @@ void Sys_Init_Task(void *argument)
   else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
-  OPS_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  if (!OPS_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Battery Module");
   extern bool Battery_Init(void);
@@ -473,13 +480,11 @@ void Sys_Init_Task(void *argument)
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
-  else {
-    SHOW_DMESG(dmesg_ok, NULL);
-    SHOW_DMESG(dmesg_wait, "Initialize Motion Control Module");
-    extern void MotionControl_Init(void);
-    MotionControl_Init();
-    SHOW_DMESG(dmesg_ok, NULL);
-  }
+
+  SHOW_DMESG(dmesg_wait, "Initialize Localization Module");
+  extern bool Loc_Init(void);
+  if (!Loc_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   extern Shell shell;
   Shell_New_Convo(&shell);

@@ -14,7 +14,7 @@
 #include <string.h>
 
 
-MotorStatusShared_t g_motor_status;
+extern MotorStatusShared_t *g_motor_status;
 
 static void Motor_Process_Ctrl(uint8_t motor_id, MotorCtrl_t *ctrl);
 static void Motor_Process_Param_Read(uint8_t motor_id, MotorParam_t *param);
@@ -53,7 +53,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
         return;
     }
 
-    MotorStatus_t *motor = &g_motor_status.motors[motor_id - 1];
+    MotorStatus_t *motor = &g_motor_status->motors[motor_id - 1];
     motor->motor_id = motor_id;
 
     switch (cmd_code) {

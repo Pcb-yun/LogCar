@@ -16,13 +16,13 @@
 // 是否使用查看任务
 // 当前程序架构存在问题，除调试阶段否则不建议使用
 // 如果使能且启用了大量的功能开关，会严重影响控制性能
-#define USE_VIEW 0
+#define USE_VIEW 1
 
 /******************** 电机参数 **********************/
 
 #define MOTOR_ELECTRICAL   1      // 电气参数（电压/电流/温度）
-#define MOTOR_MOTION       1      // 运动状态（速度/位置/误差/脉冲）
-#define MOTOR_ENCODER      0      // 编码器信息（线性值/原始值）
+#define MOTOR_MOTION       0      // 运动状态（速度/位置/误差/脉冲）
+#define MOTOR_ENCODER      1      // 编码器信息（线性值/原始值）
 #define MOTOR_STATUS_FLAGS 0      // 状态标志（电机/回零/引脚）
 #define MOTOR_SYSTEM       0      // 系统信息（固件/硬件/电阻/电感/选项）
 #define MOTOR_CONTROL      0      // 控制参数（PID/积分限幅/位置窗口）

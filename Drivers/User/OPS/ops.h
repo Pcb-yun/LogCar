@@ -39,7 +39,7 @@ typedef struct {
 } OPSData_t;
 
 
-void OPS_Init(void);
+bool OPS_Init(void);
 
 
 

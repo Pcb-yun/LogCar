@@ -15,7 +15,8 @@
 #include "Events.h"
 #include "i2c.h"
 
-static Track_t *g_track = NULL;
+TrackData_t *g_track = NULL;
+static bool is_init = false;
 
 static void Track_Reset(void);
 static void Track_Key(void);
@@ -27,15 +28,18 @@ static int16_t I2C_ReadDigital(void);
  */
 bool Track_Init(void) {
     MX_I2C1_Init();
+
+    g_track = pvPortMalloc(sizeof(TrackData_t));
     if (g_track == NULL) {
-        g_track = malloc(sizeof(Track_t));
+        return false;
     }
-    memset(g_track, 0, sizeof(Track_t));
+    memset(g_track, 0, sizeof(TrackData_t));
 
     g_track->mode = TRACK_STOP;
     g_track->time = 100;
+    is_init = true;
 
-    return true;
+    return is_init;
 }
 
 /**
@@ -43,10 +47,10 @@ bool Track_Init(void) {
  */
 void Track_Get_Task(void *argument) {
     (void)argument;
-    extern osMessageQueueId_t Track_DataHandle;
-    TrackData_t trackData;
 
+    extern osMutexId_t Track_MutexHandle;
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    if (!is_init) vTaskDelete(NULL);
 
     for(;;) {
         osDelay(g_track->time);
@@ -58,10 +62,11 @@ void Track_Get_Task(void *argument) {
         // 通过I2C读取数字量
         int16_t digital = I2C_ReadDigital();
         if (digital != -1) {
-            trackData.digitalData = digital;
-            trackData.timestamp = xTaskGetTickCount();
-            osMessageQueueReset(Track_DataHandle);
-            osMessageQueuePut(Track_DataHandle, &trackData, 0, 0);
+            if (osMutexAcquire(Track_MutexHandle, osWaitForever) == osOK) {
+                g_track->digitalData = digital;
+                g_track->timestamp = xTaskGetTickCount();
+                osMutexRelease(Track_MutexHandle);
+            }
         }
     }
 }
@@ -70,7 +75,7 @@ void Track_Get_Task(void *argument) {
  * @brief 设置巡线模块模式
  * @param mode 模式枚举值
  */
-static void Track_Set_Mode(TrackSet_t mode) {
+static void Track_Set_Mode(TrackMode_t mode) {
     char ch;
     extern Shell shell;
     uint8_t value;
@@ -106,6 +111,10 @@ static void Track_Set_Mode(TrackSet_t mode) {
  * @brief 设置巡线模块模式
  */
 static void Track_Mode_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Track module not initialized"); return;
+    }
+
     if(argc != 2) {
         logPrintln(TRACK_MODE_HELP);
         return;
@@ -137,6 +146,10 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
  * @brief 查看或设置巡线模块发送时间间隔
  */
 static void Track_Time_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Track module not initialized"); return;
+    }
+
     if(argc > 2) {
         logPrintln(TRACK_TIME_HELP); return;
     } else if(argc == 1) {
@@ -157,32 +170,35 @@ static void Track_Time_Shell(int argc, char *argv[]) {
  * @brief 实时刷新巡线模块数据
  */
 static void Track_View_Shell(void) {
-    extern osMessageQueueId_t Track_DataHandle;
-    TrackData_t trackData;
     char ch;
     extern Shell shell;
 
+    if (!is_init) {
+        logWarning("Track module not initialized"); return;
+    }
+
     logPrintln("Track Data Viewer - Press ^C to exit\r\n"
-               "Digital: - - - - - - - -");
+               "Digital: - - - - - - - -\r\n"
+               "Timestamp:");
 
     for(;;) {
-        if (osMessageQueueGet(Track_DataHandle, &trackData, NULL, 50) == osOK) {
-            logPrintln("\033[2A\033[2K\rDigital: %d %d %d %d %d %d %d %d",
-                       (trackData.digitalData & 0x80) ? 1 : 0,
-                       (trackData.digitalData & 0x40) ? 1 : 0,
-                       (trackData.digitalData & 0x20) ? 1 : 0,
-                       (trackData.digitalData & 0x10) ? 1 : 0,
-                       (trackData.digitalData & 0x08) ? 1 : 0,
-                       (trackData.digitalData & 0x04) ? 1 : 0,
-                       (trackData.digitalData & 0x02) ? 1 : 0,
-                       (trackData.digitalData & 0x01) ? 1 : 0);
-            logPrintln("Timestamp: %d", trackData.timestamp);
-        }
+        logPrintln("\033[2A\033[2K\rDigital: %d %d %d %d %d %d %d %d\r\n"
+                   "Timestamp: %d",
+                    (g_track->digitalData & 0x80) ? 1 : 0,
+                    (g_track->digitalData & 0x40) ? 1 : 0,
+                    (g_track->digitalData & 0x20) ? 1 : 0,
+                    (g_track->digitalData & 0x10) ? 1 : 0,
+                    (g_track->digitalData & 0x08) ? 1 : 0,
+                    (g_track->digitalData & 0x04) ? 1 : 0,
+                    (g_track->digitalData & 0x02) ? 1 : 0,
+                    (g_track->digitalData & 0x01) ? 1 : 0,
+                    g_track->timestamp);
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break; // ^C
         }
+        osDelay(100);
     }
-    logPrintln("\033[4A\033[J\033[2A");
+    logPrintln("\033[3A\033[J\033[2A");
 }
 
 ShellCommand TrackGroup[] = {

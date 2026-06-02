@@ -61,11 +61,11 @@ bool Battery_Init(void) {
 void Battery_Get_Task(void *argument) {
     (void)argument;
     uint16_t voltage = 0;
+
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
 
     if (!g_battery->is_init) {
-        vTaskDelete(NULL);
-        return;
+        vTaskDelete(NULL); return;
     }
 
     for (;;) {
@@ -92,7 +92,7 @@ static void Battery_ViewRealtime(void) {
     char ch;
 
     logPrintln("Battery Voltage Viewer - Press ^C to exit\r\n"
-               "Voltage: --- mV");
+               "Voltage: ----- mV");
 
     while (1) {
         logPrintln("\033[1A\033[2K\rVoltage: %d mV", g_battery->voltage);
@@ -103,7 +103,7 @@ static void Battery_ViewRealtime(void) {
         osDelay(100);
     }
 
-    logPrintln("\033[3A\033[J\033[2A");
+    logPrintln("\033[2A\033[J\033[2A");
 }
 
 /**

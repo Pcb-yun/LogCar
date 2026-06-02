@@ -6,10 +6,10 @@
 
 #include "FreeRTOS.h"
 #include "nav_local.h"
-#include "nav_common.h"
 #include "cmsis_os2.h"
 #include "Events.h"
 #include <string.h>
+#include "track.h"
 
 static Pose_t *g_pose = NULL;
 static void Loc_Update(void);
@@ -58,7 +58,11 @@ static void Loc_Update(void) {
  * @param pose 导航位姿指针
  */
 void Loc_Set(Pose_t *pose) {
+    extern osMutexId_t Pose_MutexHandle;
 
-
-
+    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
+        *g_pose = *pose;
+        g_pose->timestamp = osKernelGetTickCount();
+        osMutexRelease(Pose_MutexHandle);
+    }
 }

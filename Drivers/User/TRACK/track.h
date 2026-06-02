@@ -13,31 +13,31 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-// ==================== 用户配置区 ====================
 #define TRACK_I2C_HANDLE    &hi2c1      // 请根据实际I2C外设修改
 #define TRACK_I2C_ADDR      0x12        // 模块I2C地址
-// ====================================================
 
+/**
+ * @brief 巡线模块模式枚举
+ */
 typedef enum {
     TRACK_CAL = 0,
     TRACK_DIGITAL,
     TRACK_STOP,
-} TrackSet_t;
+} TrackMode_t;
 
-typedef struct {
-    TrackSet_t mode;
-    uint16_t time;       // 读取周期(ms)
-} Track_t;
-
+/**
+ * @brief 巡线模块数据结构体
+ */
 typedef struct {
     uint8_t digitalData;        // 数字量（bit7~bit0对应探头1~8）
     uint32_t timestamp;         // 时间戳（ms）
-    TrackSet_t mode;
+    uint16_t time;              // 更新周期(ms)
+    TrackMode_t mode;
 } TrackData_t;
 
 bool Track_Init(void);
 
-// GPIO引脚定义（与原保持一致）
+// GPIO引脚定义
 #define TRACK_KEY_Port  GPIOG
 #define TRACK_KEY_Pin   GPIO_PIN_13
 #define TRACK_RST_Port  GPIOG
@@ -48,9 +48,7 @@ bool Track_Init(void);
     "Usage: mode COMMAND\r\n" \
     "commands:\r\n" \
     "  cal      Enable calibration mode\r\n" \
-    "  a        Send analog data (NOT supported, fallback to digital)\r\n" \
     "  d        Send digital data\r\n" \
-    "  all      Send all data (NOT supported, fallback to digital)\r\n" \
     "  stop     Stop sending data\r\n" \
     "  rst      Reset track module\r\n" \
     "  sta      Show track module status"
