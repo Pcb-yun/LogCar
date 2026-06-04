@@ -7,12 +7,29 @@
 #include "FreeRTOS.h"
 #include "nav_local.h"
 #include "cmsis_os2.h"
+#include "task.h"
 #include "Events.h"
 #include <string.h>
 #include "track.h"
+#include "step_ttl.h"
+#include "nav_math.h"
+#include "motion_control.h"
+#include "ops.h"
+
+#define MAX_SENSOR_SOURCES 4    // 最大传感器数据来源数量
+
+/**
+ * @brief 带权重的位姿数据
+ */
+typedef struct {
+    Pose_t pose;              // 位姿数据
+    float weight;             // 置信度权重 (0.0-1.0)
+} WeightedPose_t;
 
 static Pose_t *g_pose = NULL;
+static bool is_init = false;
 static void Loc_Update(void);
+static void Loc_Fusion_WeightedAverage(WeightedPose_t sources[], uint8_t count, Pose_t *fused_pose);
 
 
 /**
@@ -21,13 +38,12 @@ static void Loc_Update(void);
  */
 bool Loc_Init(void) {
     g_pose = pvPortMalloc(sizeof(Pose_t));
-    if(g_pose == NULL) {
+    if (g_pose == NULL) {
         return false;
     }
     memset(g_pose, 0, sizeof(Pose_t));
 
-
-
+    is_init = true;
     return true;
 }
 
@@ -35,12 +51,14 @@ bool Loc_Init(void) {
  * @brief 导航定位任务
  */
 void Loc_Update_Task(void *argument) {
+    (void)argument;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    if (!is_init) vTaskDelete(NULL);
 
-    for(;;) {
-		Loc_Update();
-        osDelay(1000);
+    for (;;) {
+        Loc_Update();
+        osDelay(10);
     }
 }
 
@@ -48,21 +66,111 @@ void Loc_Update_Task(void *argument) {
  * @brief 导航定位更新
  */
 static void Loc_Update(void) {
+    extern osMutexId_t Pose_MutexHandle;
+
+    WeightedPose_t sensor_sources[MAX_SENSOR_SOURCES] = {0};
+    uint8_t source_count = 0;
+
+    // 获取里程计数据
+    Pose_t enc_pose;
+    bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
+    if (enc_rec) {
+        sensor_sources[source_count].pose = enc_pose;
+        sensor_sources[source_count].weight = 0.6f;    // 里程计权重
+        source_count++;
+    }
+
+    // 获取平面定位数据
+    Pose_t ops_pose;
+    OPSData_t ops_data;
+    bool ops_rec = OPS_Get(&ops_data);
+    if (ops_rec) {
+        ops_pose.x = ops_data.x;
+        ops_pose.y = ops_data.y;
+        ops_pose.yaw = ops_data.yaw;
+        ops_pose.timestamp = ops_data.timestamp;
+        sensor_sources[source_count].pose = ops_pose;
+        sensor_sources[source_count].weight = 0.9f;    // 平面定位权重
+        source_count++;
+    }
 
 
 
+
+    // 数据融合
+    Pose_t fused_pose;
+    if (source_count > 0) {
+        Loc_Fusion_WeightedAverage(sensor_sources, source_count, &fused_pose);
+    } else {
+        fused_pose = *g_pose;
+        fused_pose.timestamp = osKernelGetTickCount();
+    }
+
+    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
+        *g_pose = fused_pose;
+        osMutexRelease(Pose_MutexHandle);
+    }
 }
 
 /**
  * @brief 导航定位设置
  * @param pose 导航位姿指针
  */
-void Loc_Set(Pose_t *pose) {
+bool Loc_Set(Pose_t *pose) {
     extern osMutexId_t Pose_MutexHandle;
+    if (!is_init) return false;
 
     if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
         *g_pose = *pose;
         g_pose->timestamp = osKernelGetTickCount();
         osMutexRelease(Pose_MutexHandle);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief 获取当前导航位姿
+ * @param pose 输出参数，用于存储当前位姿
+ * @return 获取结果
+ */
+bool Loc_Get(Pose_t *pose) {
+    extern osMutexId_t Pose_MutexHandle;
+    if (!is_init) return false;
+
+    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
+        *pose = *g_pose;
+        osMutexRelease(Pose_MutexHandle);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief 加权平均融合算法
+ * @param sources 多源位姿数据数组
+ * @param count 数据源数量
+ * @param fused_pose 融合后的位姿
+ */
+static void Loc_Fusion_WeightedAverage(WeightedPose_t sources[], uint8_t count, Pose_t *fused_pose) {
+    float total_weight = 0.0f;
+    float sum_x = 0.0f, sum_y = 0.0f, sum_yaw = 0.0f;
+
+    for (uint8_t i = 0; i < count; i++) {
+        if (sources[i].weight > 0.0f) {
+            sum_x += sources[i].pose.x * sources[i].weight;
+            sum_y += sources[i].pose.y * sources[i].weight;
+            sum_yaw += sources[i].pose.yaw * sources[i].weight;
+            total_weight += sources[i].weight;
+        }
+    }
+
+    if (total_weight > 0.0f) {
+        fused_pose->x = sum_x / total_weight;
+        fused_pose->y = sum_y / total_weight;
+        fused_pose->yaw = sum_yaw / total_weight;
+        fused_pose->timestamp = osKernelGetTickCount();
     }
 }

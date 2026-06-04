@@ -11,6 +11,9 @@
                 "Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
                 "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
                 "Drivers/CMSIS/Include",
+                "Applications/chassis",
+                "Applications/chassis/kinematics",
+                "Applications/chassis/motion",
                 "Applications/letter_shell",
                 "Applications/letter_shell/src",
                 "Applications/letter_shell/log",
@@ -26,7 +29,6 @@
                 "Drivers/User/SERVO",
                 "Drivers/User/STEP",
                 "Drivers/User/STEP/driver",
-                "Drivers/User/STEP/motion",
                 "Drivers/User/TRACK",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"

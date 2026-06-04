@@ -40,6 +40,7 @@ typedef struct {
 
 
 bool OPS_Init(void);
+bool OPS_Get(OPSData_t *pose);
 
 
 

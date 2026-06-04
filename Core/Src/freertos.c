@@ -480,6 +480,13 @@ void Sys_Init_Task(void *argument)
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else {
+    SHOW_DMESG(dmesg_ok, NULL);
+    SHOW_DMESG(dmesg_wait, "Initialize Chassis Module");
+    extern bool Chassis_Init(void);
+    if (!Chassis_Init()) SHOW_DMESG(dmesg_fail, NULL);
+    else SHOW_DMESG(dmesg_ok, NULL);
+  }
 
   SHOW_DMESG(dmesg_wait, "Initialize Localization Module");
   extern bool Loc_Init(void);
@@ -497,3 +504,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

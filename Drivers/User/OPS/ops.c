@@ -15,7 +15,7 @@
 #include <stdio.h>
 
 
-OPSData_t *g_ops;
+static OPSData_t *g_ops = NULL;
 static bool is_init = false;
 static void Data_Analyse(const uint8_t rec);
 
@@ -31,6 +31,17 @@ bool OPS_Init(void) {
     MX_UART4_Init();
     is_init = true;
 
+    return true;
+}
+
+/**
+ * @brief 获取平面定位数据
+ * @param pose 定位数据指针
+ * */
+bool OPS_Get(OPSData_t *pose) {
+    if(!is_init) return false;
+
+    memcpy(pose, g_ops, sizeof(OPSData_t));
     return true;
 }
 
@@ -53,7 +64,10 @@ void OPS_Update_Task(void *argument) {
     Uart4_RxBuf_t rx_buf;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    if (!is_init) vTaskDelete(NULL);
+    if (!is_init) {
+        osMessageQueueDelete(Uart4_Rx_DataHandle);
+        vTaskDelete(NULL);
+    }
 
     for (;;) {
         osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, osWaitForever);

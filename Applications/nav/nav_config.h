@@ -11,6 +11,4 @@
 
 
 
-
-
 #endif /* __NAV_CONFIG_H__ */

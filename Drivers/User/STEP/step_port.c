@@ -60,6 +60,7 @@ bool Motor_Init(void) {
  * @return true 成功发送，false 失败
  */
 bool Motor_Send_Cmd(MotorCmd_t *cmd) {
+    if (!is_init) return false;
     osStatus_t status = osMessageQueuePut(MotorCmdsHandle, cmd, 0, 100);
     return (status == osOK);
 }
@@ -72,7 +73,10 @@ void Motor_Ctrl_Task(void *argument) {
     MotorCmd_t cmd;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    if (!is_init) vTaskDelete(NULL);
+    if (!is_init)  {
+        osMessageQueueDelete(MotorCmdsHandle);
+        vTaskDelete(NULL);
+    }
 
     for(;;) {
         if (osMessageQueueGet(MotorCmdsHandle, &cmd, NULL, osWaitForever) == osOK) {
@@ -91,7 +95,10 @@ void Motor_Get_Sta_Task(void *argument) {
     extern osMutexId_t Motor_MutexHandle;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-    if (!is_init) vTaskDelete(NULL);
+    if (!is_init) {
+        osMessageQueueDelete(Usart6_Rx_DataHandle);
+        vTaskDelete(NULL);
+    }
 
     for(;;) {
         if (osMessageQueueGet(Usart6_Rx_DataHandle, &rxBuf, NULL, osWaitForever) == osOK) {
@@ -454,121 +461,6 @@ ShellCommand StepGroup[] = {
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 step, StepGroup, Step Control CMD Group);
-
-// #if MOTOR_CMD_POSITION
-// /**
-//  * @brief 将车移动指定距离
-//  */
-// static void Car_Move(int argc, char *argv[]) {
-//     if (!is_init) {
-//         logWarning("Motor module not initialized"); return;
-//     }
-//
-//     if (argc != 4) {
-//         logPrintln("Usage: car pos [x_offset] [y_offset] [yaw_offset]"); return;
-//     }
-//
-//     int32_t x_offset = atoi(argv[1]);
-//     int32_t y_offset = atoi(argv[2]);
-//     int32_t yaw_offset = atoi(argv[3]);
-//
-//     MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
-// }
-// #endif /* MOTOR_CMD_POSITION */
-//
-// #if MOTOR_CMD_VELOCITY
-// /**
-//  * @brief 按键遥控
-//  */
-// static void Car_Key(void) {
-//     if (!is_init) {
-//         logWarning("Motor module not initialized"); return;
-//     }
-//
-// 	Shell *shell = shellGetCurrent();
-// 	logPrintln("Key control started. WASD=move, QE=rotate, ^C=exit");
-//
-// 	char prev_key = 0;
-// 	char key;
-//
-// 	for (;;) {
-//         osDelay(10);
-// 		short ret = shell->read(&key, 1);
-//
-// 		if (ret <= 0) {	// 超时无输入
-// 			if (prev_key != 0) {
-// 				MotionControl_Stop();
-// 				prev_key = 0;
-// 			} continue;
-// 		}
-//
-// 		if (key == 0x03) {	// ^C 退出
-// 			MotionControl_Stop(); break;
-// 		}
-//
-// 		if (key == prev_key) continue;
-//
-// 		int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
-// 		bool valid_key = true;
-//
-// 		switch (key) {
-// 		case 'w': case 'W': x_comp = 127;   break;	// 前进
-// 		case 's': case 'S': x_comp = -127;  break;	// 后退
-// 		case 'a': case 'A': y_comp = 127;   break;	// 左移
-// 		case 'd': case 'D': y_comp = -127;  break;	// 右移
-// 		case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
-// 		case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
-// 		default: valid_key = false; break;
-// 		}
-//
-// 		if (valid_key) {
-// 			MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
-// 		}
-//
-// 		prev_key = key;
-// 	}
-//     logPrintln("\033[%dA\033[J\033[2A", 1);
-// }
-// #endif /* MOTOR_CMD_VELOCITY */
-//
-// /**
-//  * @brief 设置车的运动参数
-//  */
-// static void Car_Params(int argc, char *argv[]) {
-//     uint16_t linear_speed;
-//     uint16_t yaw_speed;
-//     uint16_t acc;
-//     uint16_t dec;
-//
-//     if (argc == 1) {
-//         MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
-//         logPrintln("Current params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec); return;
-//     } else if (argc != 5) {
-//         logPrintln("Usage: car par [linear_speed] [yaw_speed] [acc] [dec]"); return;
-//     }
-//
-//     linear_speed = atoi(argv[2]);
-//     yaw_speed = atoi(argv[3]);
-//     acc = atoi(argv[4]);
-//     dec = atoi(argv[5]);
-//
-//     MotionControl_SetMotionParams(linear_speed, yaw_speed, acc, dec);
-//     logPrintln("Set params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec);
-// }
-//
-//
-// ShellCommand MoveGroup[] = {
-// #if MOTOR_CMD_POSITION
-//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
-// #endif
-// #if MOTOR_CMD_VELOCITY
-//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
-// #endif
-//     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, par, Car_Params, Set Car Motion Params),
-//     SHELL_CMD_GROUP_END()
-// };
-// SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-// car, MoveGroup, Car Control CMD Group);
 
 
 #if USE_VIEW

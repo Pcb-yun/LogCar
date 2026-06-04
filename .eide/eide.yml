@@ -81,6 +81,12 @@ virtualFolder:
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c
           folders: []
+    - name: chassis
+      files:
+        - path: Applications/chassis/chassis.c
+        - path: Applications/chassis/kinematics/kinematics.c
+        - path: Applications/chassis/motion/motion_control.c
+      folders: []
     - name: lettershell
       files:
         - path: Applications/letter_shell/shell_port.c
@@ -96,6 +102,7 @@ virtualFolder:
     - name: nav
       files:
         - path: Applications/nav/localization/nav_local.c
+        - path: Applications/nav/tools/nav_tools.c
         - path: Applications/nav/trajectory_tracking/nav_tracker.c
         - path: Applications/nav/utils/nav_math.c
       folders: []
@@ -125,7 +132,6 @@ virtualFolder:
         - path: Drivers/User/STEP/driver/step_ttl.c
         - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
-        - path: Drivers/User/STEP/motion/motion_control.c
       folders: []
     - name: track
       files:
@@ -155,6 +161,9 @@ targets:
         - Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F
         - Drivers/CMSIS/Device/ST/STM32F4xx/Include
         - Drivers/CMSIS/Include
+        - Applications/chassis
+        - Applications/chassis/kinematics
+        - Applications/chassis/motion
         - Applications/letter_shell
         - Applications/letter_shell/src
         - Applications/letter_shell/log
@@ -170,7 +179,6 @@ targets:
         - Drivers/User/SERVO
         - Drivers/User/STEP
         - Drivers/User/STEP/driver
-        - Drivers/User/STEP/motion
         - Drivers/User/TRACK
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code

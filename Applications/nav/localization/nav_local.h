@@ -9,7 +9,11 @@
 
 #include "stdbool.h"
 #include "nav_common.h"
+#include "chassis.h"
 
+
+bool Loc_Set(Pose_t *pose);
+bool Loc_Get(Pose_t *pose);
 
 
 #endif /* __NAV_LOCAL_H__ */
