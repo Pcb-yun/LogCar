@@ -16,7 +16,6 @@
 #include "motion_control.h"
 #include "ops.h"
 
-#define MAX_SENSOR_SOURCES 4    // 最大传感器数据来源数量
 
 /**
  * @brief 带权重的位姿数据

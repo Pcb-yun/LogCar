@@ -105,6 +105,8 @@ virtualFolder:
         - path: Applications/nav/tools/nav_tools.c
         - path: Applications/nav/trajectory_tracking/nav_tracker.c
         - path: Applications/nav/utils/nav_math.c
+        - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_map_data.c
       folders: []
     - name: battery
       files:

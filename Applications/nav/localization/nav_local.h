@@ -11,6 +11,7 @@
 #include "nav_common.h"
 #include "chassis.h"
 
+#define MAX_SENSOR_SOURCES 4    // 最大传感器数据来源数量
 
 bool Loc_Set(Pose_t *pose);
 bool Loc_Get(Pose_t *pose);

@@ -493,6 +493,13 @@ void Sys_Init_Task(void *argument)
   if (!Loc_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize Map Module");
+  extern bool Map_Init(uint8_t max_point_num);
+  if (!Map_Init(32)) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+
+
   extern Shell shell;
   Shell_New_Convo(&shell);
   osEventFlagsSet(System_StatusHandle, SYS_INIT_COMPLETE);
@@ -504,4 +511,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

@@ -49,7 +49,7 @@ bool Battery_Init(void) {
     float raw_voltage = (float)g_battery->voltage * ADC_VREF_MV / ADC_RESOLUTION;
     g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO);
 
-    if (g_battery->voltage != 0) {
+    if (g_battery->voltage >= 500) {
         g_battery->is_init = true;
     }
     return g_battery->is_init;
