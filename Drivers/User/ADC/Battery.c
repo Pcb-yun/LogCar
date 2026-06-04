@@ -64,13 +64,11 @@ void Battery_Get_Task(void *argument) {
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
 
-    if (!g_battery->is_init) {
-        vTaskDelete(NULL); return;
-    }
+    if (!g_battery->is_init) vTaskDelete(NULL);
 
     for (;;) {
         HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&voltage, 1);
-        osEventFlagsWait(System_StatusHandle, BATTERY_UPDATE, osFlagsWaitAny, osWaitForever);
+        osEventFlagsWait(System_StatusHandle, ADC1_CONVCPLT, osFlagsWaitAny, osWaitForever);
         float voltage_row = (float)voltage * ADC_VREF_MV / ADC_RESOLUTION;
         g_battery->voltage = (uint16_t)(voltage_row * BATTERY_DIVIDER_RATIO);
         osDelay(g_battery->interval_ms);

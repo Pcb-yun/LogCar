@@ -22,7 +22,7 @@ extern osEventFlagsId_t System_StatusHandle;
 #define UART6_TX_IDLE (1UL << 4)        // UART6发送空闲
 #define UART3_TX_IDLE (1UL << 5)        // UART3发送空闲
 #define UART3_RX_IDLE (1UL << 6)        // UART3接收空闲
-#define BATTERY_UPDATE (1UL << 7)       // 电池电压更新
+#define ADC1_CONVCPLT (1UL << 7)        // ADC1转换完成
 
 
 #ifdef __cplusplus

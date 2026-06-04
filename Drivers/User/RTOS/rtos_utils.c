@@ -130,6 +130,81 @@ static void Time_Info(void) {
 }
 
 /**
+ * @brief 显示互斥锁信息
+ */
+static void Mutex_Info(void) {
+    logPrintln("Mutex information:");
+
+    extern osMutexId_t Pose_MutexHandle;
+    extern osMutexId_t Track_MutexHandle;
+    extern osMutexId_t Motor_MutexHandle;
+    extern osMutexId_t OPS_MutexHandle;
+
+    logPrintln("ID        Name                  Owner         State");
+    logPrintln("---------------------------------------------------------");
+
+    if (Pose_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(Pose_MutexHandle);
+        const char *owner_name = owner ? osThreadGetName(owner) : "none";
+        logPrintln("%p  %-20s  %-12s  %s",
+                  Pose_MutexHandle, "Pose_Mutex",
+                  owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
+    }
+
+    if (Track_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(Track_MutexHandle);
+        const char *owner_name = owner ? osThreadGetName(owner) : "none";
+        logPrintln("%p  %-20s  %-12s  %s",
+                  Track_MutexHandle, "Track_Mutex",
+                  owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
+    }
+
+    if (Motor_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(Motor_MutexHandle);
+        const char *owner_name = owner ? osThreadGetName(owner) : "none";
+        logPrintln("%p  %-20s  %-12s  %s",
+                  Motor_MutexHandle, "Motor_Mutex",
+                  owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
+    }
+
+    if (OPS_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(OPS_MutexHandle);
+        const char *owner_name = owner ? osThreadGetName(owner) : "none";
+        logPrintln("%p  %-20s  %-12s  %s",
+                  OPS_MutexHandle, "OPS_Mutex",
+                  owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
+    }
+}
+
+/**
+ * @brief 显示事件标志信息
+ */
+static void Event_Info(void) {
+    logPrintln("Event Flags information:");
+
+    extern osEventFlagsId_t System_StatusHandle;
+
+    logPrintln("ID        Name                  Flags");
+    logPrintln("------------------------------------------");
+
+    if (System_StatusHandle != NULL) {
+        uint32_t flags = osEventFlagsGet(System_StatusHandle);
+        logPrintln("%p  %-20s  0x%08lx",
+                  System_StatusHandle, "System_Status", flags);
+
+        logPrintln("\nFlag Status:");
+        logPrintln("%-20s  %s", "SYS_INIT_COMPLETE", (flags & 0x01) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "APP_NEED_USART", (flags & 0x02) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "UART1_TX_IDLE", (flags & 0x04) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "UART2_RX_CPLT", (flags & 0x08) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "UART6_TX_IDLE", (flags & 0x10) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "UART3_TX_IDLE", (flags & 0x20) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "UART3_RX_IDLE", (flags & 0x40) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "ADC1_CONVCPLT", (flags & 0x80) ? "SET" : "RESET");
+    }
+}
+
+/**
  * @brief 显示消息队列信息
  */
 static void Queue_Info(void) {
@@ -219,6 +294,10 @@ static void OS_Tool_Shell(int argc, char *argv[]) {
         Time_Info();
     } else if(strcmp(argv[1], "queue") == 0) {
         Queue_Info();
+    } else if(strcmp(argv[1], "mutex") == 0) {
+        Mutex_Info();
+    } else if(strcmp(argv[1], "event") == 0) {
+        Event_Info();
     } else {
         logPrintln("Invalid command: %s\r\n"
                 OS_HELP, argv[1]);

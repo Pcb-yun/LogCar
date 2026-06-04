@@ -162,7 +162,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
  */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (hadc->Instance == ADC1) {
-        osEventFlagsSet(System_StatusHandle, BATTERY_UPDATE);
+      osEventFlagsSet(System_StatusHandle, ADC1_CONVCPLT);
     }
 }
 
@@ -183,4 +183,3 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc) {
 }
 
 /* USER CODE END 1 */
-

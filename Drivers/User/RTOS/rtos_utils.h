@@ -19,7 +19,9 @@ extern "C" {
     "  mem      Show memory status\r\n" \
     "  task     Show task status\r\n" \
     "  time     Show system time status\r\n" \
-    "  queue    Show queue status"
+    "  queue    Show queue status\r\n" \
+    "  mutex    Show mutex status\r\n" \
+    "  event    Show event flags status"
 
 
 #ifdef __cplusplus

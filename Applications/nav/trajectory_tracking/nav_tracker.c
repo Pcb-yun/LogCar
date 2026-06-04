@@ -31,6 +31,6 @@ void Nav_Track_Task(void *argument){
 
 
 
-        osDelay(1000);
+        osDelay(10);
     }
 }

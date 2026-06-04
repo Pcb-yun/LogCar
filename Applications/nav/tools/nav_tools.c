@@ -59,4 +59,4 @@ ShellCommand NavToolsGroup[] = {
 };
 
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-nav, NavToolsGroup, Navigation Debug Tools);
+nav, NavToolsGroup, Navigation Tools);
