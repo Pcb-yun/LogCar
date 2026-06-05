@@ -7,6 +7,7 @@
 #include "nav_tracker.h"
 #include "nav_local.h"
 #include "nav_math.h"
+#include "nav_map.h"
 #include "motion_control.h"
 #include "cmsis_os2.h"
 #include "Events.h"
@@ -20,10 +21,8 @@
 typedef struct {
     TrackState_t state;         // 跟踪状态
     TrackPhase_t phase;         // 当前阶段
-    uint8_t current_target_id;  // 当前目标点ID
-    uint8_t next_target_id;     // 下一个目标点ID
+    uint8_t target_id;          // 目标目标点ID
     uint32_t phase_start_tick;  // 阶段开始时间戳
-    uint32_t target_timeout;    // 目标点超时时间(ms)
 } NavTracker_t;
 
 
@@ -56,21 +55,6 @@ static void calc_target_info(Pose2D_t current, TargetPose_t target,
 }
 
 /**
- * @brief 检查是否到达目标点
- */
-static bool check_arrive(TargetPoint_t *point, float dist, float yaw_error) {
-    ArriveCheckMode_t mode = point->arrive.check_mode;
-
-    if (mode == ARRIVE_CHECK_DISTANCE || mode == ARRIVE_CHECK_BOTH) {
-        if (dist > point->arrive.distance_threshold) return false;
-    }
-    if (mode == ARRIVE_CHECK_YAW || mode == ARRIVE_CHECK_BOTH) {
-        if (fabsf(yaw_error) > point->arrive.yaw_threshold) return false;
-    }
-    return true;
-}
-
-/**
  * @brief 导航跟踪初始化
  */
 static bool Nav_Track_Init(void) {
@@ -82,19 +66,17 @@ static bool Nav_Track_Init(void) {
 }
 
 /**
- * @brief 开始导航任务
+ * @brief 导航到指定目标点
  */
-bool Nav_Track_Start(void) {
+bool Nav_Track_GoTo(uint8_t target_id) {
     if (!is_init) return false;
-    return Nav_Track_GoTo(0);
-}
+    if (Map_GetPoint(target_id) == NULL) return false;
 
-/**
- * @brief 从指定目标点开始导航
- */
-bool Nav_Track_StartFrom(uint8_t target_id) {
-    if (!is_init) return false;
-    return Nav_Track_GoTo(target_id);
+    g_tracker.target_id = target_id;
+    g_tracker.state = TRACK_STATE_RUNNING;
+    g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
+    g_tracker.phase_start_tick = osKernelGetTickCount();
+    return true;
 }
 
 /**
@@ -117,43 +99,10 @@ bool Nav_Track_Resume(void) {
 }
 
 /**
- * @brief 停止导航
- */
-bool Nav_Track_Stop(void) {
-    if (g_tracker.state == TRACK_STATE_IDLE) return false;
-    MotionControl_Stop();
-    g_tracker.state = TRACK_STATE_IDLE;
-    g_tracker.phase = TRACK_PHASE_IDLE;
-    g_tracker.current_target_id = 0;
-    return true;
-}
-
-/**
- * @brief 跳转到指定目标点
- */
-bool Nav_Track_GoTo(uint8_t target_id) {
-    if (!is_init) return false;
-    if (Map_GetPoint(target_id) == NULL) return false;
-
-    g_tracker.current_target_id = target_id;
-    g_tracker.state = TRACK_STATE_RUNNING;
-    g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
-    g_tracker.phase_start_tick = osKernelGetTickCount();
-    return true;
-}
-
-/**
  * @brief 获取当前状态
  */
 TrackState_t Nav_Track_GetState(void) {
     return g_tracker.state;
-}
-
-/**
- * @brief 获取当前目标点ID
- */
-uint8_t Nav_Track_GetCurrentTarget(void) {
-    return g_tracker.current_target_id;
 }
 
 /**
@@ -174,7 +123,7 @@ void Nav_Track_Task(void *argument) {
             continue;
         }
 
-        target = Map_GetPoint(g_tracker.current_target_id);
+        target = Map_GetPoint(g_tracker.target_id);
         if (target == NULL) {
             g_tracker.state = TRACK_STATE_ERROR;
             osDelay(10);
@@ -202,8 +151,6 @@ void Nav_Track_Task(void *argument) {
         switch (g_tracker.phase) {
             case TRACK_PHASE_ROTATE_TO_TARGET: {
                 // 旋转朝向目标方向
-                float yaw_speed = (float)target->motion.target_angular_speed;
-
                 if (fabsf(yaw_error) < target->arrive.yaw_threshold) {
                     MotionControl_Stop();
                     g_tracker.phase = TRACK_PHASE_TRANSLATE;
@@ -226,7 +173,6 @@ void Nav_Track_Task(void *argument) {
                 // 平移移动到目标位置
                 float decel_dist = 10.0f; // 减速距离(cm)
                 float speed_ratio = fminf(dist / decel_dist, 1.0f);
-                float speed = target->motion.target_speed * speed_ratio;
 
                 if (dist < target->arrive.distance_threshold) {
                     MotionControl_Stop();
@@ -236,14 +182,9 @@ void Nav_Track_Task(void *argument) {
                         g_tracker.phase = TRACK_PHASE_ADJUST_YAW;
                         g_tracker.phase_start_tick = osKernelGetTickCount();
                     } else {
-                        // 到达当前目标，切换到下一个
-                        g_tracker.current_target_id++;
-                        if (Map_GetPoint(g_tracker.current_target_id) == NULL) {
-                            g_tracker.state = TRACK_STATE_COMPLETE;
-                            g_tracker.current_target_id = 0;
-                        }
-                        g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
-                        g_tracker.phase_start_tick = osKernelGetTickCount();
+                        // 到达目标点
+                        g_tracker.state = TRACK_STATE_COMPLETE;
+                        g_tracker.phase = TRACK_PHASE_IDLE;
                     }
                 } else {
                     // 计算世界坐标系下的运动偏移
@@ -267,14 +208,9 @@ void Nav_Track_Task(void *argument) {
 
                 if (fabsf(final_yaw_error) < target->arrive.yaw_threshold) {
                     MotionControl_Stop();
-                    // 到达完成，切换到下一个目标点
-                    g_tracker.current_target_id++;
-                    if (Map_GetPoint(g_tracker.current_target_id) == NULL) {
-                        g_tracker.state = TRACK_STATE_COMPLETE;
-                        g_tracker.current_target_id = 0;
-                    }
-                    g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
-                    g_tracker.phase_start_tick = osKernelGetTickCount();
+                    // 到达目标点
+                    g_tracker.state = TRACK_STATE_COMPLETE;
+                    g_tracker.phase = TRACK_PHASE_IDLE;
                 } else {
                     int32_t yaw_deg = (int32_t)(final_yaw_error * RAD_TO_DEG);
                     int32_t yaw_clamp = yaw_deg;
