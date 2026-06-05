@@ -9,6 +9,7 @@
 #include "nav_math.h"
 #include "nav_map.h"
 #include "motion_control.h"
+#include "step_ttl.h"
 #include "cmsis_os2.h"
 #include "Events.h"
 #include <math.h>
@@ -23,12 +24,29 @@ typedef struct {
     TrackPhase_t phase;         // 当前阶段
     uint8_t target_id;          // 目标目标点ID
     uint32_t phase_start_tick;  // 阶段开始时间戳
+    bool cmd_sent;              // 指令是否已发送
 } NavTracker_t;
 
 
 static NavTracker_t g_tracker = {0};
 static bool is_init = false;
 
+extern MotorStatusShared_t *g_motor_status;
+
+
+/**
+ * @brief 检查四轮电机是否全部到位
+ * @param threshold 位置误差阈值(原始值)
+ * @return true-全部到位, false-未到位
+ */
+static bool motors_reached_target(uint16_t threshold) {
+    for (uint8_t i = 0; i < 4; i++) {
+        int32_t err = g_motor_status->motors[i].pos_error;
+        if (err < 0) err = -err;
+        if ((uint32_t)err > threshold) return false;
+    }
+    return true;
+}
 
 /**
  * @brief 获取当前位姿
@@ -75,6 +93,7 @@ bool Nav_Track_GoTo(uint8_t target_id) {
     g_tracker.target_id = target_id;
     g_tracker.state = TRACK_STATE_RUNNING;
     g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
+    g_tracker.cmd_sent = false;
     g_tracker.phase_start_tick = osKernelGetTickCount();
     return true;
 }
@@ -86,6 +105,7 @@ bool Nav_Track_Pause(void) {
     if (g_tracker.state != TRACK_STATE_RUNNING) return false;
     g_tracker.state = TRACK_STATE_PAUSED;
     MotionControl_Stop();
+    g_tracker.cmd_sent = false;
     return true;
 }
 
@@ -95,6 +115,7 @@ bool Nav_Track_Pause(void) {
 bool Nav_Track_Resume(void) {
     if (g_tracker.state != TRACK_STATE_PAUSED) return false;
     g_tracker.state = TRACK_STATE_RUNNING;
+    g_tracker.cmd_sent = false; // 恢复后重新发指令
     return true;
 }
 
@@ -150,79 +171,92 @@ void Nav_Track_Task(void *argument) {
         // 阶段处理
         switch (g_tracker.phase) {
             case TRACK_PHASE_ROTATE_TO_TARGET: {
-                // 旋转朝向目标方向
-                if (fabsf(yaw_error) < target->arrive.yaw_threshold) {
-                    MotionControl_Stop();
-                    g_tracker.phase = TRACK_PHASE_TRANSLATE;
-                    g_tracker.phase_start_tick = osKernelGetTickCount();
-                } else {
-                    int32_t yaw_deg = (int32_t)(yaw_error * RAD_TO_DEG);
-                    int32_t yaw_clamp = yaw_deg;
-                    // 限制最大偏摆角度避免过冲
-                    if (yaw_clamp > (int32_t)(target->motion.target_angular_speed * 0.2f)) {
-                        yaw_clamp = (int32_t)(target->motion.target_angular_speed * 0.2f);
-                    } else if (yaw_clamp < -(int32_t)(target->motion.target_angular_speed * 0.2f)) {
-                        yaw_clamp = -(int32_t)(target->motion.target_angular_speed * 0.2f);
+                if (!g_tracker.cmd_sent) {
+                    if (fabsf(yaw_error) < target->arrive.yaw_threshold) {
+                        // 已到位，直接进入平移阶段
+                        g_tracker.phase = TRACK_PHASE_TRANSLATE;
+                        g_tracker.cmd_sent = false;
+                        g_tracker.phase_start_tick = osKernelGetTickCount();
+                    } else {
+                        // 发一次旋转指令，然后等待到位
+                        int32_t yaw_deg = (int32_t)(yaw_error * RAD_TO_DEG);
+                        MotionControl_SetPosition(0, 0, yaw_deg);
+                        g_tracker.cmd_sent = true;
                     }
-                    MotionControl_SetPosition(0, 0, yaw_clamp);
+                } else {
+                    // 等待电机到位
+                    if (motors_reached_target(target->arrive.yaw_threshold * 100.0f)) {
+                        g_tracker.phase = TRACK_PHASE_TRANSLATE;
+                        g_tracker.cmd_sent = false;
+                        g_tracker.phase_start_tick = osKernelGetTickCount();
+                    }
                 }
                 break;
             }
 
             case TRACK_PHASE_TRANSLATE: {
-                // 平移移动到目标位置
-                float decel_dist = 10.0f; // 减速距离(cm)
-                float speed_ratio = fminf(dist / decel_dist, 1.0f);
-
-                if (dist < target->arrive.distance_threshold) {
-                    MotionControl_Stop();
-                    // 检查是否需要调整最终航向
-                    if (target->arrive.check_mode == ARRIVE_CHECK_BOTH ||
-                        target->arrive.check_mode == ARRIVE_CHECK_YAW) {
-                        g_tracker.phase = TRACK_PHASE_ADJUST_YAW;
-                        g_tracker.phase_start_tick = osKernelGetTickCount();
-                    } else {
-                        // 到达目标点
-                        g_tracker.state = TRACK_STATE_COMPLETE;
-                        g_tracker.phase = TRACK_PHASE_IDLE;
-                    }
-                } else {
-                    // 计算世界坐标系下的运动偏移
+                if (!g_tracker.cmd_sent) {
                     float dx = target->pose.x - current_pose.x;
                     float dy = target->pose.y - current_pose.y;
+                    dist = sqrtf(dx * dx + dy * dy);
 
-                    // 将运动方向投影到车体坐标系
-                    float cos_yaw = cosf(current_pose.yaw);
-                    float sin_yaw = sinf(current_pose.yaw);
-                    int32_t x_offset = (int32_t)((dx * cos_yaw + dy * sin_yaw) * speed_ratio);
-                    int32_t y_offset = (int32_t)((-dx * sin_yaw + dy * cos_yaw) * speed_ratio);
+                    if (dist < target->arrive.distance_threshold) {
+                        // 已到位，检查是否需要调整航向
+                        if (target->arrive.check_mode == ARRIVE_CHECK_BOTH ||
+                            target->arrive.check_mode == ARRIVE_CHECK_YAW) {
+                            g_tracker.phase = TRACK_PHASE_ADJUST_YAW;
+                        } else {
+                            g_tracker.state = TRACK_STATE_COMPLETE;
+                            g_tracker.phase = TRACK_PHASE_IDLE;
+                        }
+                        g_tracker.cmd_sent = false;
+                        g_tracker.phase_start_tick = osKernelGetTickCount();
+                    } else {
+                        // 发一次平移指令，然后等待到位
+                        float cos_yaw = cosf(current_pose.yaw);
+                        float sin_yaw = sinf(current_pose.yaw);
+                        int32_t x_offset = (int32_t)(dx * cos_yaw + dy * sin_yaw);
+                        int32_t y_offset = (int32_t)(-dx * sin_yaw + dy * cos_yaw);
 
-                    MotionControl_SetPosition(x_offset, y_offset, 0);
+                        MotionControl_SetPosition(x_offset, y_offset, 0);
+                        g_tracker.cmd_sent = true;
+                    }
+                } else {
+                    // 等待电机到位
+                    if (motors_reached_target(100)) { // 100原始值约等于0.3°误差
+                        g_tracker.phase = TRACK_PHASE_TRANSLATE;
+                        g_tracker.cmd_sent = false;
+                        g_tracker.phase_start_tick = osKernelGetTickCount();
+                    }
                 }
                 break;
             }
 
             case TRACK_PHASE_ADJUST_YAW: {
-                // 调整最终航向
-                float final_yaw_error = normalize_angle(target->pose.yaw - current_pose.yaw);
+                if (!g_tracker.cmd_sent) {
+                    float final_yaw_error = normalize_angle(target->pose.yaw - current_pose.yaw);
 
-                if (fabsf(final_yaw_error) < target->arrive.yaw_threshold) {
-                    MotionControl_Stop();
-                    // 到达目标点
-                    g_tracker.state = TRACK_STATE_COMPLETE;
-                    g_tracker.phase = TRACK_PHASE_IDLE;
+                    if (fabsf(final_yaw_error) < target->arrive.yaw_threshold) {
+                        g_tracker.state = TRACK_STATE_COMPLETE;
+                        g_tracker.phase = TRACK_PHASE_IDLE;
+                    } else {
+                        int32_t yaw_deg = (int32_t)(final_yaw_error * RAD_TO_DEG);
+                        MotionControl_SetPosition(0, 0, yaw_deg);
+                        g_tracker.cmd_sent = true;
+                    }
                 } else {
-                    int32_t yaw_deg = (int32_t)(final_yaw_error * RAD_TO_DEG);
-                    int32_t yaw_clamp = yaw_deg;
-                    if (yaw_clamp > 90) yaw_clamp = 90;
-                    if (yaw_clamp < -90) yaw_clamp = -90;
-                    MotionControl_SetPosition(0, 0, yaw_clamp);
+                    // 等待电机到位
+                    if (motors_reached_target(target->arrive.yaw_threshold * 100.0f)) {
+                        g_tracker.state = TRACK_STATE_COMPLETE;
+                        g_tracker.phase = TRACK_PHASE_IDLE;
+                    }
                 }
                 break;
             }
 
             default:
                 g_tracker.phase = TRACK_PHASE_ROTATE_TO_TARGET;
+                g_tracker.cmd_sent = false;
                 break;
         }
 
