@@ -15,6 +15,27 @@
 #include <math.h>
 #include <string.h>
 
+// 电机最大转速限制 (RPM)
+#define MOTOR_MAX_RPM  6000
+
+/**
+ * @brief 限制值在指定范围内
+ */
+static inline float clamp_value(float value, float min_val, float max_val) {
+    if (value < min_val) return min_val;
+    if (value > max_val) return max_val;
+    return value;
+}
+
+/**
+ * @brief 限制uint16_t值在有效范围内
+ */
+static inline uint16_t clamp_u16(float value) {
+    if (value < 0.0f) return 0;
+    if (value > 65535.0f) return 65535;
+    return (uint16_t)value;
+}
+
 
 /**
  * @brief 运动控制结构体
@@ -139,12 +160,10 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
     Kinematics_Forward(&enc_delta, &delta);
 
     // 将车体坐标系增量旋转到世界坐标系并累加
-    // g_enc_pose->yaw 单位为度，cosf/sinf 需要弧度输入
     float cos_yaw = cosf(g_enc_pose->yaw * DEG_TO_RAD);
     float sin_yaw = sinf(g_enc_pose->yaw * DEG_TO_RAD);
     g_enc_pose->x += delta.dx * cos_yaw - delta.dy * sin_yaw;
     g_enc_pose->y += delta.dx * sin_yaw + delta.dy * cos_yaw;
-    // delta.dyaw 单位为度
     g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw);
     g_enc_pose->timestamp = enc.timestamp;
 
@@ -165,28 +184,28 @@ static void send_wheel_velocity_commands(Wheel_t *wheels) {
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
     cmd.type.ctrl.type = CMD_VELOCITY;
-    cmd.type.ctrl.p.vel.acc = (uint16_t)g_motion->car_acc;
+    cmd.type.ctrl.p.vel.acc = clamp_u16(g_motion->car_acc);
     cmd.type.ctrl.p.vel.sync = true;
 
-    uint16_t wheel_rpm = (uint16_t)(fabsf(wheels->fl) * 60.0f / (2.0f * M_PI));
+    uint16_t wheel_rpm = clamp_u16(fabsf(wheels->fl) * 60.0f / (2.0f * M_PI));
     cmd.motor_id = MOTOR_FRONT_LEFT;
     cmd.type.ctrl.p.vel.dir = (wheels->fl >= 0) ? 0 : 1;
     cmd.type.ctrl.p.vel.vel = wheel_rpm;
     Motor_Send_Cmd(&cmd);
 
-    wheel_rpm = (uint16_t)(fabsf(wheels->fr) * 60.0f / (2.0f * M_PI));
+    wheel_rpm = clamp_u16(fabsf(wheels->fr) * 60.0f / (2.0f * M_PI));
     cmd.motor_id = MOTOR_FRONT_RIGHT;
     cmd.type.ctrl.p.vel.dir = (wheels->fr >= 0) ? 1 : 0;
     cmd.type.ctrl.p.vel.vel = wheel_rpm;
     Motor_Send_Cmd(&cmd);
 
-    wheel_rpm = (uint16_t)(fabsf(wheels->rl) * 60.0f / (2.0f * M_PI));
+    wheel_rpm = clamp_u16(fabsf(wheels->rl) * 60.0f / (2.0f * M_PI));
     cmd.motor_id = MOTOR_BACK_LEFT;
     cmd.type.ctrl.p.vel.dir = (wheels->rl >= 0) ? 0 : 1;
     cmd.type.ctrl.p.vel.vel = wheel_rpm;
     Motor_Send_Cmd(&cmd);
 
-    wheel_rpm = (uint16_t)(fabsf(wheels->rr) * 60.0f / (2.0f * M_PI));
+    wheel_rpm = clamp_u16(fabsf(wheels->rr) * 60.0f / (2.0f * M_PI));
     cmd.motor_id = MOTOR_BACK_RIGHT;
     cmd.type.ctrl.p.vel.dir = (wheels->rr >= 0) ? 1 : 0;
     cmd.type.ctrl.p.vel.vel = wheel_rpm;
@@ -220,15 +239,17 @@ void MotionControl_SetVelocity(float x_component, float y_component, float yaw_c
  * @param wheels 四个轮子的角位移 (rad)
  */
 static void send_wheel_position_commands(Wheel_t *wheels) {
+    // 计算轮子转速并限幅
     float wheel_rpm = g_motion->linear_speed * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
+    wheel_rpm = clamp_value(wheel_rpm, 0.0f, MOTOR_MAX_RPM);
 
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
     cmd.type.ctrl.type = CMD_POSITION;
-    cmd.type.ctrl.p.pos.acc = (uint16_t)g_motion->car_acc;
+    cmd.type.ctrl.p.pos.acc = clamp_u16(g_motion->car_acc);
     cmd.type.ctrl.p.pos.mode = 0;
 #if CURRENT_FIRMWARE == FIRMWARE_X
-    cmd.type.ctrl.p.pos.dec = (uint16_t)g_motion->car_dec;
+    cmd.type.ctrl.p.pos.dec = clamp_u16(g_motion->car_dec);
 #endif
     cmd.type.ctrl.p.pos.sync = true;
 
@@ -290,8 +311,8 @@ void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset)
  * @param dec 减速度 (cm/s²)
  */
 void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec) {
-    g_motion->linear_speed = linear_speed;
-    g_motion->yaw_speed = yaw_speed;
+    g_motion->linear_speed = clamp_value(linear_speed, 0.0f, 1000.0f);
+    g_motion->yaw_speed = clamp_value(yaw_speed, 0.0f, 360.0f);
     g_motion->car_acc = acc_car_to_motor(acc);
     g_motion->car_dec = acc_car_to_motor(dec);
 }
