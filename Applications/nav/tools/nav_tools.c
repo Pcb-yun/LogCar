@@ -11,9 +11,73 @@
 #include "nav_common.h"
 #include "nav_local.h"
 #include "nav_map.h"
+#include "nav_tracker.h"
 #include "step_port.h"
 #include "stdlib.h"
+#include "stdio.h"
 #include "string.h"
+
+static void shellReadLine(char *buffer, int maxLen);
+static void shellReadLineWithPrompt(char *buffer, int maxLen, const char *default_val, const char *field,const char *name);
+
+/**
+ * @brief 获取导航状态字符串
+ */
+static const char *NavTools_GetStateName(TrackState_t state) {
+    switch (state) {
+        case TRACK_STATE_IDLE:     return "Idle";
+        case TRACK_STATE_RUNNING:  return "Running";
+        case TRACK_STATE_COMPLETE: return "Complete";
+        case TRACK_STATE_ERROR:    return "Error";
+        default:                   return "Unknown";
+    }
+}
+
+/**
+ * @brief 导航到指定目标点
+ */
+static void NavTools_GoTo(int argc, char *argv[]) {
+    if (argc != 2) {
+        logPrintln("Usage: nav goto [id]");
+        return;
+    }
+
+    uint8_t id = (uint8_t)atoi(argv[1]);
+    TargetPoint_t *point = Map_GetPoint(id);
+
+    if (point == NULL) {
+        logPrintln("Point ID:%u not found", id);
+        return;
+    }
+
+    if (!point->enable) {
+        logPrintln("Point ID:%u is disabled", id);
+        return;
+    }
+
+    logPrintln("Navigating to ID:%u (%s)...", id, point->name);
+    if (Nav_Track_GoTo(id)) {
+        logPrintln("Navigation started");
+    } else {
+        logWarning("Failed to start navigation");
+    }
+}
+
+/**
+ * @brief 停止导航
+ */
+static void NavTools_Stop(void) {
+    Nav_Track_Stop();
+    logPrintln("Navigation stopped");
+}
+
+/**
+ * @brief 查询导航状态
+ */
+static void NavTools_State(void) {
+    TrackState_t state = Nav_Track_GetState();
+    logPrintln("Navigation State: %s", NavTools_GetStateName(state));
+}
 
 /**
  * @brief 显示当前位姿
@@ -25,7 +89,7 @@ static void NavTools_Pose(int argc, char *argv[]) {
         logPrintln("  x:     %.2f cm", pose.x);
         logPrintln("  y:     %.2f cm", pose.y);
         logPrintln("  yaw:   %.2f deg", pose.yaw);
-        logPrintln("  time:  %lu ms", pose.timestamp);
+        logPrintln("  tick:  %lu", pose.timestamp);
     } else {
         logWarning("Failed to get pose");
     }
@@ -79,31 +143,20 @@ static void NavTools_PrintPoint(TargetPoint_t *point) {
                "  Name:   %s\r\n"
                "  Type:   %s\r\n"
                "  Pose:   x=%.2f y=%.2f yaw=%.2f\r\n"
-               "  Motion: speed=%.2f accel=%.2f\r\n"
-               "  Arrive: dist=%.2f yaw=%.2f timeout=%dms\r\n"
+               "  Motion: target_speed=%.2f angular_speed=%.2f\r\n"
+               "          accel=%.2f decel=%.2f angular_accel=%.2f\r\n"
+               "  Arrive: mode=%d dist=%.2f yaw=%.2f timeout=%dms\r\n"
                "  Enable: %s",
                point->id,
                point->name,
                NavTools_GetTypeName(point->type),
                point->pose.x, point->pose.y, point->pose.yaw,
-               point->motion.target_speed, point->motion.acceleration,
+               point->motion.target_speed, point->motion.target_angular_speed,
+               point->motion.acceleration, point->motion.deceleration,
+               point->motion.angular_acceleration,
+               point->arrive.check_mode,
                point->arrive.distance_threshold, point->arrive.yaw_threshold, point->arrive.timeout_ms,
                point->enable ? "true" : "false");
-}
-
-/**
- * @brief 查看地图信息
- */
-static void NavTools_MapInfo(void) {
-    NavMapInfo_t *info = Map_GetInfo();
-    if (info == NULL) {
-        logWarning("Map not initialized"); return;
-    }
-    logPrintln("Map Info:\r\n"
-               "  Max Points: %u\r\n"
-               "  Point Count: %u",
-               info->max_points,
-               info->point_count);
 }
 
 /**
@@ -162,6 +215,258 @@ static void NavTools_MapRm(int argc, char *argv[]) {
     } else {
         logWarning("Failed to remove point ID:%u", id);
     }
+}
+
+/**
+ * @brief 修改目标点
+ */
+static void NavTools_MapModify(int argc, char *argv[]) {
+    if (argc != 2) {
+        logPrintln("Usage: map set [id]");
+        return;
+    }
+
+    uint8_t id = (uint8_t)atoi(argv[1]);
+    TargetPoint_t *point = Map_GetPoint(id);
+
+    if (point == NULL) {
+        logPrintln("Point ID:%u not found", id);
+        return;
+    }
+
+    Shell *shell = shellGetCurrent();
+    TargetPoint_t new_point;
+    memcpy(&new_point, point, sizeof(TargetPoint_t));
+    char buffer[64];
+    char default_str[64];
+
+    logPrintln("=== Edit Point ID:%u (press Ctrl+C to cancel, Enter to skip) ===", id);
+    NavTools_PrintPoint(point);
+
+    // Name
+    shellReadLineWithPrompt(buffer, sizeof(buffer), point->name, "Point name", "Name");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0 && strlen(buffer) <= 15) {
+        strncpy(new_point.name, buffer, 15);
+        new_point.name[15] = '\0';
+    }
+
+    // Type
+    snprintf(default_str, sizeof(default_str), "%d", point->type);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "Point type (0:Normal, 1:Pickup, 2:Delivery, 3:Pause, 4:Wait)", "Type");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        int type = atoi(buffer);
+        if (type >= 0 && type <= 4) {
+            new_point.type = (TargetPointType_t)type;
+        }
+    }
+
+    // X
+    snprintf(default_str, sizeof(default_str), "%.2f", point->pose.x);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "Pose x (cm)", "x");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.pose.x = atof(buffer);
+    }
+
+    // Y
+    snprintf(default_str, sizeof(default_str), "%.2f", point->pose.y);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "Pose y (cm)", "y");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.pose.y = atof(buffer);
+    }
+
+    // Yaw
+    snprintf(default_str, sizeof(default_str), "%.2f", point->pose.yaw);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "Pose yaw (deg)", "yaw");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.pose.yaw = atof(buffer);
+    }
+
+    // Target Speed
+    snprintf(default_str, sizeof(default_str), "%.2f", point->motion.target_speed);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "target speed (cm/s)", "target_speed");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.motion.target_speed = atof(buffer);
+    }
+
+    // Angular Speed
+    snprintf(default_str, sizeof(default_str), "%.2f", point->motion.target_angular_speed);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "target angular speed (deg/s)", "angular_speed");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.motion.target_angular_speed = atof(buffer);
+    }
+
+    // Acceleration
+    snprintf(default_str, sizeof(default_str), "%.2f", point->motion.acceleration);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "acceleration (cm/s²)", "accel");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.motion.acceleration = atof(buffer);
+    }
+
+    // Deceleration
+    snprintf(default_str, sizeof(default_str), "%.2f", point->motion.deceleration);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "deceleration (cm/s²)", "decel");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.motion.deceleration = atof(buffer);
+    }
+
+    // Angular Acceleration
+    snprintf(default_str, sizeof(default_str), "%.2f", point->motion.angular_acceleration);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "angular acceleration (deg/s²)", "angular_accel");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.motion.angular_acceleration = atof(buffer);
+    }
+
+    // Check Mode
+    snprintf(default_str, sizeof(default_str), "%d", point->arrive.check_mode);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "arrive check mode (0:Distance, 1:Yaw, 2:Both)", "mode");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        int mode = atoi(buffer);
+        if (mode >= 0 && mode <= 2) {
+            new_point.arrive.check_mode = (ArriveCheckMode_t)mode;
+        }
+    }
+
+    // Distance Threshold
+    snprintf(default_str, sizeof(default_str), "%.2f", point->arrive.distance_threshold);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "distance threshold (cm)", "dist");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.arrive.distance_threshold = atof(buffer);
+    }
+
+    // Yaw Threshold
+    snprintf(default_str, sizeof(default_str), "%.2f", point->arrive.yaw_threshold);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "yaw threshold (deg)", "yaw");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.arrive.yaw_threshold = atof(buffer);
+    }
+
+    // Timeout
+    snprintf(default_str, sizeof(default_str), "%d", point->arrive.timeout_ms);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "timeout (ms)", "timeout");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        new_point.arrive.timeout_ms = (uint16_t)atoi(buffer);
+    }
+
+    // Enable
+    snprintf(default_str, sizeof(default_str), "%d", point->enable ? 1 : 0);
+    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "enable (0:false, 1:true)", "Enable");
+    if (buffer[0] == 0x03) return;
+    if (strlen(buffer) > 0) {
+        int enable = atoi(buffer);
+        if (enable == 0 || enable == 1) {
+            new_point.enable = (enable == 1);
+        }
+    }
+
+    // 确认
+    logPrintln("\n=== New Values ===");
+    NavTools_PrintPoint(&new_point);
+
+    while (true) {
+        shellPrint(shell, "\nSave? (y/n): ");
+        shellReadLine(buffer, sizeof(buffer));
+
+        if (strlen(buffer) == 0) continue;
+        if (buffer[0] == 0x03) return;
+
+        if (buffer[0] == 'y' || buffer[0] == 'Y') {
+            if (Map_UpdatePoint(id, &new_point)) {
+                logPrintln("\nPoint ID:%u updated", id);
+            } else {
+                logPrintln("\nFailed to update point ID:%u", id);
+            }
+            return;
+        }
+
+        if (buffer[0] == 'n' || buffer[0] == 'N') {
+            return;
+        }
+    }
+}
+
+/**
+ * @brief 读取一行输入（覆盖模式）
+ * @param buffer 输入缓冲区指针
+ * @param maxLen 输入缓冲区最大长度
+ * @param default_val 默认值字符串
+ * @param name 字段名
+ */
+static void shellReadLineWithPrompt(char *buffer, int maxLen, const char *default_val, const char *field,const char *name) {
+    Shell *shell = shellGetCurrent();
+    int index = 0;
+    char ch;
+    char prompt_line[128];
+
+    // 第一行：字段名
+    shellPrint(shell, "%s", field);
+
+    // 第二行：提示符
+    snprintf(prompt_line, sizeof(prompt_line), "%s [%s]: ", name, default_val);
+    shellPrint(shell, "\r\n%s", prompt_line);
+
+    // 输入循环
+    while (true) {
+        if (shell->read(&ch, 1) > 0) {
+            // 处理回车
+            if (ch == '\r' || ch == '\n') {
+                break;
+            }
+            // 处理退格
+            if (ch == '\b' || ch == 0x7F) {
+                if (index > 0) {
+                    index--;
+                    shell->write("\b \b", 3);
+                }
+                continue;
+            }
+            // 处理 Ctrl+C
+            if (ch == 0x03) {
+                buffer[0] = ch;
+                buffer[1] = '\0';
+                return;
+            }
+            // 添加字符
+            if (index < maxLen - 1) {
+                buffer[index++] = ch;
+                shell->write(&ch, 1);
+            }
+        } else {
+            osDelay(10);
+        }
+    }
+
+    buffer[index] = '\0';
+
+    shellPrint(shell, "\033[1A\r\033[J");
+    // // 覆盖模式：将结果显示在第一行
+    // if (strlen(buffer) > 0) {
+    //     // 构建结果行
+    //     snprintf(label_line, sizeof(label_line), "%s: %s", name, buffer);
+    //     // 清屏两行
+    //     shell->write("\033[2K\033[1A\033[2K\r", 10);
+    //     // 显示结果
+    //     shellPrint(shell, "%s", label_line);
+    // } else {
+    //     // 使用默认值
+    //     snprintf(label_line, sizeof(label_line), "%s: %s", name, default_val);
+    //     shell->write("\033[2K\033[1A\033[2K\r", 10);
+    //     shellPrint(shell, "%s", label_line);
+    // }
+    // shell->write("\r\n", 2);
 }
 
 /**
@@ -431,7 +736,7 @@ static void NavTools_MapAdd(void) {
 
     // 16. Enable
     while (true) {
-        shellPrint(shell, "  enable (0:false, 1:true, default=1): ");
+        shellPrint(shell, "  enable (0:false, 1:true): ");
         shellReadLine(buffer, sizeof(buffer));
 
         if (strlen(buffer) == 0) continue;
@@ -476,15 +781,18 @@ static void NavTools_MapAdd(void) {
 ShellCommand NavToolsGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose, Show Current Pose),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, setpose, NavTools_SetPose, Set Pose),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, goto, NavTools_GoTo, Navigate to Point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 nav, NavToolsGroup, Navigation Tools);
 
 ShellCommand MapToolsGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, info, NavTools_MapInfo, Map Info),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, list, NavTools_MapList, List Map Points),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, get, NavTools_MapGet, Get Point by ID),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, set, NavTools_MapModify, Modify Point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, rm, NavTools_MapRm, Remove Point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, add, NavTools_MapAdd, Add Point),
     SHELL_CMD_GROUP_END()

@@ -25,7 +25,6 @@ typedef struct {
 typedef enum {
     TRACK_STATE_IDLE = 0,    // 空闲
     TRACK_STATE_RUNNING,     // 跟踪中
-    TRACK_STATE_PAUSED,      // 暂停
     TRACK_STATE_COMPLETE,    // 完成
     TRACK_STATE_ERROR        // 错误
 } TrackState_t;

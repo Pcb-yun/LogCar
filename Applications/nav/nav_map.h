@@ -87,6 +87,7 @@ typedef struct {
 NavMapInfo_t *Map_GetInfo(void);
 bool Map_AddPoint(TargetPoint_t *point);
 bool Map_RemovePoint(uint8_t id);
+bool Map_UpdatePoint(uint8_t id, TargetPoint_t *point);
 TargetPoint_t *Map_GetPoint(uint8_t id);
 bool Map_LoadPoints(TargetPoint_t *points, uint8_t count);
 

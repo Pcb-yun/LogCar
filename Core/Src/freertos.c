@@ -498,6 +498,11 @@ void Sys_Init_Task(void *argument)
   if (!Map_Init(32)) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize Navigation Module");
+  extern bool Nav_Track_Init(void);
+  if (!Nav_Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
 
 
   extern Shell shell;

@@ -114,6 +114,24 @@ TargetPoint_t *Map_GetPoint(uint8_t id) {
 }
 
 /**
+ * @brief 修改目标点
+ * @param id 目标点ID
+ * @param point 新的目标点数据
+ * @return 修改状态
+ */
+bool Map_UpdatePoint(uint8_t id, TargetPoint_t *point) {
+    if (id >= g_map_info->point_count) {
+        return false;
+    }
+
+    // 保持ID不变
+    point->id = id;
+    memcpy(&g_points[id], point, sizeof(TargetPoint_t));
+
+    return true;
+}
+
+/**
  * @brief 加载预定义目标点
  * @param points 目标点数组指针
  * @param count 目标点数量
