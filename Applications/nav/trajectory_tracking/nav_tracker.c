@@ -24,6 +24,7 @@ typedef struct {
     TrackPhase_t phase;         // 当前阶段
     uint8_t target_id;          // 目标目标点ID
     uint32_t task_start_tick;   // 任务开始时间戳（总超时用）
+    uint32_t task_elapsed_ms;   // 暂停前已用的任务时间（毫秒）
     uint32_t phase_start_tick;  // 阶段开始时间戳
     bool cmd_sent;              // 指令是否已发送
     TargetPoint_t *cached_target; // 缓存的目标点
@@ -136,6 +137,7 @@ bool Nav_Track_GoTo(uint8_t target_id) {
 bool Nav_Track_Pause(void) {
     if (g_tracker.state != TRACK_STATE_RUNNING) return false;
     g_tracker.state = TRACK_STATE_PAUSED;
+    g_tracker.task_elapsed_ms = osKernelGetTickCount() - g_tracker.task_start_tick;
     MotionControl_Stop();
     g_tracker.cmd_sent = false;
     return true;
@@ -147,6 +149,8 @@ bool Nav_Track_Pause(void) {
 bool Nav_Track_Resume(void) {
     if (g_tracker.state != TRACK_STATE_PAUSED) return false;
     g_tracker.state = TRACK_STATE_RUNNING;
+    // 恢复时更新 task_start_tick，避免暂停期间的时间计入超时
+    g_tracker.task_start_tick = osKernelGetTickCount() - g_tracker.task_elapsed_ms;
     enter_phase(g_tracker.phase);
     return true;
 }
