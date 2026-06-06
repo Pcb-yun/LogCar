@@ -106,10 +106,10 @@ static void Car_Key(void) {
  * @brief 设置车的运动参数
  */
 static void Car_Params(int argc, char *argv[]) {
-    uint16_t linear_speed;
-    uint16_t yaw_speed;
-    uint16_t acc;
-    uint16_t dec;
+    float linear_speed;
+    float yaw_speed;
+    float acc;
+    float dec;
 
 	if (!is_init) {
 		logWarning("Chassis not initialized"); return;
@@ -117,18 +117,18 @@ static void Car_Params(int argc, char *argv[]) {
 
     if (argc == 1) {
         MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
-        logPrintln("Current params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec); return;
+        logPrintln("Current params: linear_speed=%.1f, yaw_speed=%.1f, acc=%.1f, dec=%.1f", linear_speed, yaw_speed, acc, dec); return;
     } else if (argc != 5) {
         logPrintln("Usage: car par [linear_speed] [yaw_speed] [acc] [dec]"); return;
     }
 
-    linear_speed = atoi(argv[1]);
-    yaw_speed = atoi(argv[2]);
-    acc = atoi(argv[3]);
-    dec = atoi(argv[4]);
+    linear_speed = atof(argv[1]);
+    yaw_speed = atof(argv[2]);
+    acc = atof(argv[3]);
+    dec = atof(argv[4]);
 
     MotionControl_SetMotionParams(linear_speed, yaw_speed, acc, dec);
-    logPrintln("Set params: linear_speed=%d, yaw_speed=%d, acc=%d, dec=%d", linear_speed, yaw_speed, acc, dec);
+    logPrintln("Set params: linear_speed=%.1f, yaw_speed=%.1f, acc=%.1f, dec=%.1f", linear_speed, yaw_speed, acc, dec);
 }
 
 ShellCommand MoveGroup[] = {

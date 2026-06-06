@@ -18,8 +18,8 @@ extern "C" {
 
 bool MotionControl_Init(void);
 bool MotionControl_OdomUpdate(Pose_t *pose);
-void MotionControl_GetMotionParams(uint16_t *linear_speed, uint16_t *yaw_speed, uint16_t *acc, uint16_t *dec);
-void MotionControl_SetMotionParams(uint16_t linear_speed, uint16_t yaw_speed, uint16_t acc, uint16_t dec);
+void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float *acc, float *dec);
+void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec);
 void MotionControl_SetPosition(int32_t x_offset, int32_t y_offset, int32_t yaw_offset);
 void MotionControl_SetVelocity(int8_t x_component, int8_t y_component, int8_t yaw_component);
 void MotionControl_Stop(void);

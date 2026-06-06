@@ -26,9 +26,10 @@ typedef enum {
  * @brief 导航控制接口
  */
 bool Nav_Track_GoTo(uint8_t target_id); // 导航到指定目标点
-bool Nav_Track_Pause(void);             // 暂停
-bool Nav_Track_Resume(void);            // 恢复
-TrackState_t Nav_Track_GetState(void);  // 获取当前状态
+bool Nav_Track_Pause(void);              // 暂停
+bool Nav_Track_Resume(void);             // 恢复
+bool Nav_Track_Stop(void);               // 停止导航
+TrackState_t Nav_Track_GetState(void);   // 获取当前状态
 
 void Nav_Track_Task(void *argument);
 

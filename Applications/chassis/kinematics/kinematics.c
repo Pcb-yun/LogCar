@@ -15,27 +15,27 @@
 /**
  * @brief 正运动学解算
  * @param encoder_delta 编码器增量数据
- * @param pose_delta 位姿增量输出
+ * @param pose_delta 位姿增量输出（dyaw单位为度）
  */
 void Kinematics_Forward(WheelEncoderData_t *encoder_delta, PoseDelta_t *pose_delta) {
     float L = sqrtf(WHEEL_BASE_WIDTH * WHEEL_BASE_WIDTH + WHEEL_BASE_LENGTH * WHEEL_BASE_LENGTH) / 2.0f;
-    float pulse_to_rad = 2.0f * M_PI / MOTOR_PULSES_PER_REV;
+    float pulse_to_deg = 360.0f / MOTOR_PULSES_PER_REV;
 
     float delta_theta[4] = {
-        (float)encoder_delta->front_left * pulse_to_rad,
-        (float)encoder_delta->front_right * pulse_to_rad,
-        (float)encoder_delta->rear_left * pulse_to_rad,
-        (float)encoder_delta->rear_right * pulse_to_rad
+        (float)encoder_delta->front_left * pulse_to_deg,
+        (float)encoder_delta->front_right * pulse_to_deg,
+        (float)encoder_delta->rear_left * pulse_to_deg,
+        (float)encoder_delta->rear_right * pulse_to_deg
     };
 
     float delta_s[4];
     for (int i = 0; i < 4; i++) {
-        delta_s[i] = delta_theta[i] * WHEEL_RADIUS;
+        delta_s[i] = delta_theta[i] * WHEEL_RADIUS * M_PI / 180.0f;
     }
 
     pose_delta->dx = (delta_s[0] + delta_s[1] + delta_s[2] + delta_s[3]) / 4.0f;
     pose_delta->dy = (-delta_s[0] + delta_s[1] + delta_s[2] - delta_s[3]) / 4.0f;
-    pose_delta->dyaw = (-delta_s[0] + delta_s[1] - delta_s[2] + delta_s[3]) / (4.0f * L);
+    pose_delta->dyaw = (-delta_theta[0] + delta_theta[1] - delta_theta[2] + delta_theta[3]) / 4.0f;
 }
 
 /**

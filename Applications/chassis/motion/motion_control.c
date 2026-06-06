@@ -20,10 +20,10 @@
  * @brief 运动控制结构体
  */
 typedef struct {
-    uint16_t linear_speed;   // 线速度（厘米/秒）
-    uint16_t yaw_speed;      // 偏摆速度（度/秒）
-    uint16_t car_acc;        // 加速度（厘米/秒²）
-    uint16_t car_dec;        // 减速度（厘米/秒²）
+    float linear_speed;   // 线速度（厘米/秒）
+    float yaw_speed;      // 偏摆速度（度/秒）
+    float car_acc;        // 加速度（厘米/秒²）
+    float car_dec;        // 减速度（厘米/秒²）
 } MotionControl_t;
 
 static MotionControl_t *g_motion = NULL;
@@ -36,10 +36,8 @@ static bool is_init = false;
  * @param car_acc 小车线加速度（厘米/秒²）
  * @return 电机加速度（RPM/S）
  */
-static uint16_t acc_car_to_motor(float car_acc) {
-    float rpm_s = car_acc * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
-    if (rpm_s > 65535.0f) return 65535;
-    return (uint16_t)(rpm_s + 0.5f);
+static float acc_car_to_motor(float car_acc) {
+    return car_acc * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
 }
 
 /**
@@ -47,10 +45,8 @@ static uint16_t acc_car_to_motor(float car_acc) {
  * @param rpm_s 电机加速度（RPM/S）
  * @return 小车线加速度（厘米/秒²）
  */
-static uint16_t acc_motor_to_car(float rpm_s) {
-    float car_acc = rpm_s * (2.0f * M_PI * WHEEL_RADIUS) / 60.0f;
-    if (car_acc > 65535.0f) return 65535;
-    return (uint16_t)(car_acc + 0.5f);
+static float acc_motor_to_car(float rpm_s) {
+    return rpm_s * (2.0f * M_PI * WHEEL_RADIUS) / 60.0f;
 }
 
 /**
@@ -94,8 +90,8 @@ bool MotionControl_Init(void) {
     }
     g_last_enc->timestamp = osKernelGetTickCount();
 
-    g_motion->linear_speed = 100;
-    g_motion->yaw_speed = 90;
+    g_motion->linear_speed = 100.0f;
+    g_motion->yaw_speed = 90.0f;
     g_motion->car_acc = acc_car_to_motor(100.0f);
     g_motion->car_dec = acc_car_to_motor(100.0f);
 
@@ -143,11 +139,13 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
     Kinematics_Forward(&enc_delta, &delta);
 
     // 将车体坐标系增量旋转到世界坐标系并累加
-    float cos_yaw = cosf(g_enc_pose->yaw);
-    float sin_yaw = sinf(g_enc_pose->yaw);
+    // g_enc_pose->yaw 单位为度，cosf/sinf 需要弧度输入
+    float cos_yaw = cosf(g_enc_pose->yaw * DEG_TO_RAD);
+    float sin_yaw = sinf(g_enc_pose->yaw * DEG_TO_RAD);
     g_enc_pose->x += delta.dx * cos_yaw - delta.dy * sin_yaw;
     g_enc_pose->y += delta.dx * sin_yaw + delta.dy * cos_yaw;
-    g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw * RAD_TO_DEG);
+    // delta.dyaw 单位为度
+    g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw);
     g_enc_pose->timestamp = enc.timestamp;
 
     // 更新上一次的编码器值
@@ -167,28 +165,28 @@ static void send_wheel_velocity_commands(Wheel_t *wheels) {
 	MotorCmd_t cmd;
 	cmd.op_type = OP_CONTROL;
 	cmd.type.ctrl.type = CMD_VELOCITY;
-	cmd.type.ctrl.p.vel.acc = g_motion->car_acc;
+	cmd.type.ctrl.p.vel.acc = (uint16_t)g_motion->car_acc;
 	cmd.type.ctrl.p.vel.sync = true;
 
-	uint16_t rpm = (uint16_t)(fabs(wheels->fl) * 60.0f / (2.0f * M_PI));
+	uint16_t rpm = (uint16_t)(fabsf(wheels->fl) * 60.0f / (2.0f * M_PI));
 	cmd.motor_id = MOTOR_FRONT_LEFT;
 	cmd.type.ctrl.p.vel.dir = (wheels->fl >= 0) ? 0 : 1;
 	cmd.type.ctrl.p.vel.vel = rpm;
 	Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabs(wheels->fr) * 60.0f / (2.0f * M_PI));
+	rpm = (uint16_t)(fabsf(wheels->fr) * 60.0f / (2.0f * M_PI));
 	cmd.motor_id = MOTOR_FRONT_RIGHT;
 	cmd.type.ctrl.p.vel.dir = (wheels->fr >= 0) ? 1 : 0;
 	cmd.type.ctrl.p.vel.vel = rpm;
 	Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabs(wheels->rl) * 60.0f / (2.0f * M_PI));
+	rpm = (uint16_t)(fabsf(wheels->rl) * 60.0f / (2.0f * M_PI));
 	cmd.motor_id = MOTOR_BACK_LEFT;
 	cmd.type.ctrl.p.vel.dir = (wheels->rl >= 0) ? 0 : 1;
 	cmd.type.ctrl.p.vel.vel = rpm;
 	Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabs(wheels->rr) * 60.0f / (2.0f * M_PI));
+	rpm = (uint16_t)(fabsf(wheels->rr) * 60.0f / (2.0f * M_PI));
 	cmd.motor_id = MOTOR_BACK_RIGHT;
 	cmd.type.ctrl.p.vel.dir = (wheels->rr >= 0) ? 1 : 0;
 	cmd.type.ctrl.p.vel.vel = rpm;
@@ -210,9 +208,9 @@ void MotionControl_SetVelocity(int8_t x_component, int8_t y_component, int8_t ya
 	float y_ratio = (float)y_component / 127.0f;
 	float yaw_ratio = (float)yaw_component / 127.0f;
 
-	float vx = x_ratio * (float)g_motion->linear_speed;
-	float vy = y_ratio * (float)g_motion->linear_speed;
-	float w = yaw_ratio * (float)g_motion->yaw_speed;
+	float vx = x_ratio * g_motion->linear_speed;
+	float vy = y_ratio * g_motion->linear_speed;
+	float w = yaw_ratio * g_motion->yaw_speed;
 
     Wheel_t wheels;
     Kinematics_Inverse(vx, vy, w, &wheels);
@@ -231,10 +229,10 @@ static void send_wheel_position_commands(Wheel_t *wheels) {
 	MotorCmd_t cmd;
 	cmd.op_type = OP_CONTROL;
 	cmd.type.ctrl.type = CMD_POSITION;
-	cmd.type.ctrl.p.pos.acc = g_motion->car_acc;
+	cmd.type.ctrl.p.pos.acc = (uint16_t)g_motion->car_acc;
 	cmd.type.ctrl.p.pos.mode = 0;
 #if CURRENT_FIRMWARE == FIRMWARE_X
-	cmd.type.ctrl.p.pos.dec = g_motion->car_dec;
+	cmd.type.ctrl.p.pos.dec = (uint16_t)g_motion->car_dec;
 #endif
 	cmd.type.ctrl.p.pos.sync = true;
 
@@ -295,11 +293,11 @@ void MotionControl_SetPosition(int32_t x_offset, int32_t y_offset, int32_t yaw_o
  * @param acc 加速度（厘米/秒²）
  * @param dec 减速度（厘米/秒²）
  */
-void MotionControl_SetMotionParams(uint16_t linear_speed, uint16_t yaw_speed, uint16_t acc, uint16_t dec) {
+void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec) {
     g_motion->linear_speed = linear_speed;
     g_motion->yaw_speed = yaw_speed;
-    g_motion->car_acc = acc_car_to_motor((float)acc);
-    g_motion->car_dec = acc_car_to_motor((float)dec);
+    g_motion->car_acc = acc_car_to_motor(acc);
+    g_motion->car_dec = acc_car_to_motor(dec);
 }
 
 /**
@@ -309,11 +307,11 @@ void MotionControl_SetMotionParams(uint16_t linear_speed, uint16_t yaw_speed, ui
  * @param acc 加速度（厘米/秒²）
  * @param dec 减速度（厘米/秒²）
  */
-void MotionControl_GetMotionParams(uint16_t *linear_speed, uint16_t *yaw_speed, uint16_t *acc, uint16_t *dec) {
+void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float *acc, float *dec) {
     *linear_speed = g_motion->linear_speed;
     *yaw_speed = g_motion->yaw_speed;
-    *acc = acc_motor_to_car((float)g_motion->car_acc);
-    *dec = acc_motor_to_car((float)g_motion->car_dec);
+    *acc = acc_motor_to_car(g_motion->car_acc);
+    *dec = acc_motor_to_car(g_motion->car_dec);
 }
 
 /**

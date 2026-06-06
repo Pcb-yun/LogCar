@@ -23,6 +23,7 @@ typedef struct {
     TrackState_t state;         // 跟踪状态
     TrackPhase_t phase;         // 当前阶段
     uint8_t target_id;          // 目标目标点ID
+    uint32_t task_start_tick;  // 任务开始时间戳（总超时用）
     uint32_t phase_start_tick;  // 阶段开始时间戳
     bool cmd_sent;              // 指令是否已发送
     TargetPoint_t *cached_target; // 缓存的目标点
@@ -51,6 +52,16 @@ static bool motors_reached_target(uint16_t threshold) {
 }
 
 /**
+ * @brief 获取当前位置误差阈值（原始值）
+ * @return 位置误差阈值
+ */
+static uint16_t get_pos_error_threshold(void) {
+    // 电机位置误差阈值：yaw_threshold(deg) * 100 = 原始值
+    // 因为1度 = 100原始值（电机层面）
+    return (uint16_t)(g_tracker.cached_target->arrive.yaw_threshold * 100.0f);
+}
+
+/**
  * @brief 获取当前位姿
  */
 static bool get_current_pose(Pose2D_t *pose) {
@@ -70,6 +81,15 @@ static void enter_phase(TrackPhase_t new_phase) {
     g_tracker.cmd_sent = false;
     g_tracker.phase_start_tick = osKernelGetTickCount();
     get_current_pose(&g_tracker.start_pose);
+}
+
+/**
+ * @brief 停止并报错
+ */
+static void nav_error(void) {
+    MotionControl_Stop();
+    g_tracker.state = TRACK_STATE_ERROR;
+    g_tracker.phase = TRACK_PHASE_IDLE;
 }
 
 /**
@@ -94,6 +114,7 @@ bool Nav_Track_GoTo(uint8_t target_id) {
     g_tracker.target_id = target_id;
     g_tracker.cached_target = target;
     g_tracker.state = TRACK_STATE_RUNNING;
+    g_tracker.task_start_tick = osKernelGetTickCount();
     enter_phase(TRACK_PHASE_ROTATE_TO_TARGET);
     return true;
 }
@@ -116,6 +137,18 @@ bool Nav_Track_Resume(void) {
     if (g_tracker.state != TRACK_STATE_PAUSED) return false;
     g_tracker.state = TRACK_STATE_RUNNING;
     enter_phase(g_tracker.phase);
+    return true;
+}
+
+/**
+ * @brief 停止导航
+ */
+bool Nav_Track_Stop(void) {
+    if (g_tracker.state == TRACK_STATE_IDLE) return false;
+    MotionControl_Stop();
+    g_tracker.state = TRACK_STATE_IDLE;
+    g_tracker.phase = TRACK_PHASE_IDLE;
+    g_tracker.cmd_sent = false;
     return true;
 }
 
@@ -144,23 +177,22 @@ void Nav_Track_Task(void *argument) {
         }
 
         if (g_tracker.cached_target == NULL) {
-            g_tracker.state = TRACK_STATE_ERROR;
-            osDelay(10);
-            continue;
-        }
-
-        // 超时检查
-        uint32_t elapsed = osKernelGetTickCount() - g_tracker.phase_start_tick;
-        if (elapsed > g_tracker.cached_target->arrive.timeout_ms) {
-            g_tracker.state = TRACK_STATE_ERROR;
-            MotionControl_Stop();
+            nav_error();
             osDelay(10);
             continue;
         }
 
         // 获取当前位姿，失败则报错退出
         if (!get_current_pose(&current_pose)) {
-            g_tracker.state = TRACK_STATE_ERROR;
+            nav_error();
+            osDelay(10);
+            continue;
+        }
+
+        // 超时检查（从任务开始计时）
+        uint32_t elapsed = osKernelGetTickCount() - g_tracker.task_start_tick;
+        if (elapsed > g_tracker.cached_target->arrive.timeout_ms) {
+            nav_error();
             osDelay(10);
             continue;
         }
@@ -183,7 +215,7 @@ void Nav_Track_Task(void *argument) {
                     }
                 } else {
                     // 等待电机到位
-                    if (motors_reached_target(g_tracker.cached_target->arrive.yaw_threshold * 100.0f)) {
+                    if (motors_reached_target(get_pos_error_threshold())) {
                         enter_phase(TRACK_PHASE_TRANSLATE);
                     }
                 }
@@ -215,7 +247,7 @@ void Nav_Track_Task(void *argument) {
                     }
                 } else {
                     // 等待电机到位，然后用定位数据验证
-                    if (motors_reached_target(100)) {
+                    if (motors_reached_target(get_pos_error_threshold())) {
                         float dx = g_tracker.cached_target->pose.x - current_pose.x;
                         float dy = g_tracker.cached_target->pose.y - current_pose.y;
                         float dist = sqrtf(dx * dx + dy * dy);
@@ -249,7 +281,7 @@ void Nav_Track_Task(void *argument) {
                     }
                 } else {
                     // 等待电机到位，然后用定位数据验证
-                    if (motors_reached_target(g_tracker.cached_target->arrive.yaw_threshold * 100.0f)) {
+                    if (motors_reached_target(get_pos_error_threshold())) {
                         float final_yaw_error = normalize_angle(g_tracker.cached_target->pose.yaw - current_pose.yaw);
                         if (fabsf(final_yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
                             g_tracker.state = TRACK_STATE_COMPLETE;
@@ -263,7 +295,7 @@ void Nav_Track_Task(void *argument) {
             }
 
             default:
-                enter_phase(TRACK_PHASE_ROTATE_TO_TARGET);
+                nav_error();
                 break;
         }
 
