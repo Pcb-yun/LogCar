@@ -23,6 +23,7 @@ void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float ac
 void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset);
 void MotionControl_SetVelocity(float x_component, float y_component, float yaw_component);
 void MotionControl_Stop(void);
+void MotionControl_SetPose(Pose_t *pose);
 
 
 #ifdef __cplusplus

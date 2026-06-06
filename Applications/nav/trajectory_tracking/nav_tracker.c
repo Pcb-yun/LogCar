@@ -74,18 +74,6 @@ static bool get_current_pose(Pose2D_t *pose) {
 }
 
 /**
- * @brief 计算到目标点的距离和航向
- */
-static void calc_target_info(Pose2D_t current, TargetPose_t target,
-                              float *dist, float *angle_to_target, float *yaw_error) {
-    float dx = target.x - current.x;
-    float dy = target.y - current.y;
-    *dist = sqrtf(dx * dx + dy * dy);
-    *angle_to_target = atan2f(dy, dx) * RAD_TO_DEG;
-    *yaw_error = normalize_angle(*angle_to_target - current.yaw);
-}
-
-/**
  * @brief 进入新的跟踪阶段
  */
 static void enter_phase(TrackPhase_t new_phase) {
@@ -127,6 +115,7 @@ bool Nav_Track_GoTo(uint8_t target_id) {
     g_tracker.cached_target = target;
     g_tracker.state = TRACK_STATE_RUNNING;
     g_tracker.task_start_tick = osKernelGetTickCount();
+    g_tracker.task_elapsed_ms = 0;
     enter_phase(TRACK_PHASE_ROTATE_TO_TARGET);
     return true;
 }
@@ -316,3 +305,4 @@ void Nav_Track_Task(void *argument) {
         osDelay(10);
     }
 }
+
