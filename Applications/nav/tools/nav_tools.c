@@ -24,7 +24,7 @@ static void NavTools_Pose(int argc, char *argv[]) {
         logPrintln("Current Pose:");
         logPrintln("  x:     %.2f cm", pose.x);
         logPrintln("  y:     %.2f cm", pose.y);
-        logPrintln("  yaw:   %.2f rad (%.2f deg)", pose.yaw, pose.yaw * 57.3f);
+        logPrintln("  yaw:   %.2f deg", pose.yaw);
         logPrintln("  time:  %lu ms", pose.timestamp);
     } else {
         logWarning("Failed to get pose");
@@ -47,7 +47,7 @@ static void NavTools_SetPose(int argc, char *argv[]) {
     pose.yaw = atof(argv[4]);
 
     if (Loc_Set(&pose)) {
-        logPrintln("Pose set to: x=%.2f cm, y=%.2f cm, yaw=%.2f rad",
+        logPrintln("Pose set to: x=%.2f cm, y=%.2f cm, yaw=%.2f deg",
                pose.x, pose.y, pose.yaw);
     } else {
         logWarning("Failed to set pose");
@@ -297,7 +297,7 @@ static void NavTools_MapAdd(void) {
 
     // 6. Yaw
     while (true) {
-        shellPrint(shell, "  yaw (rad): ");
+        shellPrint(shell, "  yaw (deg): ");
         shellReadLine(buffer, sizeof(buffer));
 
         if (strlen(buffer) == 0) continue;
@@ -405,7 +405,7 @@ static void NavTools_MapAdd(void) {
 
     // 14. Yaw Threshold
     while (true) {
-        shellPrint(shell, "  yaw threshold (rad): ");
+        shellPrint(shell, "  yaw threshold (deg): ");
         shellReadLine(buffer, sizeof(buffer));
 
         if (strlen(buffer) == 0) continue;

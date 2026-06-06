@@ -16,7 +16,7 @@
 typedef struct {
     float x;              // X坐标 (cm)
     float y;              // Y坐标 (cm)
-    float yaw;            // 航向角 (rad)
+    float yaw;            // 航向角 (deg)
 } TRAJData_t;
 
 /**

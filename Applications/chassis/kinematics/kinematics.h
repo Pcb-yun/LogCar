@@ -32,7 +32,7 @@ typedef struct {
 typedef struct {
     float dx;                 // X方向位移增量 (cm)
     float dy;                 // Y方向位移增量 (cm)
-    float dyaw;               // 航向角增量 (rad)
+    float dyaw;               // 航向角增量 (deg)
 } PoseDelta_t;
 
 

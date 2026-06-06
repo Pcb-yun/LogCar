@@ -48,7 +48,7 @@ typedef struct {
 typedef struct {
     float x;                     // X坐标 (cm)
     float y;                     // Y坐标 (cm)
-    float yaw;                   // 期望航向角 (rad)
+    float yaw;                   // 期望航向角 (deg)
 } TargetPose_t;
 
 /**
@@ -57,7 +57,7 @@ typedef struct {
 typedef struct {
     ArriveCheckMode_t check_mode;   // 检测模式
     float distance_threshold;       // 距离阈值 (cm)
-    float yaw_threshold;            // 角度阈值 (rad)
+    float yaw_threshold;            // 角度阈值 (deg)
     uint16_t timeout_ms;            // 超时时间 (ms)
 } ArriveParams_t;
 

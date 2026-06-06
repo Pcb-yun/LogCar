@@ -24,9 +24,9 @@ float normalize_angle(float angle) {
 
 /**
  * @brief 计算角度差
- * @param target 目标角度
- * @param current 当前角度
- * @return 角度差值
+ * @param target 目标角度(度)
+ * @param current 当前角度(度)
+ * @return 角度差值(度)
  */
 float angle_diff(float target, float current) {
     return normalize_angle(target - current);
@@ -134,10 +134,13 @@ void mat3_add(Matrix3x3_t A, Matrix3x3_t B, Matrix3x3_t C) {
 Vector2D_t world_to_local(Vector2D_t world, Pose2D_t origin) {
     float dx = world.x - origin.x;
     float dy = world.y - origin.y;
+    // origin.yaw 单位为度，需要转为弧度
+    float cos_yaw = cosf(origin.yaw * DEG_TO_RAD);
+    float sin_yaw = sinf(origin.yaw * DEG_TO_RAD);
 
     Vector2D_t local;
-    local.x = dx * cosf(origin.yaw) + dy * sinf(origin.yaw);
-    local.y = -dx * sinf(origin.yaw) + dy * cosf(origin.yaw);
+    local.x = dx * cos_yaw + dy * sin_yaw;
+    local.y = -dx * sin_yaw + dy * cos_yaw;
 
     return local;
 }
@@ -149,9 +152,13 @@ Vector2D_t world_to_local(Vector2D_t world, Pose2D_t origin) {
  * @return 世界坐标
  */
 Vector2D_t local_to_world(Vector2D_t local, Pose2D_t origin) {
+    // origin.yaw 单位为度，需要转为弧度
+    float cos_yaw = cosf(origin.yaw * DEG_TO_RAD);
+    float sin_yaw = sinf(origin.yaw * DEG_TO_RAD);
+
     Vector2D_t world;
-    world.x = origin.x + local.x * cosf(origin.yaw) - local.y * sinf(origin.yaw);
-    world.y = origin.y + local.x * sinf(origin.yaw) + local.y * cosf(origin.yaw);
+    world.x = origin.x + local.x * cos_yaw - local.y * sin_yaw;
+    world.y = origin.y + local.x * sin_yaw + local.y * cos_yaw;
 
     return world;
 }
