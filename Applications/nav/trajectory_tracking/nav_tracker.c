@@ -29,6 +29,10 @@ typedef struct {
     bool cmd_sent;              // 指令是否已发送
     TargetPoint_t *cached_target; // 缓存的目标点
     Pose2D_t start_pose;        // 当前阶段的起始位姿
+    float saved_linear_speed;     // 保存的原始线速度
+    float saved_yaw_speed;        // 保存的原始角速度
+    float saved_acc;             // 保存的原始加速度
+    float saved_dec;             // 保存的原始减速度
 } NavTracker_t;
 
 
@@ -88,6 +92,7 @@ static void enter_phase(TrackPhase_t new_phase) {
  */
 static void nav_error(void) {
     MotionControl_Stop();
+    restore_motion_params();
     g_tracker.state = TRACK_STATE_ERROR;
     g_tracker.phase = TRACK_PHASE_IDLE;
 }
@@ -110,6 +115,18 @@ bool Nav_Track_GoTo(uint8_t target_id) {
     if (!is_init) return false;
     TargetPoint_t *target = Map_GetPoint(target_id);
     if (target == NULL) return false;
+
+    // 保存原始运动参数
+    MotionControl_GetMotionParams(&g_tracker.saved_linear_speed, 
+                                   &g_tracker.saved_yaw_speed, 
+                                   &g_tracker.saved_acc, 
+                                   &g_tracker.saved_dec);
+    
+    // 应用目标点的运动参数
+    MotionControl_SetMotionParams(target->motion.target_speed, 
+                                   target->motion.target_angular_speed, 
+                                   target->motion.acceleration, 
+                                   target->motion.deceleration);
 
     g_tracker.target_id = target_id;
     g_tracker.cached_target = target;
@@ -145,11 +162,22 @@ bool Nav_Track_Resume(void) {
 }
 
 /**
+ * @brief 恢复原始运动参数
+ */
+static void restore_motion_params(void) {
+    MotionControl_SetMotionParams(g_tracker.saved_linear_speed, 
+                                   g_tracker.saved_yaw_speed, 
+                                   g_tracker.saved_acc, 
+                                   g_tracker.saved_dec);
+}
+
+/**
  * @brief 停止导航
  */
 bool Nav_Track_Stop(void) {
     if (g_tracker.state == TRACK_STATE_IDLE) return false;
     MotionControl_Stop();
+    restore_motion_params();
     g_tracker.state = TRACK_STATE_IDLE;
     g_tracker.phase = TRACK_PHASE_IDLE;
     g_tracker.cmd_sent = false;
@@ -236,6 +264,7 @@ void Nav_Track_Task(void *argument) {
                             g_tracker.cached_target->arrive.check_mode == ARRIVE_CHECK_YAW) {
                             enter_phase(TRACK_PHASE_ADJUST_YAW);
                         } else {
+                            restore_motion_params();
                             g_tracker.state = TRACK_STATE_COMPLETE;
                             g_tracker.phase = TRACK_PHASE_IDLE;
                         }
@@ -260,6 +289,7 @@ void Nav_Track_Task(void *argument) {
                                 g_tracker.cached_target->arrive.check_mode == ARRIVE_CHECK_YAW) {
                                 enter_phase(TRACK_PHASE_ADJUST_YAW);
                             } else {
+                                restore_motion_params();
                                 g_tracker.state = TRACK_STATE_COMPLETE;
                                 g_tracker.phase = TRACK_PHASE_IDLE;
                             }
@@ -276,6 +306,7 @@ void Nav_Track_Task(void *argument) {
                     float final_yaw_error = normalize_angle(g_tracker.cached_target->pose.yaw - current_pose.yaw);
 
                     if (fabsf(final_yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
+                        restore_motion_params();
                         g_tracker.state = TRACK_STATE_COMPLETE;
                         g_tracker.phase = TRACK_PHASE_IDLE;
                     } else {
@@ -287,6 +318,7 @@ void Nav_Track_Task(void *argument) {
                     if (motors_reached_target(get_pos_error_threshold())) {
                         float final_yaw_error = normalize_angle(g_tracker.cached_target->pose.yaw - current_pose.yaw);
                         if (fabsf(final_yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
+                            restore_motion_params();
                             g_tracker.state = TRACK_STATE_COMPLETE;
                             g_tracker.phase = TRACK_PHASE_IDLE;
                         } else {

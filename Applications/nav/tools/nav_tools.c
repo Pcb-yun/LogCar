@@ -349,7 +349,7 @@ static void NavTools_MapAdd(void) {
 
     // 10. Target Angular Speed
     while (true) {
-        shellPrint(shell, "  target angular speed (rad/s): ");
+        shellPrint(shell, "  target angular speed (deg/s): ");
         shellReadLine(buffer, sizeof(buffer));
 
         if (strlen(buffer) == 0) continue;
@@ -362,7 +362,7 @@ static void NavTools_MapAdd(void) {
 
     // 11. Angular Acceleration
     while (true) {
-        shellPrint(shell, "  angular acceleration (rad/s²): ");
+        shellPrint(shell, "  angular acceleration (deg/s²): ");
         shellReadLine(buffer, sizeof(buffer));
 
         if (strlen(buffer) == 0) continue;

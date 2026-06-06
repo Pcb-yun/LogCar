@@ -36,10 +36,10 @@ typedef enum {
  */
 typedef struct {
     float target_speed;             // 目标线速度 (cm/s)
-    float target_angular_speed;     // 目标角速度 (rad/s)
+    float target_angular_speed;     // 目标角速度 (deg/s)
     float acceleration;             // 加速度 (cm/s²)
     float deceleration;             // 减速度 (cm/s²)
-    float angular_acceleration;     // 角加速度 (rad/s²)
+    float angular_acceleration;     // 角加速度 (deg/s²)
 } MotionParams_t;
 
 /**
