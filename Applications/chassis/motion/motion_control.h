@@ -20,8 +20,8 @@ bool MotionControl_Init(void);
 bool MotionControl_OdomUpdate(Pose_t *pose);
 void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float *acc, float *dec);
 void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec);
-void MotionControl_SetPosition(int32_t x_offset, int32_t y_offset, int32_t yaw_offset);
-void MotionControl_SetVelocity(int8_t x_component, int8_t y_component, int8_t yaw_component);
+void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset);
+void MotionControl_SetVelocity(float x_component, float y_component, float yaw_component);
 void MotionControl_Stop(void);
 
 

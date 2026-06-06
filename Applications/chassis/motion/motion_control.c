@@ -20,10 +20,10 @@
  * @brief 运动控制结构体
  */
 typedef struct {
-    float linear_speed;   // 线速度（厘米/秒）
-    float yaw_speed;      // 偏摆速度（度/秒）
-    float car_acc;        // 加速度（厘米/秒²）
-    float car_dec;        // 减速度（厘米/秒²）
+    float linear_speed;   // 线速度 (cm/s)
+    float yaw_speed;      // 偏摆速度 (deg/s)
+    float car_acc;        // 加速度 (RPM/s)
+    float car_dec;        // 减速度 (RPM/s)
 } MotionControl_t;
 
 static MotionControl_t *g_motion = NULL;
@@ -32,18 +32,18 @@ static Pose_t *g_enc_pose = NULL;
 static bool is_init = false;
 
 /**
- * @brief 小车线加速度(cm/s²) 转 电机加速度(RPM/S)
- * @param car_acc 小车线加速度（厘米/秒²）
- * @return 电机加速度（RPM/S）
+ * @brief 小车线加速度 (cm/s²) 转 电机加速度 (RPM/s)
+ * @param car_acc 小车线加速度 (cm/s²)
+ * @return 电机加速度 (RPM/s)
  */
 static float acc_car_to_motor(float car_acc) {
     return car_acc * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
 }
 
 /**
- * @brief 电机加速度(RPM/S) 转 小车线加速度(cm/s²)
- * @param rpm_s 电机加速度（RPM/S）
- * @return 小车线加速度（厘米/秒²）
+ * @brief 电机加速度 (RPM/s) 转 小车线加速度 (cm/s²)
+ * @param rpm_s 电机加速度 (RPM/s)
+ * @return 小车线加速度 (cm/s²)
  */
 static float acc_motor_to_car(float rpm_s) {
     return rpm_s * (2.0f * M_PI * WHEEL_RADIUS) / 60.0f;
@@ -81,12 +81,12 @@ bool MotionControl_Init(void) {
 
     for (int i = 0; i < 4; i++) {
         motor = &g_motor_status->motors[i];
-		switch(motor->motor_id) {
-			case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->encoder_linear; break;
-			case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->encoder_linear; break;
-			case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->encoder_linear; break;
-			case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->encoder_linear; break;
-		}
+        switch(motor->motor_id) {
+            case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->encoder_linear; break;
+            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->encoder_linear; break;
+            case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->encoder_linear; break;
+            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->encoder_linear; break;
+        }
     }
     g_last_enc->timestamp = osKernelGetTickCount();
 
@@ -106,24 +106,24 @@ bool MotionControl_Init(void) {
  */
 bool MotionControl_OdomUpdate(Pose_t *pose) {
     extern MotorStatusShared_t *g_motor_status;
-	extern osMutexId_t Pose_MutexHandle;
+    extern osMutexId_t Pose_MutexHandle;
     MotorStatus_t *motor;
     WheelEncoderData_t enc;
 
-	if (!is_init) return false;
-	if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
-		for (int i = 0; i < 4; i++) {
-			motor = &g_motor_status->motors[i];
-			switch(motor->motor_id) {
-				case MOTOR_FRONT_LEFT: enc.front_left = motor->encoder_linear; break;
-				case MOTOR_FRONT_RIGHT: enc.front_right = motor->encoder_linear; break;
-				case MOTOR_BACK_LEFT: enc.rear_left = motor->encoder_linear; break;
-				case MOTOR_BACK_RIGHT: enc.rear_right = motor->encoder_linear; break;
-			}
-		}
-		enc.timestamp = osKernelGetTickCount();
-		osMutexRelease(Pose_MutexHandle);
-	}
+    if (!is_init) return false;
+    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
+        for (int i = 0; i < 4; i++) {
+            motor = &g_motor_status->motors[i];
+            switch(motor->motor_id) {
+                case MOTOR_FRONT_LEFT: enc.front_left = motor->encoder_linear; break;
+                case MOTOR_FRONT_RIGHT: enc.front_right = motor->encoder_linear; break;
+                case MOTOR_BACK_LEFT: enc.rear_left = motor->encoder_linear; break;
+                case MOTOR_BACK_RIGHT: enc.rear_right = motor->encoder_linear; break;
+            }
+        }
+        enc.timestamp = osKernelGetTickCount();
+        osMutexRelease(Pose_MutexHandle);
+    }
 
     // 计算编码器脉冲增量
     WheelEncoderData_t enc_delta = {
@@ -159,58 +159,54 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
 #if MOTOR_CMD_VELOCITY
 /**
  * @brief 发送轮子速度命令
- * @param wheels 四个轮子的速度 (rad/s)
+ * @param wheels 四个轮子的角位移 (rad)
  */
 static void send_wheel_velocity_commands(Wheel_t *wheels) {
-	MotorCmd_t cmd;
-	cmd.op_type = OP_CONTROL;
-	cmd.type.ctrl.type = CMD_VELOCITY;
-	cmd.type.ctrl.p.vel.acc = (uint16_t)g_motion->car_acc;
-	cmd.type.ctrl.p.vel.sync = true;
+    MotorCmd_t cmd;
+    cmd.op_type = OP_CONTROL;
+    cmd.type.ctrl.type = CMD_VELOCITY;
+    cmd.type.ctrl.p.vel.acc = (uint16_t)g_motion->car_acc;
+    cmd.type.ctrl.p.vel.sync = true;
 
-	uint16_t rpm = (uint16_t)(fabsf(wheels->fl) * 60.0f / (2.0f * M_PI));
-	cmd.motor_id = MOTOR_FRONT_LEFT;
-	cmd.type.ctrl.p.vel.dir = (wheels->fl >= 0) ? 0 : 1;
-	cmd.type.ctrl.p.vel.vel = rpm;
-	Motor_Send_Cmd(&cmd);
+    uint16_t wheel_rpm = (uint16_t)(fabsf(wheels->fl) * 60.0f / (2.0f * M_PI));
+    cmd.motor_id = MOTOR_FRONT_LEFT;
+    cmd.type.ctrl.p.vel.dir = (wheels->fl >= 0) ? 0 : 1;
+    cmd.type.ctrl.p.vel.vel = wheel_rpm;
+    Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabsf(wheels->fr) * 60.0f / (2.0f * M_PI));
-	cmd.motor_id = MOTOR_FRONT_RIGHT;
-	cmd.type.ctrl.p.vel.dir = (wheels->fr >= 0) ? 1 : 0;
-	cmd.type.ctrl.p.vel.vel = rpm;
-	Motor_Send_Cmd(&cmd);
+    wheel_rpm = (uint16_t)(fabsf(wheels->fr) * 60.0f / (2.0f * M_PI));
+    cmd.motor_id = MOTOR_FRONT_RIGHT;
+    cmd.type.ctrl.p.vel.dir = (wheels->fr >= 0) ? 1 : 0;
+    cmd.type.ctrl.p.vel.vel = wheel_rpm;
+    Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabsf(wheels->rl) * 60.0f / (2.0f * M_PI));
-	cmd.motor_id = MOTOR_BACK_LEFT;
-	cmd.type.ctrl.p.vel.dir = (wheels->rl >= 0) ? 0 : 1;
-	cmd.type.ctrl.p.vel.vel = rpm;
-	Motor_Send_Cmd(&cmd);
+    wheel_rpm = (uint16_t)(fabsf(wheels->rl) * 60.0f / (2.0f * M_PI));
+    cmd.motor_id = MOTOR_BACK_LEFT;
+    cmd.type.ctrl.p.vel.dir = (wheels->rl >= 0) ? 0 : 1;
+    cmd.type.ctrl.p.vel.vel = wheel_rpm;
+    Motor_Send_Cmd(&cmd);
 
-	rpm = (uint16_t)(fabsf(wheels->rr) * 60.0f / (2.0f * M_PI));
-	cmd.motor_id = MOTOR_BACK_RIGHT;
-	cmd.type.ctrl.p.vel.dir = (wheels->rr >= 0) ? 1 : 0;
-	cmd.type.ctrl.p.vel.vel = rpm;
-	Motor_Send_Cmd(&cmd);
+    wheel_rpm = (uint16_t)(fabsf(wheels->rr) * 60.0f / (2.0f * M_PI));
+    cmd.motor_id = MOTOR_BACK_RIGHT;
+    cmd.type.ctrl.p.vel.dir = (wheels->rr >= 0) ? 1 : 0;
+    cmd.type.ctrl.p.vel.vel = wheel_rpm;
+    Motor_Send_Cmd(&cmd);
 
-	cmd.motor_id = 0;
-	cmd.type.ctrl.type = CMD_SYNC;
-	Motor_Send_Cmd(&cmd);
+    cmd.motor_id = 0;
+    cmd.type.ctrl.type = CMD_SYNC;
+    Motor_Send_Cmd(&cmd);
 }
 
 /**
  * @brief 速度控制
- * @param x_component X分量，前正后负
- * @param y_component Y分量，左正右负
- * @param yaw_component Yaw分量，顺正逆负
+ * @param x_component X分量
+ * @param y_component Y分量
+ * @param yaw_component Yaw分量
  */
-void MotionControl_SetVelocity(int8_t x_component, int8_t y_component, int8_t yaw_component) {
-	float x_ratio = (float)x_component / 127.0f;
-	float y_ratio = (float)y_component / 127.0f;
-	float yaw_ratio = (float)yaw_component / 127.0f;
-
-	float vx = x_ratio * g_motion->linear_speed;
-	float vy = y_ratio * g_motion->linear_speed;
-	float w = yaw_ratio * g_motion->yaw_speed;
+void MotionControl_SetVelocity(float x_component, float y_component, float yaw_component) {
+    float vx = x_component * g_motion->linear_speed;
+    float vy = y_component * g_motion->linear_speed;
+    float w = yaw_component * g_motion->yaw_speed;
 
     Wheel_t wheels;
     Kinematics_Inverse(vx, vy, w, &wheels);
@@ -224,74 +220,74 @@ void MotionControl_SetVelocity(int8_t x_component, int8_t y_component, int8_t ya
  * @param wheels 四个轮子的角位移 (rad)
  */
 static void send_wheel_position_commands(Wheel_t *wheels) {
-	float wheel_rpm = g_motion->linear_speed * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
+    float wheel_rpm = g_motion->linear_speed * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
 
-	MotorCmd_t cmd;
-	cmd.op_type = OP_CONTROL;
-	cmd.type.ctrl.type = CMD_POSITION;
-	cmd.type.ctrl.p.pos.acc = (uint16_t)g_motion->car_acc;
-	cmd.type.ctrl.p.pos.mode = 0;
+    MotorCmd_t cmd;
+    cmd.op_type = OP_CONTROL;
+    cmd.type.ctrl.type = CMD_POSITION;
+    cmd.type.ctrl.p.pos.acc = (uint16_t)g_motion->car_acc;
+    cmd.type.ctrl.p.pos.mode = 0;
 #if CURRENT_FIRMWARE == FIRMWARE_X
-	cmd.type.ctrl.p.pos.dec = (uint16_t)g_motion->car_dec;
+    cmd.type.ctrl.p.pos.dec = (uint16_t)g_motion->car_dec;
 #endif
-	cmd.type.ctrl.p.pos.sync = true;
+    cmd.type.ctrl.p.pos.sync = true;
 
-	int32_t pulses = (int32_t)(wheels->fl * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
-	uint32_t clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
-	cmd.motor_id = MOTOR_FRONT_LEFT;
-	cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 0 : 1;
-	cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
-	cmd.type.ctrl.p.pos.target = (int32_t)clk;
-	Motor_Send_Cmd(&cmd);
+    int32_t pulses = (int32_t)(wheels->fl * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
+    uint32_t clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
+    cmd.motor_id = MOTOR_FRONT_LEFT;
+    cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 0 : 1;
+    cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
+    cmd.type.ctrl.p.pos.target = (int32_t)clk;
+    Motor_Send_Cmd(&cmd);
 
-	pulses = (int32_t)(wheels->fr * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
-	clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
-	cmd.motor_id = MOTOR_FRONT_RIGHT;
-	cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 1 : 0;
-	cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
-	cmd.type.ctrl.p.pos.target = (int32_t)clk;
-	Motor_Send_Cmd(&cmd);
+    pulses = (int32_t)(wheels->fr * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
+    clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
+    cmd.motor_id = MOTOR_FRONT_RIGHT;
+    cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 1 : 0;
+    cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
+    cmd.type.ctrl.p.pos.target = (int32_t)clk;
+    Motor_Send_Cmd(&cmd);
 
-	pulses = (int32_t)(wheels->rl * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
-	clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
-	cmd.motor_id = MOTOR_BACK_LEFT;
-	cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 0 : 1;
-	cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
-	cmd.type.ctrl.p.pos.target = (int32_t)clk;
-	Motor_Send_Cmd(&cmd);
+    pulses = (int32_t)(wheels->rl * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
+    clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
+    cmd.motor_id = MOTOR_BACK_LEFT;
+    cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 0 : 1;
+    cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
+    cmd.type.ctrl.p.pos.target = (int32_t)clk;
+    Motor_Send_Cmd(&cmd);
 
-	pulses = (int32_t)(wheels->rr * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
-	clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
-	cmd.motor_id = MOTOR_BACK_RIGHT;
-	cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 1 : 0;
-	cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
-	cmd.type.ctrl.p.pos.target = (int32_t)clk;
-	Motor_Send_Cmd(&cmd);
+    pulses = (int32_t)(wheels->rr * MOTOR_PULSES_PER_REV / (2.0f * M_PI));
+    clk = (uint32_t)(pulses >= 0 ? pulses : -pulses);
+    cmd.motor_id = MOTOR_BACK_RIGHT;
+    cmd.type.ctrl.p.pos.dir = (pulses >= 0) ? 1 : 0;
+    cmd.type.ctrl.p.pos.vel = (uint16_t)wheel_rpm;
+    cmd.type.ctrl.p.pos.target = (int32_t)clk;
+    Motor_Send_Cmd(&cmd);
 
-	cmd.motor_id = 0;
-	cmd.type.ctrl.type = CMD_SYNC;
-	Motor_Send_Cmd(&cmd);
+    cmd.motor_id = 0;
+    cmd.type.ctrl.type = CMD_SYNC;
+    Motor_Send_Cmd(&cmd);
 }
 
 /**
  * @brief 位置控制
- * @param x_offset X偏移（厘米），前正后负
- * @param y_offset Y偏移（厘米），左正右负
- * @param yaw_offset Yaw偏移（度），顺正逆负
+ * @param x_offset X偏移 (cm)
+ * @param y_offset Y偏移 (cm)
+ * @param yaw_offset Yaw偏移 (deg)
  */
-void MotionControl_SetPosition(int32_t x_offset, int32_t y_offset, int32_t yaw_offset) {
+void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset) {
     Wheel_t wheels;
-    Kinematics_Inverse((float)x_offset, (float)y_offset, (float)yaw_offset, &wheels);
+    Kinematics_Inverse(x_offset, y_offset, yaw_offset, &wheels);
     send_wheel_position_commands(&wheels);
 }
 #endif /* MOTOR_CMD_POSITION */
 
 /**
  * @brief 设置运动参数
- * @param linear_speed 最大线速度（厘米/秒）
- * @param yaw_speed 最大偏摆速度（度/秒）
- * @param acc 加速度（厘米/秒²）
- * @param dec 减速度（厘米/秒²）
+ * @param linear_speed 最大线速度 (cm/s)
+ * @param yaw_speed 最大偏摆速度 (deg/s)
+ * @param acc 加速度 (cm/s²)
+ * @param dec 减速度 (cm/s²)
  */
 void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec) {
     g_motion->linear_speed = linear_speed;
@@ -302,10 +298,10 @@ void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float ac
 
 /**
  * @brief 获取运动参数
- * @param linear_speed 最大线速度（厘米/秒）
- * @param yaw_speed 最大偏摆速度（度/秒）
- * @param acc 加速度（厘米/秒²）
- * @param dec 减速度（厘米/秒²）
+ * @param linear_speed 最大线速度 (cm/s)
+ * @param yaw_speed 最大偏摆速度 (deg/s)
+ * @param acc 加速度 (cm/s²)
+ * @param dec 减速度 (cm/s²)
  */
 void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float *acc, float *dec) {
     *linear_speed = g_motion->linear_speed;
@@ -319,7 +315,7 @@ void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float 
  * @param pose 位姿指针
  */
 void MotionControl_SetPose(Pose_t *pose) {
-	*g_enc_pose = *pose;
+    *g_enc_pose = *pose;
 }
 
 #if MOTOR_CMD_STOP

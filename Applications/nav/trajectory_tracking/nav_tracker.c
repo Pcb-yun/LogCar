@@ -23,7 +23,7 @@ typedef struct {
     TrackState_t state;         // 跟踪状态
     TrackPhase_t phase;         // 当前阶段
     uint8_t target_id;          // 目标目标点ID
-    uint32_t task_start_tick;  // 任务开始时间戳（总超时用）
+    uint32_t task_start_tick;   // 任务开始时间戳（总超时用）
     uint32_t phase_start_tick;  // 阶段开始时间戳
     bool cmd_sent;              // 指令是否已发送
     TargetPoint_t *cached_target; // 缓存的目标点
@@ -39,8 +39,8 @@ extern MotorStatusShared_t *g_motor_status;
 
 /**
  * @brief 检查四轮电机是否全部到位
- * @param threshold 位置误差阈值(原始值)
- * @return true-全部到位, false-未到位
+ * @param threshold 位置误差阈值（原始值）
+ * @return true-全部到位，false-未到位
  */
 static bool motors_reached_target(uint16_t threshold) {
     for (uint8_t i = 0; i < 4; i++) {
@@ -56,8 +56,7 @@ static bool motors_reached_target(uint16_t threshold) {
  * @return 位置误差阈值
  */
 static uint16_t get_pos_error_threshold(void) {
-    // 电机位置误差阈值：yaw_threshold(deg) * 100 = 原始值
-    // 因为1度 = 100原始值（电机层面）
+    // 电机位置误差阈值：yaw_threshold (deg) × 100 = 原始值
     return (uint16_t)(g_tracker.cached_target->arrive.yaw_threshold * 100.0f);
 }
 
@@ -71,6 +70,18 @@ static bool get_current_pose(Pose2D_t *pose) {
     pose->y = p.y;
     pose->yaw = p.yaw;
     return true;
+}
+
+/**
+ * @brief 计算到目标点的距离和航向
+ */
+static void calc_target_info(Pose2D_t current, TargetPose_t target,
+                              float *dist, float *angle_to_target, float *yaw_error) {
+    float dx = target.x - current.x;
+    float dy = target.y - current.y;
+    *dist = sqrtf(dx * dx + dy * dy);
+    *angle_to_target = atan2f(dy, dx) * RAD_TO_DEG;
+    *yaw_error = normalize_angle(*angle_to_target - current.yaw);
 }
 
 /**
@@ -203,14 +214,13 @@ void Nav_Track_Task(void *argument) {
                 if (!g_tracker.cmd_sent) {
                     float dx = g_tracker.cached_target->pose.x - current_pose.x;
                     float dy = g_tracker.cached_target->pose.y - current_pose.y;
-                    // atan2f返回弧度，转为度后归一化
                     float angle_to_target = atan2f(dy, dx) * RAD_TO_DEG;
                     float yaw_error = normalize_angle(angle_to_target - current_pose.yaw);
 
                     if (fabsf(yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
                         enter_phase(TRACK_PHASE_TRANSLATE);
                     } else {
-                        MotionControl_SetPosition(0, 0, (int32_t)yaw_error);
+                        MotionControl_SetPosition(0.0f, 0.0f, yaw_error);
                         g_tracker.cmd_sent = true;
                     }
                 } else {
@@ -239,10 +249,10 @@ void Nav_Track_Task(void *argument) {
                     } else {
                         float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
                         float sin_yaw = sinf(current_pose.yaw * DEG_TO_RAD);
-                        int32_t x_offset = (int32_t)(dx * cos_yaw + dy * sin_yaw);
-                        int32_t y_offset = (int32_t)(-dx * sin_yaw + dy * cos_yaw);
+                        float x_offset = dx * cos_yaw + dy * sin_yaw;
+                        float y_offset = -dx * sin_yaw + dy * cos_yaw;
 
-                        MotionControl_SetPosition(x_offset, y_offset, 0);
+                        MotionControl_SetPosition(x_offset, y_offset, 0.0f);
                         g_tracker.cmd_sent = true;
                     }
                 } else {
@@ -276,7 +286,7 @@ void Nav_Track_Task(void *argument) {
                         g_tracker.state = TRACK_STATE_COMPLETE;
                         g_tracker.phase = TRACK_PHASE_IDLE;
                     } else {
-                        MotionControl_SetPosition(0, 0, (int32_t)final_yaw_error);
+                        MotionControl_SetPosition(0.0f, 0.0f, final_yaw_error);
                         g_tracker.cmd_sent = true;
                     }
                 } else {
