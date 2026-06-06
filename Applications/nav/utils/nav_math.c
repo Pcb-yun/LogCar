@@ -9,15 +9,15 @@
 
 /**
  * @brief 角度归一化
- * @param angle 角度值
- * @return 归一化后的角度值
+ * @param angle 角度值(度)
+ * @return 归一化后的角度值(度)，范围[-180, 180]
  */
 float normalize_angle(float angle) {
-    while (angle > M_PI) {
-        angle -= M_2PI;
+    while (angle > 180.0f) {
+        angle -= 360.0f;
     }
-    while (angle < -M_PI) {
-        angle += M_2PI;
+    while (angle < -180.0f) {
+        angle += 360.0f;
     }
     return angle;
 }

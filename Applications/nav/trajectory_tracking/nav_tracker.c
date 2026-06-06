@@ -158,21 +158,27 @@ void Nav_Track_Task(void *argument) {
             continue;
         }
 
+        // 获取当前位姿，失败则报错退出
+        if (!get_current_pose(&current_pose)) {
+            g_tracker.state = TRACK_STATE_ERROR;
+            osDelay(10);
+            continue;
+        }
+
         // 阶段处理
         switch (g_tracker.phase) {
             case TRACK_PHASE_ROTATE_TO_TARGET: {
                 if (!g_tracker.cmd_sent) {
-                    if (!get_current_pose(&current_pose)) break;
                     float dx = g_tracker.cached_target->pose.x - current_pose.x;
                     float dy = g_tracker.cached_target->pose.y - current_pose.y;
-                    float angle_to_target = atan2f(dy, dx);
+                    // atan2f返回弧度，转为度后归一化
+                    float angle_to_target = atan2f(dy, dx) * RAD_TO_DEG;
                     float yaw_error = normalize_angle(angle_to_target - current_pose.yaw);
 
                     if (fabsf(yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
                         enter_phase(TRACK_PHASE_TRANSLATE);
                     } else {
-                        int32_t yaw_deg = (int32_t)(yaw_error * RAD_TO_DEG);
-                        MotionControl_SetPosition(0, 0, yaw_deg);
+                        MotionControl_SetPosition(0, 0, (int32_t)yaw_error);
                         g_tracker.cmd_sent = true;
                     }
                 } else {
@@ -186,7 +192,6 @@ void Nav_Track_Task(void *argument) {
 
             case TRACK_PHASE_TRANSLATE: {
                 if (!g_tracker.cmd_sent) {
-                    if (!get_current_pose(&current_pose)) break;
                     float dx = g_tracker.cached_target->pose.x - current_pose.x;
                     float dy = g_tracker.cached_target->pose.y - current_pose.y;
                     float dist = sqrtf(dx * dx + dy * dy);
@@ -200,8 +205,8 @@ void Nav_Track_Task(void *argument) {
                             g_tracker.phase = TRACK_PHASE_IDLE;
                         }
                     } else {
-                        float cos_yaw = cosf(current_pose.yaw);
-                        float sin_yaw = sinf(current_pose.yaw);
+                        float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
+                        float sin_yaw = sinf(current_pose.yaw * DEG_TO_RAD);
                         int32_t x_offset = (int32_t)(dx * cos_yaw + dy * sin_yaw);
                         int32_t y_offset = (int32_t)(-dx * sin_yaw + dy * cos_yaw);
 
@@ -211,7 +216,6 @@ void Nav_Track_Task(void *argument) {
                 } else {
                     // 等待电机到位，然后用定位数据验证
                     if (motors_reached_target(100)) {
-                        if (!get_current_pose(&current_pose)) break;
                         float dx = g_tracker.cached_target->pose.x - current_pose.x;
                         float dy = g_tracker.cached_target->pose.y - current_pose.y;
                         float dist = sqrtf(dx * dx + dy * dy);
@@ -225,7 +229,7 @@ void Nav_Track_Task(void *argument) {
                                 g_tracker.phase = TRACK_PHASE_IDLE;
                             }
                         } else {
-                            enter_phase(TRACK_PHASE_TRANSLATE); // 有偏差，重新发指令修正
+                            enter_phase(TRACK_PHASE_TRANSLATE);
                         }
                     }
                 }
@@ -234,27 +238,24 @@ void Nav_Track_Task(void *argument) {
 
             case TRACK_PHASE_ADJUST_YAW: {
                 if (!g_tracker.cmd_sent) {
-                    if (!get_current_pose(&current_pose)) break;
                     float final_yaw_error = normalize_angle(g_tracker.cached_target->pose.yaw - current_pose.yaw);
 
                     if (fabsf(final_yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
                         g_tracker.state = TRACK_STATE_COMPLETE;
                         g_tracker.phase = TRACK_PHASE_IDLE;
                     } else {
-                        int32_t yaw_deg = (int32_t)(final_yaw_error * RAD_TO_DEG);
-                        MotionControl_SetPosition(0, 0, yaw_deg);
+                        MotionControl_SetPosition(0, 0, (int32_t)final_yaw_error);
                         g_tracker.cmd_sent = true;
                     }
                 } else {
                     // 等待电机到位，然后用定位数据验证
                     if (motors_reached_target(g_tracker.cached_target->arrive.yaw_threshold * 100.0f)) {
-                        if (!get_current_pose(&current_pose)) break;
                         float final_yaw_error = normalize_angle(g_tracker.cached_target->pose.yaw - current_pose.yaw);
                         if (fabsf(final_yaw_error) < g_tracker.cached_target->arrive.yaw_threshold) {
                             g_tracker.state = TRACK_STATE_COMPLETE;
                             g_tracker.phase = TRACK_PHASE_IDLE;
                         } else {
-                            enter_phase(TRACK_PHASE_ADJUST_YAW); // 有偏差，重新修正
+                            enter_phase(TRACK_PHASE_ADJUST_YAW);
                         }
                     }
                 }

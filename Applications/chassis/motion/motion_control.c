@@ -147,7 +147,7 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
     float sin_yaw = sinf(g_enc_pose->yaw);
     g_enc_pose->x += delta.dx * cos_yaw - delta.dy * sin_yaw;
     g_enc_pose->y += delta.dx * sin_yaw + delta.dy * cos_yaw;
-    g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw);
+    g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw * RAD_TO_DEG);
     g_enc_pose->timestamp = enc.timestamp;
 
     // 更新上一次的编码器值
