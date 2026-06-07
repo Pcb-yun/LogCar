@@ -7,6 +7,10 @@
 #ifndef __NAV_MATH_H__
 #define __NAV_MATH_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdint.h>
 #include <math.h>
 
@@ -148,5 +152,10 @@ static inline float lerp(float a, float b, float t) {
 }
 
 float fast_invsqrt(float x);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __NAV_MATH_H__ */

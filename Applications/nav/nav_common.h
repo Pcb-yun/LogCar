@@ -7,6 +7,10 @@
 #ifndef __NAV_COMMON_H__
 #define __NAV_COMMON_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "stdint.h"
 
 
@@ -28,5 +32,11 @@ typedef enum {
     TRACK_STATE_COMPLETE,    // 完成
     TRACK_STATE_ERROR        // 错误
 } TrackState_t;
+
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __NAV_COMMON_H__ */

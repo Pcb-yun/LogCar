@@ -7,6 +7,10 @@
 #ifndef __NAV_TRACKER_H__
 #define __NAV_TRACKER_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "stdbool.h"
 #include "nav_common.h"
 
@@ -25,5 +29,11 @@ typedef enum {
 bool Nav_Track_GoTo(uint8_t target_id); // 导航到指定目标点
 void Nav_Track_Stop(void);               // 停止导航
 TrackState_t Nav_Track_GetState(void);   // 获取当前状态
+
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __NAV_TRACKER_H__ */

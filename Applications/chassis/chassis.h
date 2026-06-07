@@ -7,6 +7,10 @@
 #ifndef __CHASSIS_H__
 #define __CHASSIS_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdint.h>
 
 /**
@@ -30,5 +34,8 @@ typedef struct {
 } Wheel_t;
 
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __CHASSIS_H__ */

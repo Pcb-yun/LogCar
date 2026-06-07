@@ -7,6 +7,10 @@
 #ifndef __NAV_MAP_H__
 #define __NAV_MAP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "stdint.h"
 #include "stdbool.h"
 #include "nav_common.h"
@@ -93,5 +97,11 @@ bool Map_LoadPoints(TargetPoint_t *points, uint8_t count);
 
 TargetPoint_t *Map_GetDataPoints(void);
 uint8_t Map_GetDataPointCount(void);
+
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* __NAV_MAP_H__ */

@@ -7,6 +7,10 @@
 #ifndef __NAV_LOCAL_H__
 #define __NAV_LOCAL_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include "stdbool.h"
 #include "nav_common.h"
 #include "chassis.h"
@@ -16,5 +20,10 @@
 bool Loc_Set(Pose_t *pose);
 bool Loc_Get(Pose_t *pose);
 
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 #endif /* __NAV_LOCAL_H__ */
