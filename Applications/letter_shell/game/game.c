@@ -12,6 +12,7 @@
 
 extern int main_2048(int argc, char *argv[]);
 extern int main_snake(int argc, char *argv[]);
+extern int main_ascii_patrol(int argc, char *argv[]);
 
 
 ShellCommand gameGroup[] =
@@ -20,6 +21,8 @@ ShellCommand gameGroup[] =
         game 2048 [param] Param: blackwhite bluered or null),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, snake, main_snake,
         game snake - Play snake game),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, ap, main_ascii_patrol,
+        game ap - Play ASCII Patrol game),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(

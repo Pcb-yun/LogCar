@@ -45,7 +45,7 @@ static short userShellRead(char *data, unsigned short len) {
    extern osMessageQueueId_t Usart1_Rx_DataHandle;
    if (len == 0) return 0;
 
-   if (osMessageQueueGet(Usart1_Rx_DataHandle, data, NULL, 100) == osOK) {
+   if (osMessageQueueGet(Usart1_Rx_DataHandle, data, NULL, 0) == osOK) {
        return 1;
    }
    return 0;
@@ -74,10 +74,10 @@ void Shell_Task(void *argument) {
    for(;;) {
       // 优先将数据发送给需要使用串口的应用程序
       if(osEventFlagsGet(System_StatusHandle) & APP_NEED_USART) {
-         osDelay(100);
+         osDelay(200);
          continue;
       }
-      if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 200) == osOK) {
+      if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 50) == osOK) {
          shellHandler(&shell, data);
       }
    }

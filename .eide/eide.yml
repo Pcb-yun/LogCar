@@ -97,9 +97,22 @@ virtualFolder:
         - path: Applications/letter_shell/log/log.c
         - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
         - path: Applications/letter_shell/game/game.c
-        - path: Applications/letter_shell/game/2048.c
-        - path: Applications/letter_shell/game/snake.c
-        - path: Applications/letter_shell/game/snake_tiny.c
+      folders: []
+    - name: games
+      files:
+        - path: Applications/letter_shell/game/2048/2048.c
+        - path: Applications/letter_shell/game/snake/snake.c
+        - path: Applications/letter_shell/game/snake/snake_tiny.c
+        - path: Applications/letter_shell/game/ASCII_Patrol/assets.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/conf.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/game.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/gameover.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/inter.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/manual.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/menu.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/spec_mcu.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/temp.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/twister.cpp
       folders: []
     - name: nav
       files:
@@ -169,7 +182,8 @@ targets:
         - Applications/chassis/kinematics
         - Applications/chassis/motion
         - Applications/letter_shell
-        - Applications/letter_shell/game
+        - Applications/letter_shell/game/ASCII_Patrol
+        - Applications/letter_shell/game/snake
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
         - Applications/letter_shell/src

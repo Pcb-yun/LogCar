@@ -104,7 +104,7 @@ const osThreadAttr_t Motor_Update_attributes = {
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
-  .stack_size = 128 * 4,
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityHigh5,
 };
 /* Definitions for Servo_Ctrl */
@@ -132,14 +132,14 @@ const osThreadAttr_t Battery_Get_attributes = {
 osThreadId_t Loc_UpdateHandle;
 const osThreadAttr_t Loc_Update_attributes = {
   .name = "Loc_Update",
-  .stack_size = 512 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime4,
 };
 /* Definitions for Nav_Track */
 osThreadId_t Nav_TrackHandle;
 const osThreadAttr_t Nav_Track_attributes = {
   .name = "Nav_Track",
-  .stack_size = 1024 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Usart1_Rx_Data */
@@ -363,13 +363,13 @@ void MX_FREERTOS_Init(void) {
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
   /* creation of MotorCmds */
-  MotorCmdsHandle = osMessageQueueNew (8, sizeof(MotorCmd_t), &MotorCmds_attributes);
+  MotorCmdsHandle = osMessageQueueNew (5, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
   /* creation of Usart6_Rx_Data */
   Usart6_Rx_DataHandle = osMessageQueueNew (5, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
 
   /* creation of Uart4_Rx_Data */
-  Uart4_Rx_DataHandle = osMessageQueueNew (3, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
+  Uart4_Rx_DataHandle = osMessageQueueNew (2, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
 
   /* creation of Servo_Cmd */
   Servo_CmdHandle = osMessageQueueNew (5, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
@@ -516,3 +516,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

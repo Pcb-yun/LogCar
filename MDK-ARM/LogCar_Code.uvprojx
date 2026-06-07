@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,STM32_THREAD_SAFE_STRATEGY=4,USE_WG=1</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/chassis;../Applications/chassis/kinematics;../Applications/chassis/motion;../Applications/letter_shell;..\Applications\letter_shell\game;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Applications/letter_shell/src;../Applications/nav;../Applications/nav/localization;../Applications/nav/trajectory_tracking;../Applications/nav/utils;../Drivers/User/ADC;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/TRACK</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/chassis;../Applications/chassis/kinematics;../Applications/chassis/motion;../Applications/letter_shell;../Applications/letter_shell/game/ASCII_Patrol;../Applications/letter_shell/game/snake;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Applications/letter_shell/src;../Applications/nav;../Applications/nav/localization;../Applications/nav/trajectory_tracking;../Applications/nav/utils;../Drivers/User/ADC;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/driver;../Drivers/User/TRACK</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -1209,20 +1209,75 @@
               <FileType>1</FileType>
               <FilePath>..\Applications\letter_shell\game\game.c</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>games</GroupName>
+          <Files>
             <File>
               <FileName>2048.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\2048.c</FilePath>
+              <FilePath>..\Applications\letter_shell\game\2048\2048.c</FilePath>
             </File>
             <File>
               <FileName>snake.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\snake.c</FilePath>
+              <FilePath>..\Applications\letter_shell\game\snake\snake.c</FilePath>
             </File>
             <File>
               <FileName>snake_tiny.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\snake_tiny.c</FilePath>
+              <FilePath>..\Applications\letter_shell\game\snake\snake_tiny.c</FilePath>
+            </File>
+            <File>
+              <FileName>assets.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\assets.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>conf.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\conf.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>game.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\game.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>gameover.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\gameover.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>inter.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\inter.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>manual.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\manual.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>menu.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\menu.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>spec_mcu.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\spec_mcu.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>temp.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\temp.cpp</FilePath>
+            </File>
+            <File>
+              <FileName>twister.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\twister.cpp</FilePath>
             </File>
           </Files>
         </Group>
