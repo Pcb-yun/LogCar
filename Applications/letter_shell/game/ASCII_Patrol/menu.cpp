@@ -1,3 +1,14 @@
+/**
+ * @file menu.cpp
+ * @brief ASCII Patrol 游戏菜单系统
+ *
+ * 实现游戏菜单、界面交互和配置管理
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 // extern "C" _declspec(dllimport) void __stdcall OutputDebugStringA(const char* s);
 
 #include <stdlib.h>

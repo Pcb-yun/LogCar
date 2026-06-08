@@ -1,3 +1,14 @@
+/**
+ * @file gameover.cpp
+ * @brief ASCII Patrol 游戏结束界面
+ *
+ * 实现游戏结束时的统计和显示界面
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,6 +19,9 @@
 #include "gameover.h"
 #include "twister.h"
 
+/**
+ * @brief 析构函数
+ */
 GAMEOVER_MODAL::~GAMEOVER_MODAL()
 {
 	if (tx_mask)

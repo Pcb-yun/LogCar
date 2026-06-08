@@ -1,6 +1,20 @@
+/**
+ * @file manual.cpp
+ * @brief ASCII Patrol 游戏手册
+ *
+ * 实现游戏手册和说明书的显示
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include "memory.h"
 #include "manual.h"
 
+/**
+ * @brief 析构函数
+ */
 MANUAL::~MANUAL()
 {
 	for (int i=0; i<man.frames; i++)

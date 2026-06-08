@@ -1,3 +1,14 @@
+/**
+ * @file inter.cpp
+ * @brief ASCII Patrol 关卡间界面
+ *
+ * 实现关卡之间的过渡界面和对话显示
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +21,15 @@
 #include "twister.h"
 #include "conf.h"
 
+/**
+ * @brief 在屏幕上打印文本
+ *
+ * @param s     屏幕对象
+ * @param dx    目标x坐标
+ * @param dy    目标y坐标
+ * @param str   文本字符串
+ * @param color 颜色值
+ */
 void inter_print(SCREEN* s, int dx, int dy, const char* str, char color)
 {
 	int sx=0;

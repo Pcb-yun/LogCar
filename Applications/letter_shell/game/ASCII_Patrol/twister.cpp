@@ -1,6 +1,20 @@
+/**
+ * @file twister.cpp
+ * @brief ASCII Patrol 随机数生成器
+ *
+ * 实现基于 XORShift 的伪随机数生成器
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include <stdlib.h>
 #include "twister.h"
 
+/**
+ * @brief 随机数生成器状态结构
+ */
 struct TWISTER
 {
 	unsigned int x;

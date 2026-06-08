@@ -1,3 +1,14 @@
+/**
+ * @file assets.cpp
+ * @brief ASCII Patrol 游戏资源定义
+ *
+ * 包含所有游戏精灵、场景、字体等图形资源的定义
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include "assets.h"
 
 const char* avatar_mono[]=

@@ -1,8 +1,19 @@
+/**
+ * @file conf.cpp
+ * @brief ASCII Patrol 游戏配置管理
+ *
+ * 实现游戏配置数据的定义和持久化
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include "conf.h"
 #include "menu.h"
 #include "spec.h"
 
-// 默认配置
+/** 默认战役配置 */
 ConfCampaign conf_campaign=
 {
 	0,0,0

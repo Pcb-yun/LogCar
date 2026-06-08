@@ -1,3 +1,14 @@
+/**
+ * @file game.cpp
+ * @brief ASCII Patrol 游戏核心逻辑
+ *
+ * 实现游戏关卡、对话、场地效果、干扰效果等核心游戏机制
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +24,8 @@
 
 #include "manual.h"
 
-unsigned char cl_transp = 0x70;  // mono:00 color:70
+/** 透明色（单色:00 彩色:70） */
+unsigned char cl_transp = 0x70;
 
 MANUAL manual(&book,'*',cl_transp);
 
