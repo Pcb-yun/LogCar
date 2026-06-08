@@ -26,6 +26,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "message.h"
+#include "stdbool.h"
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -210,6 +212,12 @@ void Error_Handler(void)
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
   my_printf("\r\n==================== Error_Handler Call ====================\r\n");
 
+  extern bool find_art(const char *name, char **data_ptr);
+  char *data = NULL;
+  if (find_art("NINA", &data)) {
+    my_print(data, strlen(data));
+  }
+
   while (1)
   {
   }
@@ -233,6 +241,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   my_printf("file: %s\r\n", file);
   my_printf("line: %ld\r\n", line);
 
+  Error_Handler();
   while (1);
 
   /* USER CODE END 6 */

@@ -1,13 +1,24 @@
-// extern "C" _declspec(dllimport) void __stdcall OutputDebugStringA(const char* s);
+/**
+ * @file menu.cpp
+ * @brief ASCII Patrol 游戏菜单系统
+ *
+ * 实现游戏菜单、界面交互和配置管理
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
 
-#include <stdlib.h>
+
+ #include "game_en.h"
+ #if GAME_ENABLE_AP
+
+
 #include <stdio.h>
-#include <math.h>
 #include <assert.h>
-#include <memory.h>
 #include <string.h>
 
-#include "game.h"
+#include "game_ap.h"
 #include "spec.h"
 #include "menu.h"
 #include "conf.h"
@@ -942,10 +953,8 @@ int PromptProc(int msg, void* p1, void* p2)
 		}
 
 		case MM_FOCUS:
-		{
-			int f = *(int*)p1;
-
-			const char* str = (const char*)p1;
+	{
+		const char* str = (const char*)p1;
 			data.len = strlen(str);
 			strcpy(data.str,str);
 
@@ -964,7 +973,6 @@ int PromptProc(int msg, void* p1, void* p2)
 		case MM_PAINT:
 		{
 			CON_OUTPUT* s = (CON_OUTPUT*)p1;
-			int* clip = (int*)p2;
 
 			data.sx = (s->w - prompt.w) / 2;
 			data.sy = s->h - prompt.h;
@@ -1259,7 +1267,6 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 		{
 			if (w<5)
 				w=5;
-			int fill = w-4;
 
 			menu_blit(s,x,y,&sld,0,0,1,2,fr,clip);
 			for (int f=x+1; f<x+1+val; f++)
@@ -1289,7 +1296,6 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 
 		case MM_FOCUS:
 		{
-			int f = *(int*)p1;
 			data.touch_id = -1;
 			break;
 		}
@@ -1307,8 +1313,6 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 			x+=5;
 
 			unsigned char lab_cl;
-			int l;
-			char val[32];
 
 			lab_cl = LABEL_CL(m,hover==0,false);
 			if (m->state==2 && hover==0)
@@ -1365,7 +1369,6 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 
 			if (ci->EventType == CON_INPUT_TCH_BEGIN && data.touch_id < 0)
 			{
-				int x = ci->Event.TouchEvent.x - m->x;
 				int y = ci->Event.TouchEvent.y - m->y + menu_window.smooth;
 
 				switch (y)
@@ -1564,12 +1567,6 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 		{
 			strcpy_s(data.name,16,conf_player.name);
 			data.avatar = conf_player.avatar;
-			/*
-			data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-			data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-			data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-			data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-			*/
 
 			data.prev[0] = ((data.avatar>>0) & 0xFF)*dna.w;
 			data.prev[1] = ((data.avatar>>8) & 0xFF)*dna.w;
@@ -1749,10 +1746,10 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 
 					data.avatar = 0;
 
-					data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-					data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-					data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-					data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
 
 					conf_player.avatar=data.avatar;
 					SaveConf();
@@ -2062,10 +2059,10 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 
 							data.avatar = 0;
 
-							data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-							data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-							data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
-							data.avatar = (data.avatar<<8) | ( rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
 
 							conf_player.avatar=data.avatar;
 							SaveConf();
@@ -2081,7 +2078,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 							data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
 							data.anim[c] = menu_window.time; // start new timer
 
-							int i = rand()%dna.frames;
+							int i = twister_rand()%dna.frames;
 							data.avatar &= ~(0xFF << b);
 							data.avatar |= i << b;
 
@@ -2090,8 +2087,6 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 
 							return 1;
 						}
-
-						break;
 					}
 				}
 			}
@@ -2343,12 +2338,10 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 			data.level = conf_campaign.level;
 			data.path = 0;
 
-			int lev = data.level<0 ? 0 : data.level;
+			data.car_to = data.map.course[data.course].level[data.level].seg.from;
 
-			data.car_to = data.map.course[data.course].level[lev].seg.from;
-
-			data.from_x = map_coords[data.course][2*lev+0];
-			data.from_y = map_coords[data.course][2*lev+1];
+			data.from_x = map_coords[data.course][2*data.level+0];
+			data.from_y = map_coords[data.course][2*data.level+1];
 
 			break;
 		}
@@ -2364,7 +2357,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 			data.anim_y = 0;
 
 			int lev = data.level<0 ? 0 : data.level;
-			data.from_x = map_coords[data.course][2*lev+0];
+			data.from_x = map_coords[data.course][2*lev];
 			data.from_y = map_coords[data.course][2*lev+1];
 
 			data.head_t=menu_window.time;
@@ -2518,7 +2511,6 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 			{
 				if (track[crs][lev].path)
 				{
-					int len = 0;
 					int seg = 20;
 					if (!s->color)
 						seg = 5;
@@ -3018,8 +3010,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 							conf_campaign.course = data.course;
 							conf_campaign.level  = data.level;
 
-							int lev = data.level<0 ? 0 : data.level;
-							data.car_to = data.map.course[data.course].level[lev].seg.from;
+							data.car_to = data.map.course[data.course].level[data.level].seg.from;
 
 							SaveConf();
 
@@ -3113,16 +3104,6 @@ int KeyboardProc(MODULE* m, int msg, void* p1, void* p2)
 		"Down  (crouch)",
 		"Enter (fire)",
 		"Quit"
-	};
-
-	const static char* syskey[6]=
-	{
-		"Lft",
-		"Rgt",
-		"Up",
-		"Dwn",
-		"Ent",
-		"Esc"
 	};
 
 	switch (msg)
@@ -3685,7 +3666,6 @@ int RunMenu(CON_OUTPUT* s)
 		CON_INPUT ir[4];
 		int irn=0;
 
-		bool hit = false;
 		get_input_len(&irn);
 		while (irn)
 		{
@@ -3751,7 +3731,7 @@ int RunMenu(CON_OUTPUT* s)
 
 					if (!touch_scroll.redirect)
 					{
-						if ( abs(touch_scroll.cur_x - ir[i].Event.TouchEvent.x) > 1 ||
+						if ( ABS(touch_scroll.cur_x - ir[i].Event.TouchEvent.x) > 1 ||
 							touch_scroll.cur_y != ir[i].Event.TouchEvent.y)
 						{
 							touch_scroll.dirty = true;
@@ -4053,3 +4033,5 @@ int RunMenu(CON_OUTPUT* s)
 
 	return 0;
 }
+
+#endif /* GAME_ENABLE_AP */

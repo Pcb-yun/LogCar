@@ -311,7 +311,6 @@ void vApplicationMallocFailedHook(void)
    if(xCurrentTask != NULL) {
      const char *pcTaskName = pcTaskGetName(xCurrentTask);
      my_printf("Current task: %s\r\n", pcTaskName);
-     my_printf("Task handle: 0x%p\r\n", xCurrentTask);
    }
 
    // 打印空闲堆信息
@@ -516,4 +515,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

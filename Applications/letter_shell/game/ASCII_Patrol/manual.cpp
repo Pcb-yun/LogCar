@@ -1,6 +1,20 @@
+/**
+ * @file manual.cpp
+ * @brief ASCII Patrol 游戏手册
+ *
+ * 实现游戏手册和说明书的显示
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include "memory.h"
 #include "manual.h"
 
+/**
+ * @brief 析构函数
+ */
 MANUAL::~MANUAL()
 {
 	for (int i=0; i<man.frames; i++)
@@ -11,8 +25,8 @@ MANUAL::~MANUAL()
 }
 
 MANUAL::MANUAL(const ASSET* a, char transp, unsigned char _tcolor) :
-	man(a),
-	SCREEN(43,17,transp,_tcolor)
+	SCREEN(43,17,transp,_tcolor),
+	man(a)
 {
 	for (int i=0; i<man.frames; i++)
 	{
@@ -119,3 +133,5 @@ void MANUAL::Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw, int sh, 
 		paper[page+1]->BlendPage(scr,dx+bend-anim +1,dy,0,0,anim-1,-1);
 	}
 }
+
+#endif /* GAME_ENABLE_AP */

@@ -11,10 +11,12 @@
                 "Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
                 "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
                 "Drivers/CMSIS/Include",
+                "Applications/ANSI_Art",
                 "Applications/chassis",
                 "Applications/chassis/kinematics",
                 "Applications/chassis/motion",
                 "Applications/letter_shell",
+                "Applications/letter_shell/game",
                 "Applications/letter_shell/game/ASCII_Patrol",
                 "Applications/letter_shell/game/snake",
                 "Applications/letter_shell/log",
@@ -43,7 +45,7 @@
                 "USE_HAL_DRIVER",
                 "STM32F407xx",
                 "STM32_THREAD_SAFE_STRATEGY=4",
-                "USE_WG=1"
+                "USE_WG=0"
             ]
         }
     ],

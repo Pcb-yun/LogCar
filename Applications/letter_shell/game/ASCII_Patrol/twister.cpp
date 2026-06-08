@@ -1,6 +1,20 @@
+/**
+ * @file twister.cpp
+ * @brief ASCII Patrol 随机数生成器
+ *
+ * 实现基于 XORShift 的伪随机数生成器
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include <stdlib.h>
 #include "twister.h"
 
+/**
+ * @brief 随机数生成器状态结构
+ */
 struct TWISTER
 {
 	unsigned int x;
@@ -24,8 +38,8 @@ static TWISTER state[2]=
 
 void dbg_get_twister_state(unsigned int s[6])
 {
-	s[0]=state[0].x; s[1]=state[0].y; s[2]=state[0].z; 
-	s[3]=state[1].x; s[4]=state[1].y; s[5]=state[1].z; 
+	s[0]=state[0].x; s[1]=state[0].y; s[2]=state[0].z;
+	s[3]=state[1].x; s[4]=state[1].y; s[5]=state[1].z;
 }
 
 static TWISTER* twister = state;
@@ -43,11 +57,11 @@ void twister_seed(unsigned int s)
 
 	twister_rand();
 	twister_rand();
-	twister_rand(); 
+	twister_rand();
 }
 
-int twister_rand() 
-{          
+int twister_rand()
+{
 	unsigned int t;
 
 	twister->x ^= twister->x << 16;
@@ -92,7 +106,7 @@ int twister_rand()
 	  static const unsigned long MATRIX[2] = {0, 0x9908b0df};
 	  unsigned long y, i=0;
 
-	  while ( i<(DIFF-1) ) 
+	  while ( i<(DIFF-1) )
 	  {
 		UNROLL(i+PERIOD);
 		UNROLL(i+PERIOD);
@@ -100,7 +114,7 @@ int twister_rand()
 
 	  UNROLL((i+PERIOD) % SIZE);
 
-	  while ( i<(SIZE-1) ) 
+	  while ( i<(SIZE-1) )
 	  {
 		UNROLL(i-DIFF);
 		UNROLL(i-DIFF);
@@ -116,7 +130,7 @@ int twister_rand()
 	  }
 
 	  y = M32(MT[SIZE-1]) | L31(MT[0]);
-	  MT[SIZE-1] = MT[PERIOD-1] ^ (y>>1) ^ MATRIX[ODD(y)];  
+	  MT[SIZE-1] = MT[PERIOD-1] ^ (y>>1) ^ MATRIX[ODD(y)];
   }
 
   unsigned long y = MT[index];
@@ -132,3 +146,5 @@ int twister_rand()
   return (int)(y&~(1<<31));
 }
 #endif
+
+#endif /* GAME_ENABLE_AP */

@@ -1,19 +1,28 @@
-#include <memory.h>
+/**
+ * @file game.cpp
+ * @brief ASCII Patrol 游戏核心逻辑
+ *
+ * 实现游戏关卡、对话、场地效果、干扰效果等核心游戏机制
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
 #include "memory.h"
 #include "twister.h"
-#include "game.h"
+#include "game_ap.h"
 #include "spec.h"
 
 #include "conf.h"
 
 #include "manual.h"
 
-unsigned char cl_transp = 0x70;  // mono:00 color:70
+/** 透明色（单色:00 彩色:70） */
+unsigned char cl_transp = 0x70;
 
 MANUAL manual(&book,'*',cl_transp);
 
@@ -350,29 +359,6 @@ const DIALOG dlg_champion_4[]=
 	{0,0}
 };
 
-const LEVEL tutorial[] =
-{
-	{
-		'@','@',
-		120000,
-		65440,
-		&mountains,
-		cl_mountains,
-		" @",
-		"44",
-		0
-	},
-	{
-		'@','@',
-		0,
-		0,
-		0,
-		0,
-		0,
-		0
-	}
-};
-
 const LEVEL beginner[] =
 {
 	{
@@ -527,12 +513,6 @@ const LEVEL dummy[] =
 // source for campaign menu
 const COURSE campaign[] =
 {
-	/*
-	{
-		"Tutorial",
-		tutorial, 0
-	},
-	*/
 	{	// 0
 		"Mission One",
 		beginner, 0
@@ -853,21 +833,6 @@ void Interference(SCREEN* s, int dist, int noise, unsigned long phase, int freq,
 
 static SPRITE* sprite_garbage = 0;
 
-static SPRITE* NewSprite()
-{
-	SPRITE* s=sprite_garbage;
-	if (s)
-	{
-		sprite_garbage = s->next;
-		s->Init();
-	}
-	else
-		s = new SPRITE;
-
-	return s;
-}
-
-
 static SPRITE* NewSprite(const ASSET* anim)
 {
 	SPRITE* s=sprite_garbage;
@@ -914,6 +879,16 @@ static void DeleteSprite(SPRITE* s)
 {
 	s->next=sprite_garbage;
 	sprite_garbage=s;
+}
+
+void CleanupSpriteGarbage()
+{
+	while (sprite_garbage)
+	{
+		SPRITE* next = sprite_garbage->next;
+		delete sprite_garbage;
+		sprite_garbage = next;
+	}
 }
 
 void GamePreAlloc()
@@ -1013,7 +988,6 @@ void resize_con_output(CON_OUTPUT* s, int _w, int _h, char transp)
 
 SCREEN::~SCREEN()
 {
-	free_con_output(this);
 	delete buf;
 }
 
@@ -1362,7 +1336,7 @@ void SPRITE::Init(int _score)
 	asset.color = score_color;
 
 	group_id=-1;
-	cookie='scor';
+	cookie=SPRITE_SCOR;
 
 	x_offset = 0;
 	y_offset = 0;
@@ -1395,7 +1369,7 @@ bool SPRITE::HitTest(int sx, int sy)
 		return false;
 
 	// 2. rocket flames are not lethal
-	if (cookie=='r' && sx<width/2)
+	if (cookie==SPRITE_R && sx<width/2)
 		return false;
 
 	return true;
@@ -2050,7 +2024,7 @@ bool TERRAIN::HitTest(CHASSIS* ch_spr, int x, int y, int fr)
 											// PlaySFX(DRONE_DEATH);
 										}
 
-										spr->cookie='poof';
+										spr->cookie=SPRITE_POOF;
 										spr->cookie_data[0]=fr;
 										spr->frame=0;
 										spr->width = SPRITE::AnimWidth(spr->data);
@@ -2109,13 +2083,13 @@ bool TERRAIN::HitTest(CHASSIS* ch_spr, int x, int y, int fr)
 	{
 		SPRITE* nxt = spr->prev;
 
-		if (spr->cookie=='scor' || spr->cookie=='poof' || spr->cookie=='base')
+		if (spr->cookie==SPRITE_SCOR || spr->cookie==SPRITE_POOF || spr->cookie==SPRITE_BASE)
 		{
 			spr=nxt;
 			continue;
 		}
 
-		if (spr->cookie=='h1' || spr->cookie=='h2' || spr->cookie=='h3')
+		if (spr->cookie==SPRITE_H1 || spr->cookie==SPRITE_H2 || spr->cookie==SPRITE_H3)
 		{
 			if (spr->frame == spr->frames-1)
 			{
@@ -2175,7 +2149,7 @@ bool TERRAIN::HitTest(CHASSIS* ch_spr, int x, int y, int fr)
 
 							// convert it to ground_boom
 							spr->data = &ground_boom;
-							spr->cookie='poof';
+							spr->cookie=SPRITE_POOF;
 							spr->cookie_data[0]=fr;
 							spr->frame=1;
 							spr->width = SPRITE::AnimWidth(spr->data);
@@ -2210,7 +2184,7 @@ bool TERRAIN::BulletTest(int fr, int x, int y, int* game_score)
 		{
 			// create poof
 			SPRITE* spr = NewSprite(&co_boom);
-			spr->cookie='poof';
+			spr->cookie=SPRITE_POOF;
 			spr->cookie_data[0]=fr;
 			spr->x_offset = x-(spr->width+1)/2;
 			spr->y_offset = y-(spr->height)/2;
@@ -2241,7 +2215,7 @@ bool TERRAIN::BulletTest(int fr, int x, int y, int* game_score)
 	while (spr)
 	{
 		SPRITE* nxt = spr->prev;
-		if (spr->cookie=='poof' || spr->cookie=='scor')
+		if (spr->cookie==SPRITE_POOF || spr->cookie==SPRITE_SCOR)
 		{
 			spr = nxt;
 			continue;
@@ -2332,7 +2306,7 @@ bool TERRAIN::BulletTest(int fr, int x, int y, int* game_score)
 						*game_score += basher_score;
 
 					spr->data = &fly_boom1;
-					spr->cookie='poof';
+					spr->cookie=SPRITE_POOF;
 					spr->cookie_data[0]=fr;
 					spr->frame=0;
 					spr->width = SPRITE::AnimWidth(spr->data);
@@ -2357,7 +2331,7 @@ bool TERRAIN::BulletTest(int fr, int x, int y, int* game_score)
 					// PlaySFX(spr->cookie=='U' ? UFO_DEATH : DRONE_DEATH);
 
 					spr->data = &fly_boom2;
-					spr->cookie='poof';
+					spr->cookie=SPRITE_POOF;
 					spr->cookie_data[0]=fr;
 					spr->frame=0;
 					spr->width = SPRITE::AnimWidth(spr->data);
@@ -2412,7 +2386,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 	while (spr)
 	{
 		SPRITE* nxt = spr->prev;
-		if (spr->cookie=='scor' || spr->cookie=='poof' || spr->cookie=='base')
+		if (spr->cookie==SPRITE_SCOR || spr->cookie==SPRITE_POOF || spr->cookie==SPRITE_BASE)
 		{
 			spr = nxt;
 			continue;
@@ -2482,14 +2456,14 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 	{
 		SPRITE* spr = hitspr;
 
-		int h0 = 'h0';
-		int b0 = 'b0';
+		int h0 = SPRITE_H0;
+		int b0 = SPRITE_B0;
 
 		// custom handler
 		switch (spr->cookie)
 		{
-			case 'h1':
-			case 'h2':
+			case SPRITE_H1:
+			case SPRITE_H2:
 			{
 				// ADDHIT
 				// PlaySFX(HEAP_DEATH);
@@ -2506,7 +2480,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				break;
 			}
 
-			case 'h3':
+			case SPRITE_H3:
 			{
 				// ADDHIT? -- only if final hit
 				// PlaySFX(HEAP_DEATH);
@@ -2528,9 +2502,9 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				break;
 			}
 
-			case 'b1':
-			case 'b2':
-			case 'b3':
+			case SPRITE_B1:
+			case SPRITE_B2:
+			case SPRITE_B3:
 			{
 				// ADDHIT
 				// PlaySFX(BALL_DEATH);
@@ -2544,7 +2518,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				break;
 			}
 
-			case 'b4':
+			case SPRITE_B4:
 			{
 				// ADDHIT? -- hmmm no, it is not killed yet
 				// PlaySFX(BALL_DEATH);
@@ -2557,7 +2531,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				b2->x_offset = spr->x_offset+2;
 				b2->y_offset = spr->y_offset+1;
 				b2->frame=0;
-				b2->cookie='b2';
+				b2->cookie=SPRITE_B2;
 				b2->cookie_data[0]=spr->cookie_data[0];
 				b2->cookie_data[1]=spr->cookie_data[1];
 				b2->cookie_data[2]=spr->cookie_data[2];
@@ -2579,7 +2553,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				break;
 			}
 
-			case 'r':
+			case SPRITE_R:
 			{
 				// PlaySFX(ROCKET_DEATH);
 				// ADDHIT
@@ -2631,7 +2605,7 @@ bool TERRAIN::CannonTest(int x, int y, int f, int fr, int* game_score)
 				break;
 			}
 
-			case 'tb':
+			case SPRITE_TB:
 			{
 				// PlaySFX(BULLET_BULLET);
 				break;
@@ -2724,7 +2698,7 @@ void TERRAIN::DismissSprites(int fr, int speed)
 		SPRITE* nxt = spr->next;
 		switch (spr->cookie)
 		{
-			case 'r':
+			case SPRITE_R:
 			{
 				int phase = 0;
 				if (scroll-spr->cookie_data[0]>4*spr->width)
@@ -2815,7 +2789,6 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 
 				dy++;
 
-				int prv=data[ileft];
 				for (int x = ileft; x<=iright; x++)
 				{
 					int r = ABS(x-icenter);
@@ -2853,12 +2826,12 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 					SPRITE* nxt = spr->next;
 					switch (spr->cookie)
 					{
-						case 'r':
-						case 'b1':
-						case 'b2':
-						case 'b3':
-						case 'b4':
-						case 'poof':
+						case SPRITE_R:
+						case SPRITE_B1:
+						case SPRITE_B2:
+						case SPRITE_B3:
+						case SPRITE_B4:
+						case SPRITE_POOF:
 							break;
 
 						default:
@@ -2867,7 +2840,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 								int cx = spr->x_offset + spr->width/2;
 								int cy = spr->y_offset + spr->height;
 								spr->data = &ground_boom;
-								spr->cookie='poof';
+								spr->cookie=SPRITE_POOF;
 								spr->cookie_data[0]=fr;
 								spr->frame=0;
 								spr->width = SPRITE::AnimWidth(spr->data);
@@ -2900,7 +2873,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 				// PlaySFX(BOMB_GROUND);
 			}
 
-			spr->cookie='poof';
+			spr->cookie=SPRITE_POOF;
 			spr->cookie_data[0]=fr;
 			spr->x_offset = b->sx-(spr->width+1)/2;
 			spr->y_offset = dy-spr->height + dep/2;
@@ -2940,14 +2913,14 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 		SPRITE* nxt = spr->next;
 		switch (spr->cookie)
 		{
-			case 'scor':
+			case SPRITE_SCOR:
 			{
 				if (fr - spr->cookie_data[0] < 150)
 					spr=0;
 				break;
 			}
 
-			case 'poof':
+			case SPRITE_POOF:
 			{
 				int f = (fr - spr->cookie_data[0]) / 8;
 				if (f<spr->frames) // otherwise die
@@ -3039,7 +3012,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 							spr->data = &fly_boom1;
 						else
 							spr->data = &fly_boom2;
-						spr->cookie='poof';
+						spr->cookie=SPRITE_POOF;
 						spr->cookie_data[0]=fr;
 						spr->frame=0;
 						spr->width = SPRITE::AnimWidth(spr->data);
@@ -3189,13 +3162,13 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 		SPRITE* nxt = spr->next;
 		switch (spr->cookie)
 		{
-			case 'base':
+			case SPRITE_BASE:
 			{
 				spr->SetFrame(fr/16);
 				break;
 			}
 
-			case 'poof':
+			case SPRITE_POOF:
 			{
 				int f = (fr - spr->cookie_data[0]) / 8;
 				if (f<spr->frames) // otherwise die
@@ -3221,7 +3194,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 				break;
 			}
 
-			case 'scor':
+			case SPRITE_SCOR:
 			{
 				if (fr - spr->cookie_data[0] >= 150)
 				{
@@ -3242,10 +3215,10 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 				break;
 			}
 
-			case 'b1':
-			case 'b2':
-			case 'b3':
-			case 'b4':
+			case SPRITE_B1:
+			case SPRITE_B2:
+			case SPRITE_B3:
+			case SPRITE_B4:
 			{
 				if ((fr&7)==0)
 				{
@@ -3308,7 +3281,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 						tb->x_offset = spr->x_offset -1; // - 3;
 						tb->y_offset = spr->y_offset +1;
 						tb->frame=0;
-						tb->cookie='tb';
+						tb->cookie=SPRITE_TB;
 
 						tb->next = spr;
 						tb->prev = spr->prev;
@@ -3322,7 +3295,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 				break;
 			}
 
-			case 'tb':
+			case SPRITE_TB:
 			{
 				if ((fr&3)==0)
 				{
@@ -3348,7 +3321,7 @@ void TERRAIN::AnimateSprites(int fr, int speed, bool expl)
 				break;
 			}
 
-			case 'r':
+			case SPRITE_R:
 			{
 				int phase = 0;
 				if (scroll-spr->cookie_data[0]>4*spr->width)
@@ -3545,7 +3518,7 @@ void TERRAIN::Scroll(int s)
 							break;
 						}
 
-						case 'r':
+						case SPRITE_R:
 						{
 							spr = NewSprite(&rocket);
 							spr->data_pos = x;
@@ -3553,7 +3526,7 @@ void TERRAIN::Scroll(int s)
 							spr->x_offset = x-spr->width + 1;
 							spr->y_offset = q - spr->height - 1;
 							spr->frame=0;
-							spr->cookie='r';
+							spr->cookie=SPRITE_R;
 							spr->cookie_data[0] = scroll;
 
 							spr->next = head;
@@ -3684,7 +3657,7 @@ void TERRAIN::Scroll(int s)
 							spr->x_offset = x;
 							spr->y_offset = h-2;
 							spr->frame=0;
-							spr->cookie='chkp';
+							spr->cookie=SPRITE_CHKP;
 
 							check_scroll++;
 							break;
@@ -3699,7 +3672,7 @@ void TERRAIN::Scroll(int s)
 							spr->x_offset = x;
 							spr->y_offset = h-lev-spr->height;
 							spr->frame=0;
-							spr->cookie='base';
+							spr->cookie=SPRITE_BASE;
 
 							// fix terrain elevation
 							for (int i=x; i<x+spr->width+5; i++)
@@ -5066,7 +5039,7 @@ int LEVEL_MODAL::Run()
 				{
 					/*
 					case 'R':
-					case 'r':
+					case SPRITE_R:
 						key=32; break; // ???
 					*/
 
@@ -5460,3 +5433,5 @@ int InterScreenInput()
 
 	return 0;
 }
+
+#endif /* GAME_ENABLE_AP */

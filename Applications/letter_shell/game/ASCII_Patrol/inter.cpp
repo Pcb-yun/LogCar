@@ -1,7 +1,16 @@
-#include <memory.h>
+/**
+ * @file inter.cpp
+ * @brief ASCII Patrol 关卡间界面
+ *
+ * 实现关卡之间的过渡界面和对话显示
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
 #include "memory.h"
@@ -10,6 +19,15 @@
 #include "twister.h"
 #include "conf.h"
 
+/**
+ * @brief 在屏幕上打印文本
+ *
+ * @param s     屏幕对象
+ * @param dx    目标x坐标
+ * @param dy    目标y坐标
+ * @param str   文本字符串
+ * @param color 颜色值
+ */
 void inter_print(SCREEN* s, int dx, int dy, const char* str, char color)
 {
 	int sx=0;
@@ -132,7 +150,6 @@ void PERF::Paint(SCREEN* s, int x, int y, int width)
 	//       otherwise it is length of horizontal line
 
 	int w=25;
-	int h=15;
 
 	// paint name
 	// if state is 1 clr is yellow, otherwise white
@@ -225,24 +242,23 @@ void PERF::Paint(SCREEN* s, int x, int y, int width)
 
 		// paint minval & maxval (only if !disabled)
 		char minstr[10];
-		int minlen;
 		char maxstr[10];
 		int maxlen;
 		if (idx==0)
 		{
-			minlen = sprintf_s(minstr,10,"%d%%",0);
+			sprintf_s(minstr,10,"%d%%",0);
 			maxlen = sprintf_s(maxstr,10,"%d%%",100);
 		}
 		else
 		if (idx==1)
 		{
-			minlen = sprintf_s(minstr,10,"%d:%02d",minval/60000,(minval/1000)%60);
+			sprintf_s(minstr,10,"%d:%02d",minval/60000,(minval/1000)%60);
 			maxlen = sprintf_s(maxstr,10,"%d:%02d",maxval/60000,(maxval/1000)%60);
 		}
 		else
 		if (idx==2)
 		{
-			minlen = sprintf_s(minstr,10,"%d",minval);
+			sprintf_s(minstr,10,"%d",minval);
 			maxlen = sprintf_s(maxstr,10,"%d",maxval);
 		}
 
@@ -426,7 +442,6 @@ void DLG::Start(const char* txt, unsigned long t)
 				memcpy(dst,ptr,len-(ptr-txt));
 				dst[len-(ptr-txt)]=0;
 
-				int a=0;
 				break;
 			}
 		}
@@ -664,14 +679,14 @@ INTER_MODAL::INTER_MODAL(SCREEN* _s,
 						 const char* _course_name, const LEVEL* _current_level,
 						 int _time, int _hitval, int _hitmax) :
 
-	dlg_player(&dialog_left, 20,5, 0x3B, conf_player.name, 18,2, &avatar, conf_player.avatar, 3,2, 40,12),
-	dlg_commander(&dialog_right, 5,5, 0x2A, "Commander", 40,12, &character, 0x00000000, 58,4, 3,2),
-	dlg_alien(&dialog_right, 5,5, 0x6E, "??????????????", 40,12, &character, 0x01010101, 58,4, 3,2),
-	bkgnd(&menu_bkg),
 	perf_clear(0, " A R E A  C L E A R ", _hitval, 0, _hitmax, 1000, _hitmax ? 100*100*_hitval/_hitmax : 0),
 	perf_time(1, " T I M E ", _time, _current_level->time_limit, _current_level->time_perfect, 1000, (_current_level->time_limit-_time)/10),
 	perf_lives(2, " S A V I N G S ", _lives, 1, _startlives, 1000, (_lives-1)*1000),
-	fnt(&digits_large)
+	fnt(&digits_large),
+	dlg_player(&dialog_left, 20,5, 0x3B, conf_player.name, 18,2, &avatar, conf_player.avatar, 3,2, 40,12),
+	dlg_commander(&dialog_right, 5,5, 0x2A, "Commander", 40,12, &character, 0x00000000, 58,4, 3,2),
+	dlg_alien(&dialog_right, 5,5, 0x6E, "??????????????", 40,12, &character, 0x01010101, 58,4, 3,2),
+	bkgnd(&menu_bkg)
 {
 
 
@@ -994,7 +1009,6 @@ int INTER_MODAL::Run()
 
 		{
 			// hide bonuses & score
-			int duration = 800;
 			int tm[4] =
 			{
 				static_cast<int>(t-phase_t),
@@ -1271,3 +1285,5 @@ int INTER_MODAL::Run()
 
 	return 0;
 }
+
+#endif /* GAME_ENABLE_AP */

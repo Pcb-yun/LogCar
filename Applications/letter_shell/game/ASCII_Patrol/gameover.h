@@ -1,7 +1,11 @@
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef GAMEOVER_H
 #define GAMEOVER_H
 
-#include "game.h"
+#include "game_ap.h"
 
 void inter_print(SCREEN* s, int dx, int dy, const char* str, char color);
 
@@ -50,3 +54,5 @@ struct GAMEOVER_MODAL : MODAL
 };
 
 #endif
+
+#endif /* GAME_ENABLE_AP */

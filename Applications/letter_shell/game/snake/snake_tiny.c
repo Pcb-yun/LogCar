@@ -1,3 +1,6 @@
+#include "game_en.h"
+#if GAME_ENABLE_SNAKE
+
 #include "snake_tiny.h"
 #include <string.h>
 
@@ -112,7 +115,7 @@ static void spawn_food(SnakeTiny* g)
         }
     }
 
-    // 极端情况：蛇几乎占满（兜底） 
+    // 极端情况：蛇几乎占满（兜底）
     g->food.x = 0;
     g->food.y = 0;
 }
@@ -159,17 +162,17 @@ bool snake_init(SnakeTiny* g,
         return false;
     }
 
-    // 计算网格大小（像素不能整除时会截断，边缘像素会浪费） 
+    // 计算网格大小（像素不能整除时会截断，边缘像素会浪费）
     gw = (uint16_t)(screen_w_px / cell_px);
     gh = (uint16_t)(screen_h_px / cell_px);
 
-    // 网格太小无法游玩 
+    // 网格太小无法游玩
     if (gw < 4 || gh < 4)
     {
         return false;
     }
 
-    // 坐标使用 uint8_t 存储，网格尺寸不能超过 255 
+    // 坐标使用 uint8_t 存储，网格尺寸不能超过 255
     if (gw > 255 || gh > 255)
     {
         return false;
@@ -184,7 +187,7 @@ bool snake_init(SnakeTiny* g,
     // 整体清零
     memset(g, 0, sizeof(*g));
 
-    // 写入配置 
+    // 写入配置
     g->screen_w_px = screen_w_px;
     g->screen_h_px = screen_h_px;
     g->cell_px     = cell_px;
@@ -194,24 +197,24 @@ bool snake_init(SnakeTiny* g,
     g->body     = body_storage;
     g->body_cap = body_cap;
 
-    // 随机种子修正（seed=0 则置为 1） 
+    // 随机种子修正（seed=0 则置为 1）
     g->rng = (seed == 0u) ? 1u : seed;
 
-    // 初始状态 
+    // 初始状态
     g->alive = true;
     g->score = 0;
 
-    // 初始方向：向右 
+    // 初始方向：向右
     g->dir = SNAKE_RIGHT;
     g->pending_dir = SNAKE_RIGHT;
 
-    // 初始长度：3，居中放置 
+    // 初始长度：3，居中放置
     g->len = 3;
 
     cx = (uint8_t)(g->grid_w / 2);
     cy = (uint8_t)(g->grid_h / 2);
 
-    // 约定：body[0] 为蛇头 
+    // 约定：body[0] 为蛇头
     g->body[0].x = cx;
     g->body[0].y = cy;
 
@@ -221,7 +224,7 @@ bool snake_init(SnakeTiny* g,
     g->body[2].x = (uint8_t)(cx - 2);
     g->body[2].y = cy;
 
-    // 生成食物 
+    // 生成食物
     spawn_food(g);
 
     return true;
@@ -244,7 +247,7 @@ void snake_set_dir(SnakeTiny* g, SnakeDir d)
         return;
     }
 
-    // 禁止反向 
+    // 禁止反向
     if (!is_opposite(g->dir, d))
     {
         g->pending_dir = d;
@@ -260,7 +263,7 @@ void snake_set_dir(SnakeTiny* g, SnakeDir d)
   *   3. 游戏运行速度由本函数的调用频率决定
   * @param  g：SnakeTiny 结构体指针
   * @retval SnakeEvent事件枚举，用户可根据需要进行处理
-  *         
+  *
   */
 SnakeEvent snake_tick(SnakeTiny* g)
 {
@@ -275,13 +278,13 @@ SnakeEvent snake_tick(SnakeTiny* g)
         return SNAKE_EVT_NONE;
     }
 
-    // 采纳输入方向（再次防反向） 
+    // 采纳输入方向（再次防反向）
     if (!is_opposite(g->dir, g->pending_dir))
     {
         g->dir = g->pending_dir;
     }
 
-    // 计算下一格（撞墙死） 
+    // 计算下一格（撞墙死）
     head = g->body[0];
     next = head;
 
@@ -327,10 +330,10 @@ SnakeEvent snake_tick(SnakeTiny* g)
             break;
     }
 
-    // 是否吃到食物 
+    // 是否吃到食物
     eat = (uint8_t)point_eq(next, g->food);
 
-    // 撞自己判定（踩尾巴规则） 
+    // 撞自己判定（踩尾巴规则）
     check_len = eat ? g->len : (uint16_t)(g->len - 1);
     if (snake_contains(g, next, check_len))
     {
@@ -338,15 +341,15 @@ SnakeEvent snake_tick(SnakeTiny* g)
         return SNAKE_EVT_DIE_SELF;
     }
 
-		// 吃到则增长 
+		// 吃到则增长
 		if (eat)
 		{
 				if (g->len < g->body_cap)
 				{
 						g->len++;
 						g->score++;
-		
-						// 达到最大长度 -> 胜利 
+
+						// 达到最大长度 -> 胜利
 						if (g->len >= g->body_cap)
 						{
 								g->alive = 0u;
@@ -355,13 +358,13 @@ SnakeEvent snake_tick(SnakeTiny* g)
 				}
 				else
 				{
-						// 理论兜底：已经满了还能吃到（一般不会发生） 
+						// 理论兜底：已经满了还能吃到（一般不会发生）
 						g->alive = 0u;
 						return SNAKE_EVT_WIN;
 				}
 		}
 
-    // 移动（数组整体右移；最简单） 
+    // 移动（数组整体右移；最简单）
     i = (uint16_t)(g->len - 1);
     while (i > 0)
     {
@@ -379,3 +382,5 @@ SnakeEvent snake_tick(SnakeTiny* g)
 
     return SNAKE_EVT_MOVE;
 }
+
+#endif /* GAME_ENABLE_SNAKE */

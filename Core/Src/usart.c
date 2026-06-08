@@ -650,5 +650,25 @@ void my_printf(const char *fmt, ...) {
   HAL_UART_Transmit(&huart1, (uint8_t *)(buffer), actual_len, 0xFFFF);
 }
 
-/* USER CODE END 1 */
+/**
+ * @brief 自定义print函数
+ *
+ * @note 此函数同样为保险用，使用完全阻塞方式发送。
+ *
+ * @param str 字符串指针
+ * @param len 字符串长度
+ */
+void my_print(const char *str, uint32_t len) {
+	const uint16_t chunk_size = 0xFFFF;
+	uint32_t offset = 0;
 
+	while (offset < len) {
+		uint16_t send_len = (len - offset > chunk_size) ? chunk_size : (uint16_t)(len - offset);
+		HAL_UART_Transmit(&huart1, (uint8_t *)(str + offset), send_len, 0xFFFFFF);
+		// 等待发送完成，确保完全阻塞
+		while (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TC) == RESET);
+		offset += send_len;
+	}
+}
+
+/* USER CODE END 1 */

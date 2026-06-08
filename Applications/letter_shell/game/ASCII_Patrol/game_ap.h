@@ -1,6 +1,29 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+/**
+ * @brief Sprite类型标识符
+ * @note 使用整数常量替代多字符字面量，消除编译器警告
+ */
+#define SPRITE_SCOR		0x736F6F72	// 分数sprite ('scor'的整数值)
+#define SPRITE_POOF		0x706F6F66	// 爆炸sprite ('poof'的整数值)
+#define SPRITE_BASE		0x62617365	// 基地sprite ('base'的整数值)
+#define SPRITE_H0		0x6830		// 敌人类型0 ('h0'的整数值)
+#define SPRITE_H1		0x6831		// 敌人类型1 ('h1'的整数值)
+#define SPRITE_H2		0x6832		// 敌人类型2 ('h2'的整数值)
+#define SPRITE_H3		0x6833		// 敌人类型3 ('h3'的整数值)
+#define SPRITE_B0		0x6230		// 砖块类型0 ('b0'的整数值)
+#define SPRITE_B1		0x6231		// 砖块类型1 ('b1'的整数值)
+#define SPRITE_B2		0x6232		// 砖块类型2 ('b2'的整数值)
+#define SPRITE_B3		0x6233		// 砖块类型3 ('b3'的整数值)
+#define SPRITE_B4		0x6234		// 砖块类型4 ('b4'的整数值)
+#define SPRITE_TB		0x7462		// 道具sprite ('tb'的整数值)
+#define SPRITE_CHKP		0x63686B70	// 检查点sprite ('chkp'的整数值)
+#define SPRITE_R		'r'			// 砖块类型r (单字符)
+
 #include "assets.h"
 #include "spec.h"
 
@@ -398,5 +421,8 @@ struct LEVEL_MODAL : MODAL
 };
 
 void Interference(SCREEN* s, int dist, int noise, unsigned long phase, int freq, int amp, bool sync);
+void CleanupSpriteGarbage();
 
 #endif
+
+#endif /* GAME_ENABLE_AP */

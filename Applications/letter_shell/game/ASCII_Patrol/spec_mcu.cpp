@@ -5,6 +5,10 @@
  * 实现 spec.h 中定义的接口，针对 FreeRTOS + UART 环境适配
  */
 
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include "spec.h"
 #include "shell.h"
 #include "FreeRTOS.h"
@@ -14,19 +18,25 @@
 #include <stdio.h>
 #include <string.h>
 
-// 终端尺寸常量
-#define TERMINAL_WIDTH  110
+/** 终端宽度 */
+#define TERMINAL_WIDTH	110
+/** 终端高度 */
 #define TERMINAL_HEIGHT 25
 
-// 按键缓冲区
+/** 输入缓冲区大小 */
 #define INPUT_BUFFER_SIZE 16
+
+/** 按键释放超时时间 */
+#define KEY_RELEASE_TIMEOUT_MS 100
+/** 最多跟踪的按键数量 */
+#define MAX_TRACKED_KEYS 4
+
+/** 输出缓冲区大小 */
+#define OUTPUT_BUF_SIZE 4096
+
 static CON_INPUT g_input_buffer[INPUT_BUFFER_SIZE];
 static int g_input_head = 0;
 static int g_input_tail = 0;
-
-// 按键状态跟踪（用于检测按键释放）
-#define KEY_RELEASE_TIMEOUT_MS 100	// 按键释放超时时间
-#define MAX_TRACKED_KEYS 4			// 最多跟踪的按键数量
 
 static struct {
 	char key;
@@ -35,15 +45,13 @@ static struct {
 
 static int g_key_state_count = 0;
 
-// 当前 shell 实例（由 temp.cpp 中的 main_ascii_patrol 设置）
 extern Shell *ascii_patrol_shell;
-
-// 屏幕输出缓冲区（动态分配，terminal_init 中分配，terminal_done 中释放）
-#define OUTPUT_BUF_SIZE 4096
 static char *g_output_buf = NULL;
 
 /**
  * @brief 从 shell 读取字符
+ *
+ * @return int 读取到的字符，失败返回-1
  */
 static int read_uart_char(void)
 {
@@ -56,10 +64,12 @@ static int read_uart_char(void)
 
 /**
  * @brief 获取毫秒时间戳
+ *
+ * @return unsigned int 时间戳
  */
 unsigned int get_time()
 {
-    return (unsigned int)xTaskGetTickCount();
+	return (unsigned int)xTaskGetTickCount();
 }
 
 /**
@@ -67,79 +77,119 @@ unsigned int get_time()
  */
 void vsync_wait()
 {
-    osDelay(100);
+	osDelay(50);
 }
 
 /**
  * @brief 延时函数
+ *
+ * @param ms 延时毫秒数
  */
 void sleep_ms(int ms)
 {
-    osDelay(ms);
+	osDelay(ms);
 }
 
-// ==================== 终端管理 ====================
-
+/**
+ * @brief 终端初始化
+ *
+ * @param argc 参数个数
+ * @param argv 参数数组
+ * @param dw 返回终端宽度
+ * @param dh 返回终端高度
+ * @return int 0表示成功
+ */
 int terminal_init(int argc, char* argv[], int* dw, int* dh)
 {
-    (void)argc;
-    (void)argv;
+	(void)argc;
+	(void)argv;
 
-    // 设置终端尺寸
-    if (dw) *dw = TERMINAL_WIDTH;
-    if (dh) *dh = TERMINAL_HEIGHT;
+	if (dw) {
+		*dw = TERMINAL_WIDTH;
+	}
+	if (dh) {
+		*dh = TERMINAL_HEIGHT;
+	}
 
-    // 分配输出缓冲区
-    if (!g_output_buf) {
-        g_output_buf = (char*)pvPortMalloc(OUTPUT_BUF_SIZE);
-    }
+	if (!g_output_buf) {
+		g_output_buf = (char*)pvPortMalloc(OUTPUT_BUF_SIZE);
+	}
 
-    // 清空输入缓冲区
-    g_input_head = 0;
-    g_input_tail = 0;
+	g_input_head = 0;
+	g_input_tail = 0;
 
-    return 0;
+	return 0;
 }
 
+/**
+ * @brief 终端清理
+ */
 void terminal_done()
 {
-    // 释放输出缓冲区
-    if (g_output_buf) {
-        vPortFree(g_output_buf);
-        g_output_buf = NULL;
-    }
+	if (g_output_buf) {
+		vPortFree(g_output_buf);
+		g_output_buf = NULL;
+	}
 }
 
+/**
+ * @brief 获取终端尺寸
+ *
+ * @param dw 返回终端宽度
+ * @param dh 返回终端高度
+ */
 void get_terminal_wh(int* dw, int* dh)
 {
-    if (dw) *dw = TERMINAL_WIDTH;
-    if (dh) *dh = TERMINAL_HEIGHT;
+	if (dw) {
+		*dw = TERMINAL_WIDTH;
+	}
+	if (dh) {
+		*dh = TERMINAL_HEIGHT;
+	}
 }
 
+/**
+ * @brief 释放终端输出结构
+ *
+ * @param screen 终端输出结构
+ */
 void free_con_output(CON_OUTPUT* screen)
 {
-    // screen->color 始终指向 screen->buf 内部，不需要独立释放
-    if (screen) {
-        if (screen->buf) {
-            vPortFree(screen->buf);
-            screen->buf = NULL;
-        }
-        screen->color = NULL;
-    }
+	if (screen) {
+		if (screen->buf) {
+			vPortFree(screen->buf);
+			screen->buf = NULL;
+		}
+		screen->color = NULL;
+	}
 }
 
+/**
+ * @brief 终端刷新（串口输出无需刷新）
+ */
 void terminal_flush()
 {
-    // 串口输出无需刷新
 }
 
+/**
+ * @brief 终端清屏（由 screen_write 处理）
+ */
 void terminal_clear()
 {
-    // 清屏由 screen_write 处理
 }
 
-// ==================== 屏幕写入 ====================
-
+/**
+ * @brief 屏幕写入
+ *
+ * @param screen 屏幕输出结构
+ * @param dw 终端宽度
+ * @param dh 终端高度
+ * @param sx 起始x坐标
+ * @param sy 起始y坐标
+ * @param sw 写入宽度
+ * @param sh 写入高度
+ * @return int 0表示成功
+ */
 int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int sh)
 {
     (void)dw;
@@ -195,12 +245,13 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
 
 /**
  * @brief 更新按键状态跟踪
+ *
+ * @param ch 按键字符
  */
 static void update_key_state(char ch)
 {
 	unsigned long now = get_time();
 
-	// 查找是否已跟踪该按键
 	for (int i = 0; i < g_key_state_count; i++) {
 		if (g_key_state[i].key == ch) {
 			g_key_state[i].last_time = now;
@@ -208,7 +259,6 @@ static void update_key_state(char ch)
 		}
 	}
 
-	// 添加新按键到跟踪列表
 	if (g_key_state_count < MAX_TRACKED_KEYS) {
 		g_key_state[g_key_state_count].key = ch;
 		g_key_state[g_key_state_count].last_time = now;
@@ -223,13 +273,10 @@ static void check_key_releases()
 {
 	unsigned long now = get_time();
 
-	// 遍历所有跟踪的按键
 	for (int i = 0; i < g_key_state_count; ) {
 		unsigned long elapsed = now - g_key_state[i].last_time;
 
-		// 检查是否超时（按键释放）
 		if (elapsed >= KEY_RELEASE_TIMEOUT_MS) {
-			// 生成释放事件
 			int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
 			if (next != g_input_tail) {
 				g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
@@ -238,7 +285,6 @@ static void check_key_releases()
 				g_input_head = next;
 			}
 
-			// 从跟踪列表中移除
 			g_key_state[i] = g_key_state[g_key_state_count - 1];
 			g_key_state_count--;
 		} else {
@@ -252,13 +298,13 @@ static void check_key_releases()
  *
  * 所有从 shell 读取的字符都会入缓冲。游戏中的 ConfMapInput()
  * 会将原始按键映射为游戏操作（1/2/4/8/16 等），不需要在适配层过滤。
+ *
+ * @param ch 输入字符
  */
 static void push_input_event(char ch)
 {
-	// 更新按键状态跟踪
 	update_key_state(ch);
 
-	// 生成按下事件
 	int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
 	if (next != g_input_tail) {
 		g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
@@ -268,66 +314,95 @@ static void push_input_event(char ch)
 	}
 }
 
-// ==================== 输入处理 ====================
-
+/**
+ * @brief 获取输入长度
+ *
+ * @param r 返回输入数量
+ * @return bool true表示成功
+ */
 bool get_input_len(int* r)
 {
-    if (!r) return false;
+	if (!r) {
+		return false;
+	}
 
-    // 从 shell 读取所有可用字符，全部入缓冲
-    int ch = read_uart_char();
-    while (ch >= 0) {
-        push_input_event((char)ch);
-        ch = read_uart_char();
-    }
+	int ch = read_uart_char();
+	while (ch >= 0) {
+		push_input_event((char)ch);
+		ch = read_uart_char();
+	}
 
-    // 检查按键释放超时
-    check_key_releases();
+	check_key_releases();
 
-    // 计算可用输入数量
-    int count = 0;
-    int pos = g_input_tail;
-    while (pos != g_input_head) {
-        count++;
-        pos = (pos + 1) % INPUT_BUFFER_SIZE;
-    }
-    *r = count;
+	int count = 0;
+	int pos = g_input_tail;
+	while (pos != g_input_head) {
+		count++;
+		pos = (pos + 1) % INPUT_BUFFER_SIZE;
+	}
+	*r = count;
 
-    return true;
+	return true;
 }
 
+/**
+ * @brief 读取输入（适配层包装）
+ *
+ * @param ir 输入事件数组
+ * @param n 最大读取数量
+ * @param r 返回实际读取数量
+ * @return bool true表示成功
+ */
 bool spec_read_input(CON_INPUT* ir, int n, int* r)
 {
-    return read_input(ir, n, r);
+	return read_input(ir, n, r);
 }
 
+/**
+ * @brief 读取输入
+ *
+ * @param ir 输入事件数组
+ * @param n 最大读取数量
+ * @param r 返回实际读取数量
+ * @return bool true表示成功
+ */
 bool read_input(CON_INPUT* ir, int n, int* r)
 {
-    if (!ir || n <= 0 || !r) return false;
+	if (!ir || n <= 0 || !r) {
+		return false;
+	}
 
-    int count = 0;
-    while (count < n && g_input_tail != g_input_head) {
-        ir[count] = g_input_buffer[g_input_tail];
-        g_input_tail = (g_input_tail + 1) % INPUT_BUFFER_SIZE;
-        count++;
-    }
+	int count = 0;
+	while (count < n && g_input_tail != g_input_head) {
+		ir[count] = g_input_buffer[g_input_tail];
+		g_input_tail = (g_input_tail + 1) % INPUT_BUFFER_SIZE;
+		count++;
+	}
 
-    *r = count;
-    return count > 0;
+	*r = count;
+	return count > 0;
 }
 
+/**
+ * @brief 检查是否有按键释放（通过超时检测实现）
+ *
+ * @return bool true表示支持
+ */
 bool has_key_releases()
 {
-    // 通过超时检测实现按键释放检测
-    return true;
+	return true;
 }
 
-// ==================== 调试输出 ====================
-
+/**
+ * @brief 调试输出
+ *
+ * @param str 调试字符串
+ */
 void DBG(const char* str)
 {
-	// 调试信息通过 shell 发送
-	if (!ascii_patrol_shell) return;
+	if (!ascii_patrol_shell) {
+		return;
+	}
 
 	char buf[128];
 	int len = sprintf(buf, "[DBG] %s\r\n", str);
@@ -335,63 +410,246 @@ void DBG(const char* str)
 	ascii_patrol_shell->write(buf, len);
 }
 
-// ==================== 全局 new/delete 重载 ====================
-// 使用 FreeRTOS 内存分配，替代 C 标准库 malloc/free
-
+/**
+ * @brief new 操作符重载（使用 FreeRTOS 内存分配）
+ *
+ * @param size 分配大小
+ * @return void* 分配的内存指针
+ */
 void* operator new(size_t size)
 {
 	void* p = pvPortMalloc(size);
 	return p;
 }
 
+/**
+ * @brief new[] 操作符重载（使用 FreeRTOS 内存分配）
+ *
+ * @param size 分配大小
+ * @return void* 分配的内存指针
+ */
 void* operator new[](size_t size)
 {
 	void* p = pvPortMalloc(size);
 	return p;
 }
 
+/**
+ * @brief delete 操作符重载（使用 FreeRTOS 内存释放）
+ *
+ * @param ptr 释放的内存指针
+ */
 void operator delete(void* ptr)
 {
 	vPortFree(ptr);
 }
 
+/**
+ * @brief delete[] 操作符重载（使用 FreeRTOS 内存释放）
+ *
+ * @param ptr 释放的内存指针
+ */
 void operator delete[](void* ptr)
 {
 	vPortFree(ptr);
 }
 
+/**
+ * @brief delete 操作符重载（带大小）
+ *
+ * @param ptr 释放的内存指针
+ * @param size 大小（未使用）
+ */
 void operator delete(void* ptr, size_t size)
 {
 	(void)size;
 	vPortFree(ptr);
 }
 
+/**
+ * @brief delete[] 操作符重载（带大小）
+ *
+ * @param ptr 释放的内存指针
+ * @param size 大小（未使用）
+ */
 void operator delete[](void* ptr, size_t size)
 {
 	(void)size;
 	vPortFree(ptr);
 }
 
-// ==================== 游戏主循环 ====================
-
+/**
+ * @brief 游戏主循环
+ */
 void terminal_loop()
 {
-    // 游戏主循环，运行 modal 直到返回
-    while (modal) {
-        int result = modal->Run();
-        if (result < 0) {
-            // 负数退出码，退出游戏
-            break;
-        }
-        // 正数或零通常表示继续下一个 modal
-        osDelay(1);
-    }
+	while (modal) {
+		int result = modal->Run();
+		if (result < 0) {
+			break;
+		}
+		osDelay(1);
+	}
 }
 
-// ==================== 应用控制 ====================
-
+/**
+ * @brief 应用退出
+ */
 void app_exit()
 {
-    // 设置 modal 为 NULL，terminal_loop 检测到后退出，返回 shell
-    modal = NULL;
+	modal = NULL;
 }
+
+/* ============================================================
+ *  嵌入式数学函数替代实现（避免使用标准库 math.h）
+ * ============================================================ */
+
+/** 圆周率 */
+#define M_PI 3.14159265f
+
+/**
+ * @brief 向下取整
+ * @param x 输入值
+ * @return float 不大于 x 的最大整数
+ */
+float floorf(float x)
+{
+	int i = (int)x;
+	if (x >= 0.0f || (float)i == x) {
+		return (float)i;
+	}
+	return (float)(i - 1);
+}
+
+/**
+ * @brief 正弦函数（Bhaskara I 近似公式）
+ *
+ * 精度约 0.001，适用于游戏动画效果
+ *
+ * @param x 弧度值
+ * @return float sin(x)
+ */
+float sinf(float x)
+{
+	// 归一化到 [0, 2*PI]
+	const float TWO_PI = 2.0f * M_PI;
+	while (x < 0.0f) {
+		x += TWO_PI;
+	}
+	while (x >= TWO_PI) {
+		x -= TWO_PI;
+	}
+
+	// 利用对称性将范围缩小到 [0, PI]
+	int sign = 1;
+	if (x > M_PI) {
+		x -= M_PI;
+		sign = -1;
+	}
+
+	// Bhaskara I 近似: sin(x) ≈ 16*x*(π-x) / (5π² - 4*x*(π-x))
+	float t = x * (M_PI - x);
+	float result = 16.0f * t / (5.0f * M_PI * M_PI - 4.0f * t);
+	return sign * result;
+}
+
+/**
+ * @brief 余弦函数
+ * @param x 弧度值
+ * @return float cos(x)
+ */
+float cosf(float x)
+{
+	return sinf(x + M_PI / 2.0f);
+}
+
+/**
+ * @brief 平方根函数（牛顿迭代法）
+ * @param x 输入值
+ * @return float sqrt(x)
+ */
+float sqrtf(float x)
+{
+	if (x <= 0.0f) {
+		return 0.0f;
+	}
+	float r = x;
+	for (int i = 0; i < 8; i++) {
+		r = 0.5f * (r + x / r);
+	}
+	return r;
+}
+
+/**
+ * @brief 指数函数（泰勒级数，仅处理负数参数）
+ * @param x 指数值（通常为负数）
+ * @return float exp(x)
+ */
+float expf(float x)
+{
+	if (x >= 0.0f) {
+		return 1.0f;
+	}
+	if (x < -5.0f) {
+		return 0.0f;
+	}
+
+	// e^x = 1 + x + x^2/2! + x^3/3! + ...
+	float sum = 1.0f;
+	float term = 1.0f;
+	for (int i = 1; i < 10; i++) {
+		term *= x / (float)i;
+		sum += term;
+	}
+	return sum;
+}
+
+/**
+ * @brief 自然对数函数（泰勒级数展开）
+ * @param x 输入值
+ * @return float ln(x)
+ */
+float logf(float x)
+{
+	if (x <= 0.0f) {
+		return 0.0f;
+	}
+
+	float result = 0.0f;
+	float term;
+
+	// 使用变换: ln(x) = 2 * sum_{k=0}^{n} ((x-1)/(x+1))^(2k+1) / (2k+1)
+	float t = (x - 1.0f) / (x + 1.0f);
+	float t_squared = t * t;
+	float t_power = t;
+
+	for (int k = 0; k < 10; k++) {
+		term = t_power / (2.0f * k + 1.0f);
+		result += term;
+		t_power *= t_squared;
+	}
+
+	return 2.0f * result;
+}
+
+/**
+ * @brief 普通精度正弦函数（兼容C标准库）
+ * @param x 弧度值
+ * @return float sin(x)
+ */
+float sin(float x)
+{
+	return sinf((float)x);
+}
+
+/**
+ * @brief 自然对数函数（兼容C标准库，double版本）
+ * @param x 输入值
+ * @return float log(x)
+ */
+float log(float x)
+{
+	return logf((float)x);
+}
+
+#endif /* GAME_ENABLE_AP */

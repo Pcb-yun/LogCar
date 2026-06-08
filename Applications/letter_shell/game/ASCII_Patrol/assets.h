@@ -1,3 +1,13 @@
+/**
+ * @file assets.h
+ * @brief ASCII Patrol 游戏资源定义
+ *
+ * 包含所有游戏精灵、场景、字体等图形资源的定义
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef ASSETS_H
 #define ASSETS_H
 
@@ -74,3 +84,4 @@ extern ASSET wheel;
 
 #endif
 
+#endif /* GAME_ENABLE_AP */

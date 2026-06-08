@@ -65,6 +65,7 @@ void MX_USART6_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 void my_printf(const char *fmt, ...);
+void my_print(const char *str, uint32_t len);
 
 /* USER CODE END Prototypes */
 
@@ -73,4 +74,3 @@ void my_printf(const char *fmt, ...);
 #endif
 
 #endif /* __USART_H__ */
-

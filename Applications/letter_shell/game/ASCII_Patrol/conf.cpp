@@ -1,8 +1,17 @@
+/**
+ * @file conf.cpp
+ * @brief ASCII Patrol 游戏配置管理
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include "conf.h"
 #include "menu.h"
 #include "spec.h"
 
-// 默认配置
+/** 默认战役配置 */
 ConfCampaign conf_campaign=
 {
 	0,0,0
@@ -57,3 +66,5 @@ char ConfMapInput(char c)
 
 	return c;
 }
+
+#endif /* GAME_ENABLE_AP */

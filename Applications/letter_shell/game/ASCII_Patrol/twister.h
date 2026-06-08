@@ -1,3 +1,7 @@
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef TWISTER_H
 #define TWISTER_H
 
@@ -8,3 +12,5 @@ int  twister_rand();
 
 #endif
 
+
+#endif /* GAME_ENABLE_AP */

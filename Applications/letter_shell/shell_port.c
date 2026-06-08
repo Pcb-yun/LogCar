@@ -23,16 +23,31 @@ Shell shell;
 char shellBuffer[SHELL_BUFFER_SIZE];
 
 /**
-* @brief 用户shell写
-* @param data 数据
-* @param len 数据长度
-* @return 实际写入的数据长度
-*/
-static short userShellWrite(char *data, unsigned short len) {
-   osEventFlagsClear(System_StatusHandle, UART1_TX_IDLE);
-   HAL_UART_Transmit_DMA(&huart1, (uint8_t *)data, len);
-   osEventFlagsWait(System_StatusHandle, UART1_TX_IDLE, osFlagsWaitAny, osWaitForever);
-   return len;
+ * @brief 用户shell写
+ * @param data 数据
+ * @param len 数据长度
+ * @return 实际写入的数据长度
+ */
+static short userShellWrite(char *data, uint32_t len) {
+    uint32_t total_sent = 0;
+    const uint16_t MAX_DMA_LEN = 0xFFFF;  // DMA单次最大发送长度
+
+    while (len > 0) {
+        // 计算本次发送长度，不超过DMA限制
+        uint16_t send_len = len > MAX_DMA_LEN ? MAX_DMA_LEN : (uint16_t)len;
+
+        // 发送数据
+        osEventFlagsClear(System_StatusHandle, UART1_TX_IDLE);
+        HAL_UART_Transmit_DMA(&huart1, (uint8_t *)data, send_len);
+        osEventFlagsWait(System_StatusHandle, UART1_TX_IDLE, osFlagsWaitAny, osWaitForever);
+
+        // 更新进度
+        total_sent += send_len;
+        data += send_len;
+        len -= send_len;
+    }
+
+    return total_sent;
 }
 
 /**
