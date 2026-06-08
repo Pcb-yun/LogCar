@@ -13,18 +13,24 @@
  * @brief ASCII Art图片数据数组
  */
 static const Artdata_t Art_cfg[] = {
+#if NINA_EN
     {
         .name = "NINA",
         .data = NINA_DATA,
     },
+#endif
+#if HARUHI_EN
 	{
 		.name = "HARUHI",
 		.data = HARUHI_DATA,
 	},
+#endif
+#if IZUMI_EN
 	{
 		.name = "IZUMI",
 		.data = IZUMI_DATA,
 	}
+#endif
 };
 
 /**
