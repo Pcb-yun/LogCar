@@ -154,14 +154,20 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
     char *output_buf = g_output_buf;
     int len = 0;
 
-    // 发送清屏命令
-    len += sprintf(output_buf + len, "\033[%dA\033[J\033[2A", TERMINAL_HEIGHT);
+    // 静态变量，追踪是否是第一帧
+    static bool is_first_frame = true;
 
-    // 逐行发送内容
+    if (is_first_frame) {
+        // 第一帧：完整清屏，清除游戏前的内容
+        len += sprintf(output_buf + len, "\033[H\033[2J");
+        is_first_frame = false;
+    } else {
+        // 后续帧：仅移动光标到左上角，覆盖刷新
+        len += sprintf(output_buf + len, "\033[H");
+    }
+
+    // 逐行发送内容（覆盖原有内容）
     for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
-        // 移动光标到行首
-        len += sprintf(output_buf + len, "\033[%d;1H", y + 1);
-
         // 发送该行内容
         for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
             int idx = y * (screen->w + 1) + x;
@@ -171,10 +177,13 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
                 output_buf[len++] = c;
             }
         }
-        // 换行
+        // 换行但不滚动屏幕
         output_buf[len++] = '\r';
         output_buf[len++] = '\n';
     }
+
+    // 清除光标位置后的剩余内容（避免残留）
+    len += sprintf(output_buf + len, "\033[J");
 
     // 发送完整缓冲区（通过 shell 写接口）
     if (len > 0 && ascii_patrol_shell) {
