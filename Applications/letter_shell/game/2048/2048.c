@@ -6,6 +6,9 @@
  ============================================================================
  */
 
+#include "game_en.h"
+#if GAME_ENABLE_2048
+
 #define _XOPEN_SOURCE 500
 #include <stdlib.h>
 #include <string.h>
@@ -421,3 +424,5 @@ int main_2048(int argc, char *argv[]) {
 
 	return EXIT_SUCCESS;
 }
+
+#endif /* GAME_ENABLE_2048 */

@@ -3,11 +3,10 @@
  * @brief ASCII Patrol 游戏资源定义
  *
  * 包含所有游戏精灵、场景、字体等图形资源的定义
- * @version 1.0.0
- * @date 2026-06-08
- *
- * @copyright (c) 2026
  */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
 
 #include "assets.h"
 
@@ -5414,3 +5413,4 @@ ASSET wheel=
 	wheel_color
 };
 
+#endif /* GAME_ENABLE_AP */

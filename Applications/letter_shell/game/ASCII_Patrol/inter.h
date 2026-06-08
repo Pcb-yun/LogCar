@@ -1,8 +1,12 @@
 
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #ifndef INTER_H
 #define INTER_H
 
-#include "game.h"
+#include "game_ap.h"
 
 struct PERF
 {
@@ -106,9 +110,9 @@ struct INTER_MODAL : MODAL
 	int bonus;
 
 	virtual ~INTER_MODAL();
-	INTER_MODAL(SCREEN* _s, 
-				int _lives, int _startlives, int* _score, 
-				const char* _course_name, const LEVEL* _current_level, 
+	INTER_MODAL(SCREEN* _s,
+				int _lives, int _startlives, int* _score,
+				const char* _course_name, const LEVEL* _current_level,
 				int _time, int _hitval, int _hitmax);
 
 	virtual int Run();
@@ -116,3 +120,4 @@ struct INTER_MODAL : MODAL
 
 #endif
 
+#endif /* GAME_ENABLE_AP */

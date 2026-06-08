@@ -1,3 +1,11 @@
+/**
+ * @file conf.h
+ * @brief ASCII Patrol 游戏配置管理
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef CONF_H
 #define CONF_H
 
@@ -32,3 +40,5 @@ extern "C"
 char ConfMapInput(char c);
 
 #endif
+
+#endif /* GAME_ENABLE_AP */

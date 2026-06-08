@@ -82,10 +82,10 @@ bool MotionControl_Init(void) {
     for (int i = 0; i < 4; i++) {
         motor = &g_motor_status->motors[i];
         switch(motor->motor_id) {
-            case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->encoder_linear; break;
-            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->encoder_linear; break;
-            case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->encoder_linear; break;
-            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->encoder_linear; break;
+            case MOTOR_FRONT_LEFT: g_last_enc->front_left = 0; break;
+            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = 0; break;
+            case MOTOR_BACK_LEFT: g_last_enc->rear_left = 0; break;
+            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = 0; break;
         }
     }
     g_last_enc->timestamp = osKernelGetTickCount();
@@ -115,10 +115,10 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
         for (int i = 0; i < 4; i++) {
             motor = &g_motor_status->motors[i];
             switch(motor->motor_id) {
-                case MOTOR_FRONT_LEFT: enc.front_left = motor->encoder_linear; break;
-                case MOTOR_FRONT_RIGHT: enc.front_right = motor->encoder_linear; break;
-                case MOTOR_BACK_LEFT: enc.rear_left = motor->encoder_linear; break;
-                case MOTOR_BACK_RIGHT: enc.rear_right = motor->encoder_linear; break;
+                case MOTOR_FRONT_LEFT: enc.front_left = 0; break;
+                case MOTOR_FRONT_RIGHT: enc.front_right = 0; break;
+                case MOTOR_BACK_LEFT: enc.rear_left = 0; break;
+                case MOTOR_BACK_RIGHT: enc.rear_right = 0; break;
             }
         }
         enc.timestamp = osKernelGetTickCount();

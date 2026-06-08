@@ -26,6 +26,9 @@
  ******************************************************************************
  */
 
+#include "game_en.h"
+#if GAME_ENABLE_SNAKE
+
 #ifndef SNAKE_TINY_H
 #define SNAKE_TINY_H
 
@@ -155,3 +158,5 @@ extern "C"
 #endif
 
 #endif // SNAKE_TINY_H
+
+#endif /* GAME_ENABLE_SNAKE */

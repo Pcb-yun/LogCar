@@ -3,11 +3,11 @@
  * @brief ASCII Patrol 嵌入式平台适配层
  *
  * 实现 spec.h 中定义的接口，针对 FreeRTOS + UART 环境适配
- * @version 1.0.0
- * @date 2026-06-08
- *
- * @copyright (c) 2026
  */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 
 #include "spec.h"
 #include "shell.h"
@@ -77,7 +77,7 @@ unsigned int get_time()
  */
 void vsync_wait()
 {
-	osDelay(100);
+	osDelay(50);
 }
 
 /**
@@ -192,42 +192,55 @@ void terminal_clear()
  */
 int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int sh)
 {
-	(void)dw;
-	(void)dh;
-	(void)sx;
-	(void)sy;
-	(void)sw;
-	(void)sh;
+    (void)dw;
+    (void)dh;
+    (void)sx;
+    (void)sy;
+    (void)sw;
+    (void)sh;
 
-	if (!screen || !screen->buf || !g_output_buf) {
-		return 0;
-	}
+    if (!screen || !screen->buf || !g_output_buf) return 0;
 
-	char *output_buf = g_output_buf;
-	int len = 0;
+    char *output_buf = g_output_buf;
+    int len = 0;
 
-	len += sprintf(output_buf + len, "\033[%dA\033[J\033[2A", TERMINAL_HEIGHT);
+    // 静态变量，追踪是否是第一帧
+    static bool is_first_frame = true;
 
-	for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
-		len += sprintf(output_buf + len, "\033[%d;1H", y + 1);
+    if (is_first_frame) {
+        // 第一帧：完整清屏，清除游戏前的内容
+        len += sprintf(output_buf + len, "\033[H\033[2J");
+        is_first_frame = false;
+    } else {
+        // 后续帧：仅移动光标到左上角，覆盖刷新
+        len += sprintf(output_buf + len, "\033[H");
+    }
 
-		for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
-			int idx = y * (screen->w + 1) + x;
-			if (idx < (screen->w + 1) * screen->h) {
-				char c = screen->buf[idx];
-				c = c ? c : ' ';
-				output_buf[len++] = c;
-			}
-		}
-		output_buf[len++] = '\r';
-		output_buf[len++] = '\n';
-	}
+    // 逐行发送内容（覆盖原有内容）
+    for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
+        // 发送该行内容
+        for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
+            int idx = y * (screen->w + 1) + x;
+            if (idx < (screen->w + 1) * screen->h) {
+                char c = screen->buf[idx];
+                c = c ? c : ' ';
+                output_buf[len++] = c;
+            }
+        }
+        // 换行但不滚动屏幕
+        output_buf[len++] = '\r';
+        output_buf[len++] = '\n';
+    }
 
-	if (len > 0 && ascii_patrol_shell) {
-		ascii_patrol_shell->write(output_buf, len);
-	}
+    // 清除光标位置后的剩余内容（避免残留）
+    len += sprintf(output_buf + len, "\033[J");
 
-	return 0;
+    // 发送完整缓冲区（通过 shell 写接口）
+    if (len > 0 && ascii_patrol_shell) {
+        ascii_patrol_shell->write(output_buf, len);
+    }
+
+    return 0;
 }
 
 /**
@@ -486,3 +499,157 @@ void app_exit()
 {
 	modal = NULL;
 }
+
+/* ============================================================
+ *  嵌入式数学函数替代实现（避免使用标准库 math.h）
+ * ============================================================ */
+
+/** 圆周率 */
+#define M_PI 3.14159265f
+
+/**
+ * @brief 向下取整
+ * @param x 输入值
+ * @return float 不大于 x 的最大整数
+ */
+float floorf(float x)
+{
+	int i = (int)x;
+	if (x >= 0.0f || (float)i == x) {
+		return (float)i;
+	}
+	return (float)(i - 1);
+}
+
+/**
+ * @brief 正弦函数（Bhaskara I 近似公式）
+ *
+ * 精度约 0.001，适用于游戏动画效果
+ *
+ * @param x 弧度值
+ * @return float sin(x)
+ */
+float sinf(float x)
+{
+	// 归一化到 [0, 2*PI]
+	const float TWO_PI = 2.0f * M_PI;
+	while (x < 0.0f) {
+		x += TWO_PI;
+	}
+	while (x >= TWO_PI) {
+		x -= TWO_PI;
+	}
+
+	// 利用对称性将范围缩小到 [0, PI]
+	int sign = 1;
+	if (x > M_PI) {
+		x -= M_PI;
+		sign = -1;
+	}
+
+	// Bhaskara I 近似: sin(x) ≈ 16*x*(π-x) / (5π² - 4*x*(π-x))
+	float t = x * (M_PI - x);
+	float result = 16.0f * t / (5.0f * M_PI * M_PI - 4.0f * t);
+	return sign * result;
+}
+
+/**
+ * @brief 余弦函数
+ * @param x 弧度值
+ * @return float cos(x)
+ */
+float cosf(float x)
+{
+	return sinf(x + M_PI / 2.0f);
+}
+
+/**
+ * @brief 平方根函数（牛顿迭代法）
+ * @param x 输入值
+ * @return float sqrt(x)
+ */
+float sqrtf(float x)
+{
+	if (x <= 0.0f) {
+		return 0.0f;
+	}
+	float r = x;
+	for (int i = 0; i < 8; i++) {
+		r = 0.5f * (r + x / r);
+	}
+	return r;
+}
+
+/**
+ * @brief 指数函数（泰勒级数，仅处理负数参数）
+ * @param x 指数值（通常为负数）
+ * @return float exp(x)
+ */
+float expf(float x)
+{
+	if (x >= 0.0f) {
+		return 1.0f;
+	}
+	if (x < -5.0f) {
+		return 0.0f;
+	}
+
+	// e^x = 1 + x + x^2/2! + x^3/3! + ...
+	float sum = 1.0f;
+	float term = 1.0f;
+	for (int i = 1; i < 10; i++) {
+		term *= x / (float)i;
+		sum += term;
+	}
+	return sum;
+}
+
+/**
+ * @brief 自然对数函数（泰勒级数展开）
+ * @param x 输入值
+ * @return float ln(x)
+ */
+float logf(float x)
+{
+	if (x <= 0.0f) {
+		return 0.0f;
+	}
+
+	float result = 0.0f;
+	float term;
+
+	// 使用变换: ln(x) = 2 * sum_{k=0}^{n} ((x-1)/(x+1))^(2k+1) / (2k+1)
+	float t = (x - 1.0f) / (x + 1.0f);
+	float t_squared = t * t;
+	float t_power = t;
+
+	for (int k = 0; k < 10; k++) {
+		term = t_power / (2.0f * k + 1.0f);
+		result += term;
+		t_power *= t_squared;
+	}
+
+	return 2.0f * result;
+}
+
+/**
+ * @brief 普通精度正弦函数（兼容C标准库）
+ * @param x 弧度值
+ * @return float sin(x)
+ */
+float sin(float x)
+{
+	return sinf((float)x);
+}
+
+/**
+ * @brief 自然对数函数（兼容C标准库，double版本）
+ * @param x 输入值
+ * @return float log(x)
+ */
+float log(float x)
+{
+	return logf((float)x);
+}
+
+#endif /* GAME_ENABLE_AP */

@@ -3,14 +3,13 @@
  * @brief ASCII Patrol 游戏入口与模态框管理
  *
  * 实现游戏主入口、战役模式、菜单模态框和开场动画
- * @version 1.0.0
- * @date 2026-06-08
- *
- * @copyright (c) 2026
  */
 
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
 #include <stdlib.h>
-#include <math.h>
 #include <assert.h>
 #include <string.h>
 
@@ -22,7 +21,7 @@
 
 #include "inter.h"
 #include "gameover.h"
-#include "game.h"
+#include "game_ap.h"
 #include "spec.h"
 #include "menu.h"
 #include "conf.h"
@@ -491,10 +490,10 @@ struct INTRO_MODAL : MODAL {
 
 		for (int i = 0; i < 336; i++) {
 			if ((i / 16) % 3 == 0) {
-				fr_terrain[i] = (signed char)(-1.7 * sin(3.131592 * i / 8));
+				fr_terrain[i] = (signed char)(-1.7f * sinf(3.131592f * i / 8));
 			}
 			if ((i / 16) % 3 == 1) {
-				bk_terrain[i] = (signed char)(1.7 * sin(3.131592 * (i + 63) / 8));
+				bk_terrain[i] = (signed char)(1.7f * sinf(3.131592f * (i + 63) / 8));
 			}
 		}
 
@@ -744,13 +743,21 @@ extern "C" int main_ascii_patrol(int argc, char* argv[])
 	int cols, rows;
 	terminal_init(0, 0, &cols, &rows);
 
+	// 隐藏光标，避免干扰游戏画面
+	ascii_patrol_shell->write("\033[?25l", 6);
+
 	modal = &intro_modal;
 
 	intro_modal.Init(&global_screen);
 
 	terminal_loop();
 
+	CleanupSpriteGarbage();
+	FreeMenu();
 	terminal_done();
+
+	// 恢复光标显示
+	ascii_patrol_shell->write("\033[?25h", 6);
 
 	osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 
@@ -787,3 +794,5 @@ void SetColorMode(unsigned char cl)
 	cl_transp = 0;
 	SetColorMode(&global_screen, 0);
 }
+
+#endif /* GAME_ENABLE_AP */

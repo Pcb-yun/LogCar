@@ -4,6 +4,9 @@
  * @brief 贪吃蛇游戏移植
  */
 
+#include "game_en.h"
+#if GAME_ENABLE_SNAKE
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -118,3 +121,5 @@ int main_snake(int argc, char *argv[]) {
 
     return 0;
 }
+
+#endif /* GAME_ENABLE_SNAKE */

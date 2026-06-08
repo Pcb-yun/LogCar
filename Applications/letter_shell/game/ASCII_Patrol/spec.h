@@ -1,3 +1,7 @@
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef SPEC_H
 #define SPEC_H
 
@@ -109,6 +113,15 @@ float sinf(float f);
 float cosf(float f);
 float expf(float f);
 float powf(float f, float n);
+#else
+float sqrtf(float f);
+float logf(float f);
+float log(float x);
+float floorf(float f);
+float sinf(float f);
+float cosf(float f);
+float expf(float f);
+float sin(float x);
 #endif
 
 #define ABS(a) ((a)<0 ? -(a):(a))
@@ -117,3 +130,5 @@ float powf(float f, float n);
 
 void app_exit();
 #endif
+
+#endif /* GAME_ENABLE_AP */

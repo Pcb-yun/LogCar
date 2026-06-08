@@ -3,11 +3,11 @@
  * @brief ASCII Patrol 游戏结束界面
  *
  * 实现游戏结束时的统计和显示界面
- * @version 1.0.0
- * @date 2026-06-08
- *
- * @copyright (c) 2026
  */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 
 #include <stdio.h>
 #include <string.h>
@@ -33,8 +33,12 @@ GAMEOVER_MODAL::~GAMEOVER_MODAL()
 }
 
 GAMEOVER_MODAL::GAMEOVER_MODAL(SCREEN* _s, int* _score, const LEVEL* _level) :
-	bk(&game_over_bk),
+	s(_s),
+	score(_score),
+	level(_level),
+	bk2_asset(),
 	bk2(_level->bkgnd),
+	bk(&game_over_bk),
 	fg(&game_over_fg),
 	tx(&game_over_tx),
 	fl1(&flame1),
@@ -166,10 +170,8 @@ int GAMEOVER_MODAL::Run()
 		s->tcolor = 0x0F;
 	s->Clear();
 
-	int tm_y = 0,  tm_h = 10;
-	int bk_y = 10, bk_h = 20;
-	int fg_y = 30, fg_h = 10;
-	int bm_y = 40, bm_h = 10;
+	int bk_y = 10;
+	int fg_y = 30;
 
 	int wx = (160 - s->w)/2;
 	int wy = 17 - 17*(s->h-25)/25;
@@ -282,3 +284,5 @@ int GAMEOVER_MODAL::Run()
 
 	return 0;
 }
+
+#endif /* GAME_ENABLE_AP */

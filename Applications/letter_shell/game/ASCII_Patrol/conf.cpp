@@ -1,13 +1,11 @@
 /**
  * @file conf.cpp
  * @brief ASCII Patrol 游戏配置管理
- *
- * 实现游戏配置数据的定义和持久化
- * @version 1.0.0
- * @date 2026-06-08
- *
- * @copyright (c) 2026
  */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 
 #include "conf.h"
 #include "menu.h"
@@ -68,3 +66,5 @@ char ConfMapInput(char c)
 
 	return c;
 }
+
+#endif /* GAME_ENABLE_AP */

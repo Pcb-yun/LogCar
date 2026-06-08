@@ -81,6 +81,11 @@ virtualFolder:
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c
           folders: []
+    - name: ansi_art
+      files:
+        - path: Applications/ANSI_Art/Art_Data.c
+        - path: Applications/ANSI_Art/Art_show.c
+      folders: []
     - name: chassis
       files:
         - path: Applications/chassis/chassis.c
@@ -105,7 +110,7 @@ virtualFolder:
         - path: Applications/letter_shell/game/snake/snake_tiny.c
         - path: Applications/letter_shell/game/ASCII_Patrol/assets.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/conf.cpp
-        - path: Applications/letter_shell/game/ASCII_Patrol/game.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/game_ap.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/gameover.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/inter.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/manual.cpp
@@ -168,7 +173,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F407xx
         - STM32_THREAD_SAFE_STRATEGY=4
-        - USE_WG=1
+        - USE_WG=0
       incList:
         - Core/Inc
         - Drivers/STM32F4xx_HAL_Driver/Inc
@@ -178,10 +183,12 @@ targets:
         - Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F
         - Drivers/CMSIS/Device/ST/STM32F4xx/Include
         - Drivers/CMSIS/Include
+        - Applications/ANSI_Art
         - Applications/chassis
         - Applications/chassis/kinematics
         - Applications/chassis/motion
         - Applications/letter_shell
+        - Applications/letter_shell/game
         - Applications/letter_shell/game/ASCII_Patrol
         - Applications/letter_shell/game/snake
         - Applications/letter_shell/log

@@ -8,7 +8,7 @@
 #define __CHASSIS_CONFIG_H__
 
 // 麦轮小车机械参数
-#define WHEEL_RADIUS       5.0f     // 轮子半径 (cm)
+#define WHEEL_RADIUS       4.0f     // 轮子半径 (cm)
 #define WHEEL_BASE_WIDTH   25.0f    // 轮距宽度 (cm)
 #define WHEEL_BASE_LENGTH  25.0f    // 轴距长度 (cm)
 

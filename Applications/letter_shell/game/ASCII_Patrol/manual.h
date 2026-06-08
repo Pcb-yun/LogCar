@@ -1,7 +1,11 @@
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
 #ifndef MANUAL_H
 #define MANUAL_H
 
-#include "game.h"
+#include "game_ap.h"
 
 struct MANUAL : SCREEN
 {
@@ -25,3 +29,4 @@ struct MANUAL : SCREEN
 
 #endif
 
+#endif /* GAME_ENABLE_AP */
