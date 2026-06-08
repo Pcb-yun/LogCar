@@ -19,7 +19,7 @@
 #include <string.h>
 
 /** 终端宽度 */
-#define TERMINAL_WIDTH  110
+#define TERMINAL_WIDTH	110
 /** 终端高度 */
 #define TERMINAL_HEIGHT 25
 
@@ -39,8 +39,8 @@ static int g_input_head = 0;
 static int g_input_tail = 0;
 
 static struct {
-    char key;
-    unsigned long last_time;
+	char key;
+	unsigned long last_time;
 } g_key_state[MAX_TRACKED_KEYS];
 
 static int g_key_state_count = 0;
@@ -55,11 +55,11 @@ static char *g_output_buf = NULL;
  */
 static int read_uart_char(void)
 {
-    char ch;
-    if (ascii_patrol_shell && ascii_patrol_shell->read(&ch, 1) > 0) {
-        return (int)ch;
-    }
-    return -1;
+	char ch;
+	if (ascii_patrol_shell && ascii_patrol_shell->read(&ch, 1) > 0) {
+		return (int)ch;
+	}
+	return -1;
 }
 
 /**
@@ -69,7 +69,7 @@ static int read_uart_char(void)
  */
 unsigned int get_time()
 {
-    return (unsigned int)xTaskGetTickCount();
+	return (unsigned int)xTaskGetTickCount();
 }
 
 /**
@@ -77,7 +77,7 @@ unsigned int get_time()
  */
 void vsync_wait()
 {
-    osDelay(100);
+	osDelay(100);
 }
 
 /**
@@ -87,7 +87,7 @@ void vsync_wait()
  */
 void sleep_ms(int ms)
 {
-    osDelay(ms);
+	osDelay(ms);
 }
 
 /**
@@ -101,24 +101,24 @@ void sleep_ms(int ms)
  */
 int terminal_init(int argc, char* argv[], int* dw, int* dh)
 {
-    (void)argc;
-    (void)argv;
+	(void)argc;
+	(void)argv;
 
-    if (dw) {
-        *dw = TERMINAL_WIDTH;
-    }
-    if (dh) {
-        *dh = TERMINAL_HEIGHT;
-    }
+	if (dw) {
+		*dw = TERMINAL_WIDTH;
+	}
+	if (dh) {
+		*dh = TERMINAL_HEIGHT;
+	}
 
-    if (!g_output_buf) {
-        g_output_buf = (char*)pvPortMalloc(OUTPUT_BUF_SIZE);
-    }
+	if (!g_output_buf) {
+		g_output_buf = (char*)pvPortMalloc(OUTPUT_BUF_SIZE);
+	}
 
-    g_input_head = 0;
-    g_input_tail = 0;
+	g_input_head = 0;
+	g_input_tail = 0;
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -126,10 +126,10 @@ int terminal_init(int argc, char* argv[], int* dw, int* dh)
  */
 void terminal_done()
 {
-    if (g_output_buf) {
-        vPortFree(g_output_buf);
-        g_output_buf = NULL;
-    }
+	if (g_output_buf) {
+		vPortFree(g_output_buf);
+		g_output_buf = NULL;
+	}
 }
 
 /**
@@ -140,12 +140,12 @@ void terminal_done()
  */
 void get_terminal_wh(int* dw, int* dh)
 {
-    if (dw) {
-        *dw = TERMINAL_WIDTH;
-    }
-    if (dh) {
-        *dh = TERMINAL_HEIGHT;
-    }
+	if (dw) {
+		*dw = TERMINAL_WIDTH;
+	}
+	if (dh) {
+		*dh = TERMINAL_HEIGHT;
+	}
 }
 
 /**
@@ -155,13 +155,13 @@ void get_terminal_wh(int* dw, int* dh)
  */
 void free_con_output(CON_OUTPUT* screen)
 {
-    if (screen) {
-        if (screen->buf) {
-            vPortFree(screen->buf);
-            screen->buf = NULL;
-        }
-        screen->color = NULL;
-    }
+	if (screen) {
+		if (screen->buf) {
+			vPortFree(screen->buf);
+			screen->buf = NULL;
+		}
+		screen->color = NULL;
+	}
 }
 
 /**
@@ -192,42 +192,42 @@ void terminal_clear()
  */
 int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int sh)
 {
-    (void)dw;
-    (void)dh;
-    (void)sx;
-    (void)sy;
-    (void)sw;
-    (void)sh;
+	(void)dw;
+	(void)dh;
+	(void)sx;
+	(void)sy;
+	(void)sw;
+	(void)sh;
 
-    if (!screen || !screen->buf || !g_output_buf) {
-        return 0;
-    }
+	if (!screen || !screen->buf || !g_output_buf) {
+		return 0;
+	}
 
-    char *output_buf = g_output_buf;
-    int len = 0;
+	char *output_buf = g_output_buf;
+	int len = 0;
 
-    len += sprintf(output_buf + len, "\033[%dA\033[J\033[2A", TERMINAL_HEIGHT);
+	len += sprintf(output_buf + len, "\033[%dA\033[J\033[2A", TERMINAL_HEIGHT);
 
-    for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
-        len += sprintf(output_buf + len, "\033[%d;1H", y + 1);
+	for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
+		len += sprintf(output_buf + len, "\033[%d;1H", y + 1);
 
-        for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
-            int idx = y * (screen->w + 1) + x;
-            if (idx < (screen->w + 1) * screen->h) {
-                char c = screen->buf[idx];
-                c = c ? c : ' ';
-                output_buf[len++] = c;
-            }
-        }
-        output_buf[len++] = '\r';
-        output_buf[len++] = '\n';
-    }
+		for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
+			int idx = y * (screen->w + 1) + x;
+			if (idx < (screen->w + 1) * screen->h) {
+				char c = screen->buf[idx];
+				c = c ? c : ' ';
+				output_buf[len++] = c;
+			}
+		}
+		output_buf[len++] = '\r';
+		output_buf[len++] = '\n';
+	}
 
-    if (len > 0 && ascii_patrol_shell) {
-        ascii_patrol_shell->write(output_buf, len);
-    }
+	if (len > 0 && ascii_patrol_shell) {
+		ascii_patrol_shell->write(output_buf, len);
+	}
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -237,20 +237,20 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
  */
 static void update_key_state(char ch)
 {
-    unsigned long now = get_time();
+	unsigned long now = get_time();
 
-    for (int i = 0; i < g_key_state_count; i++) {
-        if (g_key_state[i].key == ch) {
-            g_key_state[i].last_time = now;
-            return;
-        }
-    }
+	for (int i = 0; i < g_key_state_count; i++) {
+		if (g_key_state[i].key == ch) {
+			g_key_state[i].last_time = now;
+			return;
+		}
+	}
 
-    if (g_key_state_count < MAX_TRACKED_KEYS) {
-        g_key_state[g_key_state_count].key = ch;
-        g_key_state[g_key_state_count].last_time = now;
-        g_key_state_count++;
-    }
+	if (g_key_state_count < MAX_TRACKED_KEYS) {
+		g_key_state[g_key_state_count].key = ch;
+		g_key_state[g_key_state_count].last_time = now;
+		g_key_state_count++;
+	}
 }
 
 /**
@@ -258,26 +258,26 @@ static void update_key_state(char ch)
  */
 static void check_key_releases()
 {
-    unsigned long now = get_time();
+	unsigned long now = get_time();
 
-    for (int i = 0; i < g_key_state_count; ) {
-        unsigned long elapsed = now - g_key_state[i].last_time;
+	for (int i = 0; i < g_key_state_count; ) {
+		unsigned long elapsed = now - g_key_state[i].last_time;
 
-        if (elapsed >= KEY_RELEASE_TIMEOUT_MS) {
-            int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
-            if (next != g_input_tail) {
-                g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
-                g_input_buffer[g_input_head].Event.KeyEvent.bKeyDown = false;
-                g_input_buffer[g_input_head].Event.KeyEvent.uChar.AsciiChar = g_key_state[i].key;
-                g_input_head = next;
-            }
+		if (elapsed >= KEY_RELEASE_TIMEOUT_MS) {
+			int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
+			if (next != g_input_tail) {
+				g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
+				g_input_buffer[g_input_head].Event.KeyEvent.bKeyDown = false;
+				g_input_buffer[g_input_head].Event.KeyEvent.uChar.AsciiChar = g_key_state[i].key;
+				g_input_head = next;
+			}
 
-            g_key_state[i] = g_key_state[g_key_state_count - 1];
-            g_key_state_count--;
-        } else {
-            i++;
-        }
-    }
+			g_key_state[i] = g_key_state[g_key_state_count - 1];
+			g_key_state_count--;
+		} else {
+			i++;
+		}
+	}
 }
 
 /**
@@ -290,15 +290,15 @@ static void check_key_releases()
  */
 static void push_input_event(char ch)
 {
-    update_key_state(ch);
+	update_key_state(ch);
 
-    int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
-    if (next != g_input_tail) {
-        g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
-        g_input_buffer[g_input_head].Event.KeyEvent.bKeyDown = true;
-        g_input_buffer[g_input_head].Event.KeyEvent.uChar.AsciiChar = ch;
-        g_input_head = next;
-    }
+	int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
+	if (next != g_input_tail) {
+		g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
+		g_input_buffer[g_input_head].Event.KeyEvent.bKeyDown = true;
+		g_input_buffer[g_input_head].Event.KeyEvent.uChar.AsciiChar = ch;
+		g_input_head = next;
+	}
 }
 
 /**
@@ -309,27 +309,27 @@ static void push_input_event(char ch)
  */
 bool get_input_len(int* r)
 {
-    if (!r) {
-        return false;
-    }
+	if (!r) {
+		return false;
+	}
 
-    int ch = read_uart_char();
-    while (ch >= 0) {
-        push_input_event((char)ch);
-        ch = read_uart_char();
-    }
+	int ch = read_uart_char();
+	while (ch >= 0) {
+		push_input_event((char)ch);
+		ch = read_uart_char();
+	}
 
-    check_key_releases();
+	check_key_releases();
 
-    int count = 0;
-    int pos = g_input_tail;
-    while (pos != g_input_head) {
-        count++;
-        pos = (pos + 1) % INPUT_BUFFER_SIZE;
-    }
-    *r = count;
+	int count = 0;
+	int pos = g_input_tail;
+	while (pos != g_input_head) {
+		count++;
+		pos = (pos + 1) % INPUT_BUFFER_SIZE;
+	}
+	*r = count;
 
-    return true;
+	return true;
 }
 
 /**
@@ -342,7 +342,7 @@ bool get_input_len(int* r)
  */
 bool spec_read_input(CON_INPUT* ir, int n, int* r)
 {
-    return read_input(ir, n, r);
+	return read_input(ir, n, r);
 }
 
 /**
@@ -355,19 +355,19 @@ bool spec_read_input(CON_INPUT* ir, int n, int* r)
  */
 bool read_input(CON_INPUT* ir, int n, int* r)
 {
-    if (!ir || n <= 0 || !r) {
-        return false;
-    }
+	if (!ir || n <= 0 || !r) {
+		return false;
+	}
 
-    int count = 0;
-    while (count < n && g_input_tail != g_input_head) {
-        ir[count] = g_input_buffer[g_input_tail];
-        g_input_tail = (g_input_tail + 1) % INPUT_BUFFER_SIZE;
-        count++;
-    }
+	int count = 0;
+	while (count < n && g_input_tail != g_input_head) {
+		ir[count] = g_input_buffer[g_input_tail];
+		g_input_tail = (g_input_tail + 1) % INPUT_BUFFER_SIZE;
+		count++;
+	}
 
-    *r = count;
-    return count > 0;
+	*r = count;
+	return count > 0;
 }
 
 /**
@@ -377,7 +377,7 @@ bool read_input(CON_INPUT* ir, int n, int* r)
  */
 bool has_key_releases()
 {
-    return true;
+	return true;
 }
 
 /**
@@ -387,14 +387,14 @@ bool has_key_releases()
  */
 void DBG(const char* str)
 {
-    if (!ascii_patrol_shell) {
-        return;
-    }
+	if (!ascii_patrol_shell) {
+		return;
+	}
 
-    char buf[128];
-    int len = sprintf(buf, "[DBG] %s\r\n", str);
+	char buf[128];
+	int len = sprintf(buf, "[DBG] %s\r\n", str);
 
-    ascii_patrol_shell->write(buf, len);
+	ascii_patrol_shell->write(buf, len);
 }
 
 /**
@@ -405,8 +405,8 @@ void DBG(const char* str)
  */
 void* operator new(size_t size)
 {
-    void* p = pvPortMalloc(size);
-    return p;
+	void* p = pvPortMalloc(size);
+	return p;
 }
 
 /**
@@ -417,8 +417,8 @@ void* operator new(size_t size)
  */
 void* operator new[](size_t size)
 {
-    void* p = pvPortMalloc(size);
-    return p;
+	void* p = pvPortMalloc(size);
+	return p;
 }
 
 /**
@@ -428,7 +428,7 @@ void* operator new[](size_t size)
  */
 void operator delete(void* ptr)
 {
-    vPortFree(ptr);
+	vPortFree(ptr);
 }
 
 /**
@@ -438,7 +438,7 @@ void operator delete(void* ptr)
  */
 void operator delete[](void* ptr)
 {
-    vPortFree(ptr);
+	vPortFree(ptr);
 }
 
 /**
@@ -449,8 +449,8 @@ void operator delete[](void* ptr)
  */
 void operator delete(void* ptr, size_t size)
 {
-    (void)size;
-    vPortFree(ptr);
+	(void)size;
+	vPortFree(ptr);
 }
 
 /**
@@ -461,8 +461,8 @@ void operator delete(void* ptr, size_t size)
  */
 void operator delete[](void* ptr, size_t size)
 {
-    (void)size;
-    vPortFree(ptr);
+	(void)size;
+	vPortFree(ptr);
 }
 
 /**
@@ -470,13 +470,13 @@ void operator delete[](void* ptr, size_t size)
  */
 void terminal_loop()
 {
-    while (modal) {
-        int result = modal->Run();
-        if (result < 0) {
-            break;
-        }
-        osDelay(1);
-    }
+	while (modal) {
+		int result = modal->Run();
+		if (result < 0) {
+			break;
+		}
+		osDelay(1);
+	}
 }
 
 /**
@@ -484,5 +484,5 @@ void terminal_loop()
  */
 void app_exit()
 {
-    modal = NULL;
+	modal = NULL;
 }
