@@ -19,16 +19,9 @@ struct ConfPlayer
 	unsigned int avatar;
 };
 
-struct ConfControl
-{
-	int sticky;
-	int color;
-};
-
 extern ConfCampaign conf_campaign;
 extern ConfKeyboard conf_keyboard;
 extern ConfPlayer   conf_player;
-extern ConfControl  conf_control;
 
 extern "C"
 {

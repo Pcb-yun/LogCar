@@ -1227,8 +1227,6 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 	struct ControlData
 	{
 		int hover;
-		int color;
-		int sticky;
 		int touch_id;
 		int touch_x;
 		int touch_y;
@@ -1279,22 +1277,14 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 	{
 		case MM_LOAD:
 		{
-			data.sticky = conf_control.sticky;
-			data.color = conf_control.color;
-
-			SetColorMode(data.color?0x70:0x00);
-
 			break;
 		}
 
 		case MM_INIT:
 		{
 			data.hover = 0;
-
-			data.color = 1;
-			data.sticky = 0;
 			data.touch_id = -1;
-			return 20;
+			return 12;
 		}
 
 		case MM_FOCUS:
@@ -1314,41 +1304,21 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 
 			int hover = data.hover;
 			y++;
-			x+=2;
+			x+=5;
 
 			unsigned char lab_cl;
-			unsigned char val_cl = VALUE_CL(m,true,true);
 			int l;
 			char val[32];
 
 			lab_cl = LABEL_CL(m,hover==0,false);
 			if (m->state==2 && hover==0)
-				menu_print(s, x-2, y,  ">", cl_menu_c[m->state], 1, clip);
-			menu_print(s,x,y,"Sticky Input",lab_cl, 12, clip);
-			ControlData::PaintSwt(s,x+14,y-1,8,m->state==2?0:1,data.sticky,clip);
-			l=sprintf_s(val,32,"%s",data.sticky ? "Enabled" : "Disabled");
-			menu_print(s, x+23, y, val, val_cl, l, clip);
-			y+=2;
-
-			lab_cl = LABEL_CL(m,hover==1,false);
-			if (m->state==2 && hover==1)
-				menu_print(s, x-2, y,  ">", cl_menu_c[m->state], 1, clip);
-			menu_print(s,x,y,"Color Mode",lab_cl, 10, clip);
-			ControlData::PaintSwt(s,x+14,y-1,8,m->state==2?0:1,data.color,clip);
-			l=sprintf_s(val,32,"%s",data.color ? "16 Colors" : "Black & White");
-			menu_print(s, x+23, y, val, val_cl, l, clip);
-			y+=3;
-			x+=3;
-
-			lab_cl = LABEL_CL(m,hover==2,false);
-			if (m->state==2 && hover==2)
 				menu_print(s, x-5, y,  ">", cl_menu_c[m->state], 1, clip);
 			menu_print(s,x,y,"EXIT TO OS",lab_cl, 10, clip);
 			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
 			y+=2;
 
-			lab_cl = LABEL_CL(m,hover==3,false);
-			if (m->state==2 && hover==3)
+			lab_cl = LABEL_CL(m,hover==1,false);
+			if (m->state==2 && hover==1)
 				menu_print(s, x-5, y,  ">", cl_menu_c[m->state], 1, clip);
 			menu_print(s,x,y,"RESET CAMPAIGN PROGRESS",lab_cl, 23, clip);
 			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
@@ -1364,16 +1334,11 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 			if ((ci->EventType == CON_INPUT_TCH_MOVE || ci->EventType == CON_INPUT_TCH_END) &&
 				data.touch_id == ci->Event.TouchEvent.id)
 			{
-				int delta = ci->Event.TouchEvent.x - data.touch_x;
-
-				switch (data.touch_y)
-				{
-				}
-
 				if (ci->EventType == CON_INPUT_TCH_END)
 				{
 					data.touch_id = -1;
 
+					int delta = ci->Event.TouchEvent.x - data.touch_x;
 					int dy = ci->Event.TouchEvent.y - m->y + menu_window.smooth - data.touch_y;
 
 					if (delta <= +1 && delta >= -1 && dy <= +1 && dy >= -1 && data.touch_x - m->x < 40)
@@ -1381,23 +1346,10 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 						switch (data.touch_y)
 						{
 							case 5: case 6:
-								data.sticky = !data.sticky;
-								conf_control.sticky = data.sticky;
-								SaveConf();
-								break;
-
-							case 7: case 8:
-								data.color=!data.color;
-								SetColorMode(data.color?0x70:0x00);
-								conf_control.color = data.color;
-								SaveConf();
-								break;
-
-							case 11:
 								app_exit();
 								return 1;
 
-							case 13:
+							case 7: case 8:
 								conf_campaign.course=0;
 								conf_campaign.level=-1;
 								conf_campaign.passed=0;
@@ -1430,38 +1382,11 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 						data.touch_y = y;
 						data.touch_id = ci->Event.TouchEvent.id;
 						break;
-					case 9: case 10:
-						data.hover = 2;
-						data.touch_x = ci->Event.TouchEvent.x;
-						data.touch_y = y;
-						data.touch_id = ci->Event.TouchEvent.id;
-						break;
-					case 11: case 12:
-						data.hover = 3;
-						data.touch_x = ci->Event.TouchEvent.x;
-						data.touch_y = y;
-						data.touch_id = ci->Event.TouchEvent.id;
-						break;
-
-					case 15:
-						data.hover = 2;
-						data.touch_x = ci->Event.TouchEvent.x;
-						data.touch_y = y;
-						data.touch_id = ci->Event.TouchEvent.id;
-						break;
-
-					case 17:
-						data.hover = 3;
-						data.touch_x = ci->Event.TouchEvent.x;
-						data.touch_y = y;
-						data.touch_id = ci->Event.TouchEvent.id;
-						break;
 				}
 			}
 
 			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
 			{
-				int delta=1;
 				switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
 				{
 					case KBD_UP:
@@ -1475,50 +1400,11 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 					}
 					case KBD_DN:
 					{
-						if (data.hover<3)
+						if (data.hover<1)
 						{
 							data.hover++;
 							return 1;
 						}
-						break;
-					}
-
-					case KBD_LT:
-						delta = -1;
-						// nobreak;
-
-					case KBD_RT:
-					{
-						switch (data.hover)
-						{
-							case 0:
-							{
-								if (data.sticky+delta>=0 && data.sticky+delta<=1)
-								{
-									data.sticky+=delta;
-
-									conf_control.sticky = data.sticky;
-									SaveConf();
-									return 1;
-								}
-								break;
-							}
-
-							case 1:
-							{
-								if (data.color+delta>=0 && data.color+delta<=1)
-								{
-									data.color+=delta;
-									SetColorMode(data.color?0x70:0x00);
-
-									conf_control.color = data.color;
-									SaveConf();
-									return 1;
-								}
-								break;
-							}
-						}
-
 						break;
 					}
 
@@ -1528,29 +1414,11 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 						{
 							case 0:
 							{
-								data.sticky = !data.sticky;
-
-								conf_control.sticky = data.sticky;
-								SaveConf();
-								return 1;
-							}
-							case 1:
-							{
-								data.color = !data.color;
-								SetColorMode(data.color?0x70:0x00);
-
-								conf_control.color = data.color;
-								SaveConf();
-								return 1;
-							}
-
-							case 2:
-							{
 								app_exit();
 								return 1;
 							}
 
-							case 3:
+							case 1:
 							{
 								conf_campaign.course=0;
 								conf_campaign.level=-1;

@@ -4765,7 +4765,7 @@ int LEVEL_MODAL::Run()
 		int t_min = *level_time/(1000*60);
 		int t_sec = (*level_time - t_min*(1000*60))/1000;
 		int t_hnd = (*level_time/10) % 100;
-		statlen = sprintf_s(status,81,"Time: %02d:%02d.%02d  F:%d  ", t_min,t_sec,t_hnd, fr);
+		statlen = sprintf_s(status,81,"Time: %02d:%02d.%02d", t_min,t_sec,t_hnd);
 		memcpy(s->buf+s->w-statlen,status,statlen);
 		if (s->color)
 		{

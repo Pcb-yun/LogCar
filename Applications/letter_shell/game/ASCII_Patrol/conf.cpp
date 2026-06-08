@@ -19,12 +19,6 @@ ConfPlayer conf_player=
 	0x00000000
 };
 
-ConfControl conf_control=
-{
-	0,
-	1
-};
-
 void LoadConf()
 {
 	// 使用默认配置

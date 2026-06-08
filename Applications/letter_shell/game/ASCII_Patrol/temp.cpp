@@ -22,7 +22,7 @@
 
 
 MODAL* modal = 0;
-SCREEN global_screen(90,28,' ',cl_transp);
+SCREEN global_screen(110,25,' ',cl_transp);
 
 
 struct CAMPAIGN_MODAL : MODAL
@@ -1092,83 +1092,21 @@ extern "C" int main_ascii_patrol(int argc, char* argv[])
 
 void SetColorMode(SCREEN* s, unsigned char cl)
 {
-	// free
+	(void)cl;
+	// 单色模式，不分配颜色缓冲区
 	if (s->arr)
 	{
 		free_con_output(s);
 		s->arr = 0;
 	}
-
-	if (s->buf)
-	{
-		int size = (s->w+1)*s->h;
-		int oldsize = size;
-		if (s->color)
-			oldsize*=2;
-		if (cl)
-			size*=2;
-		char* buf = new char[size];
-
-		int cpysize = MIN(size,oldsize);
-		memcpy(buf,s->buf,cpysize);
-
-		delete s->buf;
-		s->buf = buf;
-		s->color=0;
-		s->buf[(s->w+1)*s->h-1]=0;
-		if (cl)
-		{
-			s->color = s->buf+(s->w+1)*s->h;
-			memset(s->color, cl, (s->w+1)*s->h);
-		}
-	}
-
-	s->tcolor = cl;
+	s->color = 0;
+	s->tcolor = 0;
 }
 
 void SetColorMode(unsigned char cl)
 {
-	cl_transp = cl;
-	SetColorMode(&global_screen,cl);
-
-	if (menu_modal.hold_modal)
-	{
-		CAMPAIGN_MODAL* cm = (CAMPAIGN_MODAL*)menu_modal.hold_modal;
-
-		if (cm->level_modal)
-		{
-			twister_switch(1);
-
-			LEVEL_MODAL* lm = (LEVEL_MODAL*)cm->level_modal;
-
-			SetColorMode(&lm->b,cl?cm->current_level->sky:0);
-			lm->b.scroll -= lm->b.w;
-			lm->b.Scroll(lm->b.w);
-
-			SetColorMode(&lm->m,cl);
-			lm->m.scroll-=lm->m.w;
-			lm->m.Scroll(lm->m.w);
-
-			SetColorMode(&lm->d,cl);
-			lm->d.scroll-=lm->d.w;
-			lm->d.Scroll(lm->d.w);
-
-			SetColorMode(&lm->t,cl);
-			if (cl)
-			{
-				for (int y=0,i=0; y<lm->t.h; y++,i++)
-				{
-					for (int x=0; x<lm->t.w; x++,i++)
-					{
-						if (lm->t.buf[i] == ch_ground)
-							lm->t.color[i] = cl_ground;
-						else
-							lm->t.color[i] = cl;
-					}
-				}
-			}
-
-			twister_switch(0);
-		}
-	}
+	(void)cl;
+	// 单色模式，忽略颜色参数
+	cl_transp = 0;
+	SetColorMode(&global_screen, 0);
 }

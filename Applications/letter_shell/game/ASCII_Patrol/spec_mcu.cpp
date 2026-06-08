@@ -15,29 +15,8 @@
 #include <string.h>
 
 // 终端尺寸常量
-#define TERMINAL_WIDTH  90
+#define TERMINAL_WIDTH  110
 #define TERMINAL_HEIGHT 25
-
-// 游戏内部颜色格式（每个字节高4位=背景，低4位=前景）
-// 映射到 ANSI 16色标准
-static const char ansi_color_map[16] = {
-	0,   // 0: black
-	4,   // 1: blue
-	2,   // 2: green
-	6,   // 3: cyan
-	1,   // 4: red
-	5,   // 5: magenta
-	3,   // 6: yellow/brown
-	7,   // 7: white
-	8,   // 8: gray
-	12,  // 9: bright blue
-	10,  // A: bright green
-	14,  // B: bright cyan
-	9,   // C: bright red
-	13,  // D: bright magenta
-	11,  // E: bright yellow
-	15   // F: bright white
-};
 
 // 按键缓冲区
 #define INPUT_BUFFER_SIZE 16
@@ -45,11 +24,22 @@ static CON_INPUT g_input_buffer[INPUT_BUFFER_SIZE];
 static int g_input_head = 0;
 static int g_input_tail = 0;
 
+// 按键状态跟踪（用于检测按键释放）
+#define KEY_RELEASE_TIMEOUT_MS 100	// 按键释放超时时间
+#define MAX_TRACKED_KEYS 4			// 最多跟踪的按键数量
+
+static struct {
+	char key;
+	unsigned long last_time;
+} g_key_state[MAX_TRACKED_KEYS];
+
+static int g_key_state_count = 0;
+
 // 当前 shell 实例（由 temp.cpp 中的 main_ascii_patrol 设置）
 extern Shell *ascii_patrol_shell;
 
 // 屏幕输出缓冲区（动态分配，terminal_init 中分配，terminal_done 中释放）
-#define OUTPUT_BUF_SIZE 5120
+#define OUTPUT_BUF_SIZE 4096
 static char *g_output_buf = NULL;
 
 /**
@@ -77,7 +67,7 @@ unsigned int get_time()
  */
 void vsync_wait()
 {
-    osDelay(80);
+    osDelay(100);
 }
 
 /**
@@ -167,9 +157,6 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
     // 发送清屏命令
     len += sprintf(output_buf + len, "\033[%dA\033[J\033[2A", TERMINAL_HEIGHT);
 
-    // 当前活动的前景色和背景色（用于跟踪变化）
-    int cur_fg = -1, cur_bg = -1;
-
     // 逐行发送内容
     for (int y = 0; y < screen->h && y < TERMINAL_HEIGHT; y++) {
         // 移动光标到行首
@@ -177,34 +164,12 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
 
         // 发送该行内容
         for (int x = 0; x < screen->w && x < TERMINAL_WIDTH; x++) {
-            int idx = y * screen->w + x;
-            if (idx < screen->w * screen->h) {
+            int idx = y * (screen->w + 1) + x;
+            if (idx < (screen->w + 1) * screen->h) {
                 char c = screen->buf[idx];
                 c = c ? c : ' ';
-
-                // 输出颜色转义
-                if (screen->color) {
-                    unsigned char col = screen->color[idx];
-                    int fg = ansi_color_map[col & 0x0F];
-                    int bg = ansi_color_map[(col >> 4) & 0x0F];
-
-                    if (fg != cur_fg || bg != cur_bg) {
-                        int fg_code = (fg < 8) ? (fg + 30) : (fg + 82);   // 30-37 或 90-97
-                        int bg_code = (bg < 8) ? (bg + 40) : (bg + 92);   // 40-47 或 100-107
-                        len += sprintf(output_buf + len, "\033[%d;%dm",
-                                       fg_code, bg_code);
-                        cur_fg = fg;
-                        cur_bg = bg;
-                    }
-                }
-
                 output_buf[len++] = c;
             }
-        }
-        // 行尾复位颜色
-        if (screen->color) {
-            len += sprintf(output_buf + len, "\033[0m");
-            cur_fg = cur_bg = -1;
         }
         // 换行
         output_buf[len++] = '\r';
@@ -220,6 +185,60 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
 }
 
 /**
+ * @brief 更新按键状态跟踪
+ */
+static void update_key_state(char ch)
+{
+	unsigned long now = get_time();
+
+	// 查找是否已跟踪该按键
+	for (int i = 0; i < g_key_state_count; i++) {
+		if (g_key_state[i].key == ch) {
+			g_key_state[i].last_time = now;
+			return;
+		}
+	}
+
+	// 添加新按键到跟踪列表
+	if (g_key_state_count < MAX_TRACKED_KEYS) {
+		g_key_state[g_key_state_count].key = ch;
+		g_key_state[g_key_state_count].last_time = now;
+		g_key_state_count++;
+	}
+}
+
+/**
+ * @brief 检查超时并生成按键释放事件
+ */
+static void check_key_releases()
+{
+	unsigned long now = get_time();
+
+	// 遍历所有跟踪的按键
+	for (int i = 0; i < g_key_state_count; ) {
+		unsigned long elapsed = now - g_key_state[i].last_time;
+
+		// 检查是否超时（按键释放）
+		if (elapsed >= KEY_RELEASE_TIMEOUT_MS) {
+			// 生成释放事件
+			int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
+			if (next != g_input_tail) {
+				g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
+				g_input_buffer[g_input_head].Event.KeyEvent.bKeyDown = false;
+				g_input_buffer[g_input_head].Event.KeyEvent.uChar.AsciiChar = g_key_state[i].key;
+				g_input_head = next;
+			}
+
+			// 从跟踪列表中移除
+			g_key_state[i] = g_key_state[g_key_state_count - 1];
+			g_key_state_count--;
+		} else {
+			i++;
+		}
+	}
+}
+
+/**
  * @brief 从 shell 读取字符并缓冲为游戏输入事件
  *
  * 所有从 shell 读取的字符都会入缓冲。游戏中的 ConfMapInput()
@@ -227,6 +246,10 @@ int screen_write(CON_OUTPUT* screen, int dw, int dh, int sx, int sy, int sw, int
  */
 static void push_input_event(char ch)
 {
+	// 更新按键状态跟踪
+	update_key_state(ch);
+
+	// 生成按下事件
 	int next = (g_input_head + 1) % INPUT_BUFFER_SIZE;
 	if (next != g_input_tail) {
 		g_input_buffer[g_input_head].EventType = CON_INPUT_KBD;
@@ -248,6 +271,9 @@ bool get_input_len(int* r)
         push_input_event((char)ch);
         ch = read_uart_char();
     }
+
+    // 检查按键释放超时
+    check_key_releases();
 
     // 计算可用输入数量
     int count = 0;
@@ -283,8 +309,8 @@ bool read_input(CON_INPUT* ir, int n, int* r)
 
 bool has_key_releases()
 {
-    // 嵌入式环境简化为始终返回 false
-    return false;
+    // 通过超时检测实现按键释放检测
+    return true;
 }
 
 // ==================== 调试输出 ====================
