@@ -19,7 +19,7 @@
 #define MOTOR_BACK_LEFT    4	// 后左轮
 
 // 电机脉冲参数
-#define MOTOR_PULSES_PER_REV    3200	// 电机每转脉冲数 (200步 * 16细分)
+#define MOTOR_PULSES_PER_REV    3200	// 电机每转脉冲数
 
 
 

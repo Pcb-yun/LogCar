@@ -8,6 +8,8 @@
 #include "game_en.h"
 #if GAME_ENABLE_AP
 
+// 外部函数声明
+extern void ClearOnHold();
 
 #include "spec.h"
 #include "shell.h"
@@ -19,7 +21,7 @@
 #include <string.h>
 
 /** 终端宽度 */
-#define TERMINAL_WIDTH	110
+#define TERMINAL_WIDTH	100
 /** 终端高度 */
 #define TERMINAL_HEIGHT 25
 
@@ -32,7 +34,7 @@
 #define MAX_TRACKED_KEYS 4
 
 /** 输出缓冲区大小 */
-#define OUTPUT_BUF_SIZE 4096
+#define OUTPUT_BUF_SIZE 3072
 
 static CON_INPUT g_input_buffer[INPUT_BUFFER_SIZE];
 static int g_input_head = 0;
@@ -77,7 +79,7 @@ unsigned int get_time()
  */
 void vsync_wait()
 {
-	osDelay(50);
+	osDelay(33);
 }
 
 /**
@@ -160,22 +162,7 @@ void free_con_output(CON_OUTPUT* screen)
 			vPortFree(screen->buf);
 			screen->buf = NULL;
 		}
-		screen->color = NULL;
 	}
-}
-
-/**
- * @brief 终端刷新（串口输出无需刷新）
- */
-void terminal_flush()
-{
-}
-
-/**
- * @brief 终端清屏（由 screen_write 处理）
- */
-void terminal_clear()
-{
 }
 
 /**
@@ -394,23 +381,6 @@ bool has_key_releases()
 }
 
 /**
- * @brief 调试输出
- *
- * @param str 调试字符串
- */
-void DBG(const char* str)
-{
-	if (!ascii_patrol_shell) {
-		return;
-	}
-
-	char buf[128];
-	int len = sprintf(buf, "[DBG] %s\r\n", str);
-
-	ascii_patrol_shell->write(buf, len);
-}
-
-/**
  * @brief new 操作符重载（使用 FreeRTOS 内存分配）
  *
  * @param size 分配大小
@@ -485,7 +455,7 @@ void terminal_loop()
 {
 	while (modal) {
 		int result = modal->Run();
-		if (result < 0) {
+		if (result == -1) {
 			break;
 		}
 		osDelay(1);
@@ -497,6 +467,9 @@ void terminal_loop()
  */
 void app_exit()
 {
+	// 清理暂停的游戏状态，避免内存泄漏
+	ClearOnHold();
+
 	modal = NULL;
 }
 

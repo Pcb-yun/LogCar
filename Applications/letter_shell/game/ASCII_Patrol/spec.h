@@ -5,8 +5,6 @@
 #ifndef SPEC_H
 #define SPEC_H
 
-void DBG(const char* str);
-
 struct MODAL
 {
 	virtual ~MODAL() {}
@@ -24,7 +22,6 @@ struct CON_OUTPUT
 {
 	int w,h;
 	char* buf;
-	char* color;
 	void* arr;
 };
 

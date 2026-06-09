@@ -16,11 +16,6 @@ struct ConfCampaign
 	int level;
 };
 
-struct ConfKeyboard
-{
-	char map[6];
-};
-
 struct ConfPlayer
 {
 	char name[16];
@@ -28,13 +23,11 @@ struct ConfPlayer
 };
 
 extern ConfCampaign conf_campaign;
-extern ConfKeyboard conf_keyboard;
 extern ConfPlayer   conf_player;
 
 extern "C"
 {
 	void LoadConf();
-	void SaveConf();
 }
 
 char ConfMapInput(char c);

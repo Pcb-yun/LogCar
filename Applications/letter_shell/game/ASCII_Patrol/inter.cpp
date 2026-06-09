@@ -19,16 +19,15 @@
 #include "twister.h"
 #include "conf.h"
 
-/**
+/*
  * @brief 在屏幕上打印文本
  *
  * @param s     屏幕对象
  * @param dx    目标x坐标
  * @param dy    目标y坐标
  * @param str   文本字符串
- * @param color 颜色值
  */
-void inter_print(SCREEN* s, int dx, int dy, const char* str, char color)
+void inter_print(SCREEN* s, int dx, int dy, const char* str)
 {
 	int sx=0;
 	int sy=0;
@@ -79,17 +78,9 @@ void inter_print(SCREEN* s, int dx, int dy, const char* str, char color)
 		if (*ptr!='*')
 		{
 			s->buf[(s->w+1)*dy + x] = *ptr;
-			if (s->color)
-				s->color[(s->w+1)*dy + x] = color;
 		}
 	}
 
-	/*
-	memcpy( s->buf + (s->w+1)*dy + dx, str+sx, sw);
-
-	if (s->color)
-		memset( s->color + (s->w+1)*dy + dx, color, sw);
-	*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,10 +143,9 @@ void PERF::Paint(SCREEN* s, int x, int y, int width)
 	int w=25;
 
 	// paint name
-	// if state is 1 clr is yellow, otherwise white
 	int len = strlen(name);
 	int nx = x + (w-len)/2;
-	inter_print(s, nx,y, name, state==2 ? 0x0B : 0x0F);
+	inter_print(s, nx,y, name);
 
 	// paint curval (or val?)
 	char valstr[10];
@@ -178,7 +168,7 @@ void PERF::Paint(SCREEN* s, int x, int y, int width)
 	}
 
 	int vx = x + (w-(vallen*5-1 + valofs))/2;
-	fnt.Paint(s,vx+valofs,y+1,0x02,valstr);
+	fnt.Paint(s,vx+valofs,y+1,valstr);
 
 	if (idx==2)
 	{
@@ -262,8 +252,8 @@ void PERF::Paint(SCREEN* s, int x, int y, int width)
 			maxlen = sprintf_s(maxstr,10,"%d",maxval);
 		}
 
-		inter_print(s, x+1,y+9, minstr, 0x07);
-		inter_print(s, x+w-1-maxlen,y+9, maxstr, 0x07);
+		inter_print(s, x+1,y+9, minstr);
+		inter_print(s, x+w-1-maxlen,y+9, maxstr);
 	}
 
 	int line_ofs[3]={11,9,7};
@@ -544,12 +534,8 @@ void DLG::Paint(SCREEN* s, int x, int y, bool blend)
 	avatar.SetFrame((mix>>24)&0xFF);
 	avatar.Paint(s,x+ax,y+ay+6,0,6,-1,2,0,false);
 
-	// paint name w/color
+	// paint name
 	int nl = strlen(name);
-
-	unsigned char xl = cl;
-	if (avatar.data == &character) // alien and commander get white name
-		xl = cl | 0x0F;
 
 	int dy = y+ny;
 	if (dy>=0 && dy<s->h)
@@ -563,66 +549,29 @@ void DLG::Paint(SCREEN* s, int x, int y, bool blend)
 			if (ic>=0 && ic<nl)
 				c=name[ic];
 			s->buf[dy*(s->w+1)+dx] = c; // < name
-			if (s->color)
-			{
-				s->color[dy*(s->w+1)+dx] = xl;
-				if (dy-1>=0 && dy-1<s->h)
-					s->color[(dy-1)*(s->w+1)+dx] = ( s->color[(dy-1)*(s->w+1)+dx] & 0xF0 ) | ( cl & 0x0F );
-			}
 		}
 	}
 
-	// paint vox w/color
-	if (s->color)
+	dy = y+vy;
+	if (dy>=0 && dy<s->h)
 	{
-		int dy = y+vy;
-		if (dy>=0 && dy<s->h)
+		for (int i=0; i<vox; i++)
 		{
-			for (int i=0; i<vox; i++)
+			int dx1 = x+vx+14-i;
+			int dx2 = x+vx+16+i;
+
+			if (dx1>=0 && dx1<s->w)
 			{
-				int dx1 = x+vx+14-i;
-				int dx2 = x+vx+16+i;
-
-				unsigned char c = cl&0x0F;
-				if (i*3>vox*2)
-					c = (cl>>4)&0x0F;
-
-				if (dx1>=0 && dx1<s->w)
-				{
-					s->buf[dx1+dy*(s->w+1)]='<';
-					s->color[dx1+dy*(s->w+1)] = (s->color[dx1+dy*(s->w+1)]&0xF0) | c;
-				}
-				if (dx2>=0 && dx2<s->w)
-				{
-					s->buf[dx2+dy*(s->w+1)]='>';
-					s->color[dx2+dy*(s->w+1)] = (s->color[dx2+dy*(s->w+1)]&0xF0) | c;
-				}
+				s->buf[dx1+dy*(s->w+1)]='<';
 			}
-		}
-	}
-	else
-	{
-		int dy = y+vy;
-		if (dy>=0 && dy<s->h)
-		{
-			for (int i=0; i<vox; i++)
+			if (dx2>=0 && dx2<s->w)
 			{
-				int dx1 = x+vx+14-i;
-				int dx2 = x+vx+16+i;
-
-				if (dx1>=0 && dx1<s->w)
-				{
-					s->buf[dx1+dy*(s->w+1)]='<';
-				}
-				if (dx2>=0 && dx2<s->w)
-				{
-					s->buf[dx2+dy*(s->w+1)]='>';
-				}
+				s->buf[dx2+dy*(s->w+1)]='>';
 			}
 		}
 	}
 
-	// paint text w/color
+	// paint text
 	if (text)
 	{
 		int len = (time-start)/20;
@@ -644,8 +593,6 @@ void DLG::Paint(SCREEN* s, int x, int y, bool blend)
 				if (dx>=0 && dx<s->w && dy>=0 && dy<s->h)
 				{
 					s->buf[dx+dy*(s->w+1)]=text[i];
-					if (s->color)
-						s->color[dx+dy*(s->w+1)]=(s->color[dx+dy*(s->w+1)]&0xF0) | (cl&0x0F);
 				}
 				dx++;
 				c++;
@@ -656,14 +603,10 @@ void DLG::Paint(SCREEN* s, int x, int y, bool blend)
 		if (!done && dx>=0 && dx<s->w && dy>=0 && dy<s->h)
 		{
 			int cc = dx+dy*(s->w+1);
-			if (s->color)
-				s->color[cc]=cl<<4;
-			else
-			{
-				s->buf[cc]='[';
-				if (dx+1<s->w)
-					s->buf[cc+1]=']';
-			}
+
+			s->buf[cc]='[';
+			if (dx+1<s->w)
+				s->buf[cc+1]=']';
 
 		}
 
@@ -826,33 +769,15 @@ int INTER_MODAL::Run()
 		if (pos>duration*2)
 			done=true;
 
-		// random blend...
-		if (s->color)
+
+		for (int y=0,dst=0; y<s->h; y++,dst++)
 		{
-			for (int y=0,dst=0; y<s->h; y++,dst++)
+			int src = (bkgnd.width+1)*y;
+			for (int x=0; x<s->w; x++,dst++,src++)
 			{
-				int src = (bkgnd.width+1)*y;
-				for (int x=0; x<s->w; x++,dst++,src++)
+				if ((twister_rand()&3) == 0)
 				{
-					if ((twister_rand()&3) == 0)
-					{
-						s->buf[dst] =  bkgnd.data->shade[0][src];
-						s->color[dst] =  bkgnd.data->color[0][src];
-					}
-				}
-			}
-		}
-		else
-		{
-			for (int y=0,dst=0; y<s->h; y++,dst++)
-			{
-				int src = (bkgnd.width+1)*y;
-				for (int x=0; x<s->w; x++,dst++,src++)
-				{
-					if ((twister_rand()&3) == 0)
-					{
-						s->buf[dst] =  bkgnd.data->mono[0][src];
-					}
+					s->buf[dst] =  bkgnd.data->mono[0][src];
 				}
 			}
 		}
@@ -1116,11 +1041,7 @@ int INTER_MODAL::Run()
 			int y = y1 + dlg_player.frame.height - 1;
 			int x = x1 + 7;
 
-			unsigned char bl = (t&1023)<512 ? 0x03 : 0x0B;
-
 			memcpy(s->buf+x+(s->w+1)*y,"P R E S S  A N Y  K E Y",23);
-			if (s->color)
-				memset(s->color+x+(s->w+1)*y, bl, 23);
 		}
 	}
 	else
@@ -1250,13 +1171,13 @@ int INTER_MODAL::Run()
 		perf_time.Paint(s,time_x,time_y,0);
 		perf_lives.Paint(s,live_x,live_y,width);
 
-		fnt.Paint(s, perf_x + (perf_w-(scorelen*5-1))/2,score_y,0x06,scorestr);
+		fnt.Paint(s, perf_x + (perf_w-(scorelen*5-1))/2,score_y,scorestr);
 
 		if (phase<-1)
-			inter_print(s, perf_x + (perf_w-11)/2,score_y+7," S C O R E ", 0x0B);
+			inter_print(s, perf_x + (perf_w-11)/2,score_y+7," S C O R E ");
 		else
 		if (phase==-1)
-			inter_print(s, perf_x + (perf_w-25)/2,score_y+7," P R E S S  A N Y  K E Y ", (t&0x3ff) < 0x200 ? 0x03 : 0x0B);
+			inter_print(s, perf_x + (perf_w-25)/2,score_y+7," P R E S S  A N Y  K E Y ");
 	}
 
 	// paint dialogs

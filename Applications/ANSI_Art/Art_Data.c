@@ -16,21 +16,25 @@ static const Artdata_t Art_cfg[] = {
 #if NINA_EN
     {
         .name = "NINA",
-        .data = NINA_DATA,
+        .data = NINA_DATA
     },
 #endif
 #if HARUHI_EN
 	{
 		.name = "HARUHI",
-		.data = HARUHI_DATA,
+		.data = HARUHI_DATA
 	},
 #endif
 #if IZUMI_EN
 	{
 		.name = "IZUMI",
-		.data = IZUMI_DATA,
-	}
+		.data = IZUMI_DATA
+	},
 #endif
+	{
+		.name = "__EMPTY__",
+		.data = "empty"
+	}
 };
 
 /**
@@ -56,7 +60,10 @@ bool find_art(const char *name, const char **data) {
  */
 void Art_list(void) {
 	Shell *shell = shellGetCurrent();
-	for (uint8_t i = 0; i < sizeof(Art_cfg) / sizeof(Art_cfg[0]); i++) {
+	uint8_t list = sizeof(Art_cfg) / sizeof(Art_cfg[0]);
+	if (list == 1) return;
+
+	for (uint8_t i = 0; i < list - 1; i++) {
 		ART_OUT(shell, Art_cfg[i].name, strlen(Art_cfg[i].name));
 		ART_OUT(shell, "\r\n", 2);
 	}

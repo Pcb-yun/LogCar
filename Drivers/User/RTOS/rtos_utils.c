@@ -21,13 +21,13 @@ static void Memory_Info(void) {
 
     vPortGetHeapStats(&xHeapStats);
 
-    logPrintln("Free heap: %u bytes\r\n"
-               "Min ever free: %u bytes\r\n"
-               "Largest free block: %u bytes\r\n"
-               "Smallest free block: %u bytes\r\n"
-               "Number of free blocks: %u\r\n"
-               "Successful allocations: %u\r\n"
-               "Successful frees: %u",
+    logPrintln("Free heap: %u bytes\r\n"                /* 当前可用的堆总大小——这是所有空闲块的总和，而不是可以分配的最大块 */
+               "Min ever free: %u bytes\r\n"            /* 自系统启动以来堆中可用内存的最小总量（所有可用块的总和） */
+               "Largest free block: %u bytes\r\n"       /* 调用vPortGetHeapStats()时堆中所有空闲块的最大大小（以字节为单位） */
+               "Smallest free block: %u bytes\r\n"      /* 调用vPortGetHeapStats()时堆中所有空闲块的最小大小（以字节为单位） */
+               "Number of free blocks: %u\r\n"          /* 调用vPortGetHeapStats()时堆中所有空闲块的数量 */
+               "Successful allocations: %u\r\n"         /* 成功调用pvPortMalloc()的次数 */
+               "Successful frees: %u",                  /* 成功调用vPortFree()的次数 */
                xHeapStats.xAvailableHeapSpaceInBytes,
                xHeapStats.xMinimumEverFreeBytesRemaining,
                xHeapStats.xSizeOfLargestFreeBlockInBytes,

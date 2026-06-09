@@ -14,8 +14,6 @@
 struct ASSET
 {
 	const char** mono;
-	const char** shade;
-	const char** color;
 };
 
 extern ASSET avatar;
@@ -53,7 +51,6 @@ extern ASSET ground_boom;
 extern ASSET heap1;
 extern ASSET heap2;
 extern ASSET heap3;
-extern ASSET keyb;
 extern ASSET land_mine;
 extern ASSET map;
 extern ASSET menu_bkg;

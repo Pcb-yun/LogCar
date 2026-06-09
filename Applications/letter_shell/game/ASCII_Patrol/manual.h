@@ -10,7 +10,7 @@
 struct MANUAL : SCREEN
 {
 	virtual ~MANUAL();
-	MANUAL(const ASSET* a, char transp = ' ', unsigned char _tcolor = 0);
+	MANUAL(const ASSET* a, char transp = ' ');
 	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
 
 

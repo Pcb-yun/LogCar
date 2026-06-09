@@ -82,18 +82,18 @@ bool MotionControl_Init(void) {
     for (int i = 0; i < 4; i++) {
         motor = &g_motor_status->motors[i];
         switch(motor->motor_id) {
-            case MOTOR_FRONT_LEFT: g_last_enc->front_left = 0; break;
-            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = 0; break;
-            case MOTOR_BACK_LEFT: g_last_enc->rear_left = 0; break;
-            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = 0; break;
+            case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->pos; break;
+            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->pos; break;
+            case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->pos; break;
+            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->pos; break;
         }
     }
     g_last_enc->timestamp = osKernelGetTickCount();
 
-    g_motion->linear_speed = 100.0f;
-    g_motion->yaw_speed = 90.0f;
-    g_motion->car_acc = acc_car_to_motor(100.0f);
-    g_motion->car_dec = acc_car_to_motor(100.0f);
+    g_motion->linear_speed = 30.0f;
+    g_motion->yaw_speed = 20.0f;
+    g_motion->car_acc = acc_car_to_motor(10.0f);
+    g_motion->car_dec = acc_car_to_motor(10.0f);
 
     is_init = true;
     return true;
@@ -115,17 +115,17 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
         for (int i = 0; i < 4; i++) {
             motor = &g_motor_status->motors[i];
             switch(motor->motor_id) {
-                case MOTOR_FRONT_LEFT: enc.front_left = 0; break;
-                case MOTOR_FRONT_RIGHT: enc.front_right = 0; break;
-                case MOTOR_BACK_LEFT: enc.rear_left = 0; break;
-                case MOTOR_BACK_RIGHT: enc.rear_right = 0; break;
+                case MOTOR_FRONT_LEFT: enc.front_left = motor->pos; break;
+                case MOTOR_FRONT_RIGHT: enc.front_right = motor->pos; break;
+                case MOTOR_BACK_LEFT: enc.rear_left = motor->pos; break;
+                case MOTOR_BACK_RIGHT: enc.rear_right = motor->pos; break;
             }
         }
         enc.timestamp = osKernelGetTickCount();
         osMutexRelease(Pose_MutexHandle);
     }
 
-    // 计算编码器脉冲增量
+    // 计算脉冲增量
     WheelEncoderData_t enc_delta = {
         .front_left  = (int32_t)(enc.front_left - g_last_enc->front_left),
         .front_right = (int32_t)(enc.front_right - g_last_enc->front_right),

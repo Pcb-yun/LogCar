@@ -74,3 +74,4 @@ void my_print(const char *str, uint32_t len);
 #endif
 
 #endif /* __USART_H__ */
+

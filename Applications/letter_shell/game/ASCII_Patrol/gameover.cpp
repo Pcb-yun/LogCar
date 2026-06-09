@@ -57,14 +57,8 @@ GAMEOVER_MODAL::GAMEOVER_MODAL(SCREEN* _s, int* _score, const LEVEL* _level) :
 	level = _level;
 
 	bk2_asset.mono = _level->bkgnd->mono;
-	bk2_asset.shade = _level->bkgnd->mono;
-	bk2_asset.color = _level->bkgnd->color;
-
-	prompt.attrib_mask=0;
 
 	bk2.data = &bk2_asset;
-	bk2.attrib_mask = 0x00;
-	bk2.attrib_over = 0x04;
 
 	bt = get_time();
 	frame = 0;
@@ -100,20 +94,10 @@ void GAMEOVER_MODAL::PaintFlame(SPRITE* fl, SPRITE* msk, int dx, int dy, int frm
 			{
 				int f = 1+ x+fy*(fl->width+1);
 				int b = x+dx+(y+dy)*(s->w+1);
-				if (s->color)
+
+				if (fl->data->mono[0][f]!='*')
 				{
-					if (fl->data->shade[0][f]!='*')
-					{
-						s->buf[b] = fl->data->shade[0][f];
-						s->color[b] = fl->data->color[0][f];
-					}
-				}
-				else
-				{
-					if (fl->data->mono[0][f]!='*')
-					{
-						s->buf[b] = fl->data->mono[0][f];
-					}
+					s->buf[b] = fl->data->mono[0][f];
 				}
 			}
 		}
@@ -166,8 +150,6 @@ int GAMEOVER_MODAL::Run()
 		h=nh;
 	}
 
-	if (s->color)
-		s->tcolor = 0x0F;
 	s->Clear();
 
 	int bk_y = 10;
@@ -206,10 +188,10 @@ int GAMEOVER_MODAL::Run()
 
 		int cx = (s->w - (5*len-1))/2;
 
-		fnt.Paint(s,cx,tx_y-wy+2,0x06,str);
+		fnt.Paint(s,cx,tx_y-wy+2,str);
 
 		cx = (s->w - 11)/2;
-		inter_print(s,cx,tx_y-wy+1, "YOUR SCORE:", 0x0F);
+		inter_print(s,cx,tx_y-wy+1, "YOUR SCORE:");
 	}
 
 	// paint tx comming out of fog!
@@ -224,20 +206,9 @@ int GAMEOVER_MODAL::Run()
 				int dst=x+tx_x+(tx_y-wy+y)*(s->w+1);
 				int src=x+y*(tx.width+1);
 
-				if (s->color)
+				if (tx.data->mono[0][src]!='*')
 				{
-					if (tx.data->shade[0][src]!='*')
-					{
-						s->buf[dst] = tx.data->shade[0][src];
-						s->color[dst] = tx.data->color[0][src];
-					}
-				}
-				else
-				{
-					if (tx.data->mono[0][src]!='*')
-					{
-						s->buf[dst] = tx.data->mono[0][src];
-					}
+					s->buf[dst] = tx.data->mono[0][src];
 				}
 			}
 		}
@@ -256,23 +227,7 @@ int GAMEOVER_MODAL::Run()
 		tx.Paint(s,tx_x+dx+tx.width/2,tx_y-wy,0,0,tx.width-tx.width/2,-1,0,false);
 	}
 
-	if (fr>4000)
-	{
-		if ((fr&0x3FF)<0x200)
-			prompt.attrib_over=0x07;
-		else
-			prompt.attrib_over=0x0F;
-
-		int pr_y = s->h-2 - 4*(s->h-25)/25;
-
-		if (s->color || (fr&0x2FF)<0x200)
-			prompt.Paint(s, (s->w-prompt.width)/2 , pr_y, 0,0);
-	}
-
 	s->Write(dw,dh,0,0,-1,-1);
-
-	if (s->color)
-		s->tcolor = cl_transp;
 
 	int ret = InterScreenInput();
 

@@ -25,16 +25,11 @@
 
 #include "twister.h"
 
-// remove!
-void DBG(const char* str);
-
 struct MENU_ASSET : ASSET
 {
 	void Init(const ASSET* a)
 	{
 		mono = a->mono;
-		shade = a->shade;
-		color = a->color;
 
 		const char** anim = mono;
 
@@ -119,7 +114,7 @@ static int menu_write(CON_OUTPUT* s, int dw, int dh, int sx, int sy, int sw, int
 	return screen_write(s, dw,dh,sx,sy,sw,sh);
 }
 
-static void menu_print(CON_OUTPUT* s, int dx, int dy, const char* str, char color, int sw, const int* clip = 0)
+static void menu_print(CON_OUTPUT* s, int dx, int dy, const char* str, int sw, const int* clip = 0)
 {
 	int sx=0;
 	int sy=0;
@@ -188,12 +183,9 @@ static void menu_print(CON_OUTPUT* s, int dx, int dy, const char* str, char colo
 		return;
 
 	memcpy( s->buf + (s->w+1)*dy + dx, str+sx, sw);
-
-	if (s->color)
-		memset( s->color + (s->w+1)*dy + dx, color, sw);
 }
 
-static void menu_fill(CON_OUTPUT* s, int dx, int dy, char glyph, char color, int sw, int sh, const int* clip = 0)
+static void menu_fill(CON_OUTPUT* s, int dx, int dy, char glyph, int sw, int sh, const int* clip = 0)
 {
 	if (clip)
 	{
@@ -242,11 +234,6 @@ static void menu_fill(CON_OUTPUT* s, int dx, int dy, char glyph, char color, int
 
 	for (int y=0; y<sh; y++)
 		memset( s->buf + (s->w+1)*(dy+y) + dx, glyph, sw);
-
-	if (s->color)
-		for (int y=0; y<sh; y++)
-			memset( s->color + (s->w+1)*(dy+y) + dx, color, sw);
-
 }
 
 static void menu_blit(CON_OUTPUT* s, int dx, int dy, const MENU_ASSET* a, int sx, int sy, int sw, int sh, int fr, const int* clip = 0)
@@ -256,8 +243,7 @@ static void menu_blit(CON_OUTPUT* s, int dx, int dy, const MENU_ASSET* a, int sx
 
 	fr %= a->frames;
 
-	const char* glyph = s->color ? a->shade[fr] : a->mono[fr];
-	const char* color = s->color ? a->color[fr] : 0;
+	const char* glyph = a->mono[fr];
 
 	if (clip)
 	{
@@ -332,10 +318,6 @@ static void menu_blit(CON_OUTPUT* s, int dx, int dy, const MENU_ASSET* a, int sx
 
 	for (int y=0; y<sh; y++)
 		memcpy( s->buf + (s->w+1)*(dy+y) + dx, glyph + (a->w+1)*(sy+y) + sx, sw);
-
-	if (color)
-		for (int y=0; y<sh; y++)
-			memcpy( s->color + (s->w+1)*(dy+y) + dx, color + (a->w+1)*(sy+y) + sx, sw);
 }
 
 
@@ -391,18 +373,13 @@ static void menu_stretch(CON_OUTPUT* s, int dx, int dy, int dw, int dh, const ME
 	}
 
 	// interior
-	char glyph = s->color ? a->shade[fr][ (a->w+1)*t+l ] : a->mono[fr][ (a->w+1)*t+l ];
-	char color = a->color ? a->color[fr][ (a->w+1)*t+l ] : 0;
-	menu_fill(s,dx+l,dy+t,glyph,color,dw-l-r,dh-t-b, clip);
+	char glyph = a->mono[fr][ (a->w+1)*t+l ];
+	menu_fill(s,dx+l,dy+t,glyph,dw-l-r,dh-t-b, clip);
 }
 
 
 static MENU_ASSET window(&menu_wnd,5,5,2,3);
-static MENU_ASSET module(&menu_mod,1,1,4,1);
-
-static unsigned char cl_menu_a[3];
-static unsigned char cl_menu_b[3];
-static unsigned char cl_menu_c[3];
+static MENU_ASSET module(&menu_mod,1,1,4,4);
 
 struct MODULE
 {
@@ -801,8 +778,7 @@ enum MODULE_MSG
 	// if focus is being gained p2 contains Y coordinate of previously focused element in module the focus is comming from
 };
 
-#define LABEL_CL(m,h,f) ((m)->state==2) ? ((h)&&!(f) ? cl_menu_c[(m)->state] : cl_menu_b[(m)->state] ) : cl_menu_a[(m)->state];
-#define VALUE_CL(m,h,f) ((m)->state==2) ? ((h)&&(f) ? cl_menu_c[(m)->state] : cl_menu_b[(m)->state] ) : cl_menu_b[(m)->state];
+
 
 void PaintScroll(CON_OUTPUT* s, int x, int dy, int h, int pos, int size, int state, const int* clip);
 
@@ -811,254 +787,37 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2);
 
 int PromptProc(int msg, void* p1, void* p2)
 {
-	static MENU_ASSET prompt(&keyb);
+	(void)p1;
+	(void)p2;
 
-	enum FuncKey
-	{
-		EXIT = 1,
-		BKSPC,
-		TAB,
-		CAPSLK,
-		ENTER,
-		L_SHIFT,
-		R_SHIFT,
-		L_CTRL,
-		L_WIN,
-		L_ALT,
-		R_ALT,
-		R_WIN,
-		APP,
-		R_CTRL
-	};
-
-	struct Key
-	{
-		int ch; // if smaller than 0x20 it is some FuncKey
-		int shift_ch;
-		bool caps; // if false don't xor shift with capslk
-		int x,y,w,h;
-	};
-
-	const static Key keymap[] =
-	{
-		{ L_SHIFT,L_SHIFT, false, 2,17, 11,3 },  // [0] - so no lookup needed
-		{ R_SHIFT,R_SHIFT, false, 64,17, 11,3 }, // [1] - so no lookup needed
-		{ EXIT,EXIT,       false, 72,1, 3,3 },
-		{ BKSPC,BKSPC,     false, 67,5, 8,3 },
-	//	{ TAB,TAB,         false, 2,9, 7,3 },
-		{ CAPSLK,CAPSLK,   false, 2,13, 9,3 },
-		{ ENTER,ENTER,     false, 67,13, 8,3 },
-	//	{ L_CTRL,L_CTRL,   false, 2,21, 7,3 },
-	//	{ L_WIN,L_WIN,     false, 10,21, 5,3 },
-	//	{ L_ALT,L_ALT,     false, 16,21, 5,3 },
-	//	{ R_ALT,R_ALT,     false, 50,21, 5,3 },
-	//	{ R_WIN,R_WIN,     false, 56,21, 5,3 },
-	//	{ APP,APP,         false, 62,21, 5,3 },
-	//	{ R_CTRL,R_CTRL,   false, 68,21, 7,3 },
-
-		{ '`','~', false,  2,5, 4,3 },
-		{ '1','!', false,  7,5, 4,3 },
-		{ '2','@', false, 12,5, 4,3 },
-		{ '3','#', false, 17,5, 4,3 },
-		{ '4','$', false, 22,5, 4,3 },
-		{ '5','%', false, 27,5, 4,3 },
-		{ '6','^', false, 32,5, 4,3 },
-		{ '7','&', false, 37,5, 4,3 },
-		{ '8','*', false, 42,5, 4,3 },
-		{ '9','(', false, 47,5, 4,3 },
-		{ '0',')', false, 52,5, 4,3 },
-		{ '-','_', false, 57,5, 4,3 },
-		{ '=','+', false, 62,5, 4,3 },
-
-		{ 'q','Q', true,  10,9, 4,3 },
-		{ 'w','W', true,  15,9, 4,3 },
-		{ 'e','E', true,  20,9, 4,3 },
-		{ 'r','R', true,  25,9, 4,3 },
-		{ 't','T', true,  30,9, 4,3 },
-		{ 'y','Y', true,  35,9, 4,3 },
-		{ 'u','U', true,  40,9, 4,3 },
-		{ 'i','I', true,  45,9, 4,3 },
-		{ 'o','O', true,  50,9, 4,3 },
-		{ 'p','P', true,  55,9, 4,3 },
-		{ '[','{', false, 60,9, 4,3 },
-		{ ']','}', false, 65,9, 4,3 },
-		{ '\\','|',false, 70,9, 5,3 },
-
-		{ 'a','A',   true,  12,13, 4,3 },
-		{ 's','S',   true,  17,13, 4,3 },
-		{ 'd','D',   true,  22,13, 4,3 },
-		{ 'f','F',   true,  27,13, 4,3 },
-		{ 'g','G',   true,  32,13, 4,3 },
-		{ 'h','H',   true,  37,13, 4,3 },
-		{ 'j','J',   true,  42,13, 4,3 },
-		{ 'k','K',   true,  47,13, 4,3 },
-		{ 'l','L',   true,  52,13, 4,3 },
-		{ ';',':',   false, 57,13, 4,3 },
-		{ '\'','\"', false, 62,13, 4,3 },
-
-		{ 'z','Z', true,  14,17, 4,3 },
-		{ 'x','X', true,  19,17, 4,3 },
-		{ 'c','C', true,  24,17, 4,3 },
-		{ 'v','V', true,  29,17, 4,3 },
-		{ 'b','B', true,  34,17, 4,3 },
-		{ 'n','N', true,  39,17, 4,3 },
-		{ 'm','M', true,  44,17, 4,3 },
-		{ ',','<', false, 49,17, 4,3 },
-		{ '.','>', false, 54,17, 4,3 },
-		{ '/','?', false, 59,17, 4,3 },
-
-		{ ' ',' ', false, 22,21, 27,3 },
-
-		{ 0,0, false, 0,0, 0,0 }
-	};
-
-	struct PromptData
-	{
-		int sx, sy;
-
-		int len;
-		char str[256];
-
-		int capslk_key;
-
-		int left_shift;
-		int right_shift;
-
-		int last_key_idx;
-		unsigned long last_key_blink;
-
-		// track touches
-		// ...
-	};
-
-	static PromptData data =
-	{
-		0,0,
-		0,"",
-		-1,
-		false,false,
-		-1,0
-	};
+	static int len = 0;
+	static char str[256] = "";
 
 	switch (msg)
 	{
-		case MM_LOAD:
-		{
-			break;
-		}
-
-		case MM_INIT:
-		{
-			break;
-		}
-
 		case MM_FOCUS:
-	{
-		const char* str = (const char*)p1;
-			data.len = strlen(str);
-			strcpy(data.str,str);
-
-			data.sx = 0;
-			data.sy = -prompt.h; // outa screen
-
-			data.capslk_key = -1;
-			data.left_shift = -1;
-			data.right_shift = -1;
-			data.last_key_idx = -1;
-			data.last_key_blink = 0;
-
+		{
+			const char* s = (const char*)p1;
+			len = strlen(s);
+			strcpy(str, s);
 			break;
 		}
 
 		case MM_PAINT:
 		{
 			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int x = 10;
+			int y = s->h - 2;
 
-			data.sx = (s->w - prompt.w) / 2;
-			data.sy = s->h - prompt.h;
-
-			menu_blit(s, data.sx, data.sy, &prompt, 0,0, prompt.w, prompt.h, 0, 0);
-
-			if (data.capslk_key >=0)
-			{
-				int key = data.capslk_key;
-				menu_blit(s, data.sx + keymap[key].x-1, data.sy + keymap[key].y-1, &prompt,
-							keymap[key].x-1, keymap[key].y-1, keymap[key].w+2, keymap[key].h+1, 1, 0);
-			}
-
-			if (data.left_shift >=0)
-			{
-				int key = 0;
-				menu_blit(s, data.sx + keymap[key].x-1, data.sy + keymap[key].y-1, &prompt,
-							keymap[key].x-1, keymap[key].y-1, keymap[key].w+2, keymap[key].h+1, 1, 0);
-			}
-
-			if (data.right_shift >=0)
-			{
-				int key = 1;
-				menu_blit(s, data.sx + keymap[key].x-1, data.sy + keymap[key].y-1, &prompt,
-							keymap[key].x-1, keymap[key].y-1, keymap[key].w+2, keymap[key].h+1, 1, 0);
-			}
-
-			if (data.last_key_idx >=0)
-			{
-				int key = data.last_key_idx;
-				int dt = menu_window.time - data.last_key_blink;
-				if (dt<150)
-				{
-					menu_blit(s, data.sx + keymap[key].x-1, data.sy + keymap[key].y-1, &prompt,
-								keymap[key].x-1, keymap[key].y-1, keymap[key].w+2, keymap[key].h+1, 1, 0);
-				}
-				else
-					data.last_key_idx = -1;
-			}
-
-			// draw prompt (Player Name)
 			const char* prompt = "Player Name: ";
-			int x = 3 + data.sx;
-			int y = 2 + data.sy;
+			for (int i = 0; prompt[i]; i++)
+				s->buf[(s->w+1)*y + x + i] = prompt[i];
 
-			for (int l=0; prompt[l]; l++)
-			{
-				char* c = s->buf + (s->w+1)*y + x;
-				*c = prompt[l];
+			for (int i = 0; i < len && i < 16; i++)
+				s->buf[(s->w+1)*y + x + 12 + i] = str[i];
 
-				unsigned char* a = (unsigned char*)s->color + (s->w+1)*y + x;
-				*a = 0x0B; // bright yello on black
-
-				x++;
-			}
-
-			// draw string
-			for (int l=0; l<data.len; l++)
-			{
-				char* c = s->buf + (s->w+1)*y + x;
-				*c = data.str[l];
-
-				unsigned char* a = (unsigned char*)s->color + (s->w+1)*y + x;
-				*a = 0x0F; // white on black
-
-				x++;
-			}
-
-			// blink cursor
 			if ((menu_window.time & 0xFF) < 0x7F)
-			{
-				// show caret: in color mode, blink alternating fg/bg, in mono replace char with _
-				if (s->color)
-				{
-					unsigned char* c = (unsigned char*)s->color + (s->w+1)*y + x;
-					*c = 0xF0; //((*c&0xF)<<4) | ((*c>>4)&0xF);
-				}
-				else
-				{
-					char* c = s->buf + (s->w+1)*y + x;
-					*c = '_';
-				}
-			}
-
-			// overlay l/r_shift, capslk, last key w/blink
-			// ...
+				s->buf[(s->w+1)*y + x + 12 + len] = '_';
 
 			break;
 		}
@@ -1066,162 +825,24 @@ int PromptProc(int msg, void* p1, void* p2)
 		case MM_INPUT:
 		{
 			CON_INPUT* ci = (CON_INPUT*)p1;
-
 			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
 			{
-				int key = 0;
-				int ch = ci->Event.KeyEvent.uChar.AsciiChar;
-
-				if (ch == 27)
-				{
-					// exit
-					return -1;
-				}
-
+				char ch = ci->Event.KeyEvent.uChar.AsciiChar;
+				if (ch == 27) return -1;
 				if (ch == 13)
 				{
-					// enter
-					strcpy(conf_player.name,data.str);
-					ProfileProc(0, MM_LOAD, 0,0);
-					SaveConf();
+					strcpy(conf_player.name, str);
+					ProfileProc(0, MM_LOAD, 0, 0);
 					return 1;
 				}
-
-				if (ch==8)
-					ch = BKSPC;
-				else
-				if (ch<32 || ch>=127)
-					break;
-
-				while (keymap[key].ch)
-				{
-					if (ch == keymap[key].ch ||
-						ch == keymap[key].shift_ch)
-					{
-						data.last_key_idx = key;
-						data.last_key_blink = menu_window.time;
-
-						if (ch==BKSPC)
-						{
-							//bkspc
-							if (data.len)
-								data.len--;
-							data.str[data.len] = 0;
-						}
-						else
-						if (data.len < 16)
-						{
-							int c = ch;
-							data.str[data.len++] = c;
-							data.str[data.len] = 0;
-						}
-
-						break;
-					}
-
-					key++;
-				}
-			}
-			if (ci->EventType == CON_INPUT_TCH_END)
-			{
-				if (data.left_shift == ci->Event.TouchEvent.id)
-					data.left_shift = -1;
-				if (data.right_shift == ci->Event.TouchEvent.id)
-					data.right_shift = -1;
-				break;
-			}
-			if (ci->EventType == CON_INPUT_TCH_BEGIN)
-			{
-				int key = 0;
-				int x = ci->Event.TouchEvent.x - data.sx;
-				int y = ci->Event.TouchEvent.y - data.sy;
-
-				while (keymap[key].ch)
-				{
-					if (x>=keymap[key].x && x<keymap[key].x+keymap[key].w &&
-						y>=keymap[key].y && y<keymap[key].y+keymap[key].h)
-					{
-						// check for special keys
-						switch (keymap[key].ch)
-						{
-							case L_SHIFT:
-								if (data.left_shift < 0)
-									data.left_shift = ci->Event.TouchEvent.id;
-								break;
-
-							case R_SHIFT:
-								if (data.right_shift < 0)
-									data.right_shift = ci->Event.TouchEvent.id;
-								break;
-
-							case CAPSLK:
-								if (data.capslk_key>=0)
-									data.capslk_key = -1;
-								else
-									data.capslk_key = key;
-								break;
-							case EXIT:
-								return -1;
-							case ENTER:
-							{
-								strcpy(conf_player.name,data.str);
-								ProfileProc(0, MM_LOAD, 0,0);
-								SaveConf();
-								return 1;
-							}
-							case BKSPC:
-							{
-								data.last_key_idx = key;
-								data.last_key_blink = menu_window.time;
-
-								//bkspc
-								if (data.len)
-									data.len--;
-								data.str[data.len] = 0;
-								break;
-							}
-
-							default:
-
-								data.last_key_idx = key;
-								data.last_key_blink = menu_window.time;
-
-								if (data.len<16)
-								{
-									bool shift = data.capslk_key>=0 && keymap[key].caps;
-									if (data.left_shift>=0 || data.right_shift>=0)
-										shift = !shift;
-
-									int c = shift ? keymap[key].shift_ch : keymap[key].ch;
-									data.str[data.len++] = c;
-									data.str[data.len] = 0;
-								}
-						}
-						break;
-					}
-
-					key++;
-				}
-			}
-
-			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
-			{
-				switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
-				{
-					case KBD_UP:
-					{
-						break;
-					}
-					case KBD_DN:
-					{
-						break;
-					}
-				}
+				if (ch == 8 && len > 0) len--;
+				else if (ch >= 32 && ch < 127 && len < 16)
+					str[len++] = ch;
+				str[len] = 0;
 			}
 			break;
 		}
 	}
-
 	return 0;
 }
 
@@ -1312,19 +933,15 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 			y++;
 			x+=5;
 
-			unsigned char lab_cl;
-
-			lab_cl = LABEL_CL(m,hover==0,false);
 			if (m->state==2 && hover==0)
-				menu_print(s, x-5, y,  ">", cl_menu_c[m->state], 1, clip);
-			menu_print(s,x,y,"EXIT TO OS",lab_cl, 10, clip);
+				menu_print(s, x-5, y,  ">", 1, clip);
+			menu_print(s,x,y,"EXIT TO OS", 10, clip);
 			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
 			y+=2;
 
-			lab_cl = LABEL_CL(m,hover==1,false);
 			if (m->state==2 && hover==1)
-				menu_print(s, x-5, y,  ">", cl_menu_c[m->state], 1, clip);
-			menu_print(s,x,y,"RESET CAMPAIGN PROGRESS",lab_cl, 23, clip);
+				menu_print(s, x-5, y,  ">", 1, clip);
+			menu_print(s,x,y,"RESET CAMPAIGN PROGRESS", 23, clip);
 			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
 			y+=2;
 
@@ -1358,7 +975,7 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 								conf_campaign.level=-1;
 								conf_campaign.passed=0;
 								CampaignProc(0,MM_LOAD,0,0);
-								SaveConf();
+
 								break;
 						}
 					}
@@ -1427,7 +1044,7 @@ int ControlProc(MODULE* m, int msg, void* p1, void* p2)
 								conf_campaign.level=-1;
 								conf_campaign.passed=0;
 								CampaignProc(0,MM_LOAD,0,0);
-								SaveConf();
+
 								return 1;
 							}
 						}
@@ -1600,41 +1217,28 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 			int y = m->y + (module.t+1) - menu_window.smooth;
 
 			if (m->state==2 && data.hover==0)
-				menu_print(s, x, y,  ">", cl_menu_c[m->state], 1, clip);
+				menu_print(s, x, y,  ">", 1, clip);
 
-			unsigned char cl = LABEL_CL(m,data.hover==0,data.edit_pos>=0);
-			menu_print(s, x+2, y, "Name:", cl, 5, clip);
+			menu_print(s, x+2, y, "Name:", 5, clip);
 
 			char* name = data.name;
 			if (data.edit_pos>=0)
 				name = data.edit_buf;
 
-			cl = VALUE_CL(m,data.hover==0,data.edit_pos>=0);
-			menu_print(s, x+8, y, name, cl, strlen(name), clip);
+			menu_print(s, x+8, y, name, strlen(name), clip);
 
 			if (data.edit_pos>=0)
 			{
 				if ((menu_window.time & 0xFF) < 0x7F)
 				{
-					// show caret: in color mode, blink alternating fg/bg, in mono replace char with _
-					if (s->color)
-					{
-						unsigned char* c = (unsigned char*)s->color + (s->w+1)*y + x+8 + data.edit_pos;
-						*c = 0xF0; //((*c&0xF)<<4) | ((*c>>4)&0xF);
-					}
-					else
-					{
-						char* c = s->buf + (s->w+1)*y + x+8 + data.edit_pos;
-						*c = '_';
-					}
+					char* c = s->buf + (s->w+1)*y + x+8 + data.edit_pos;
+					*c = '_';
 				}
-				//
 			}
 
 			y+=2;
 
-			cl = LABEL_CL(m,data.hover>0,0);
-			menu_print(s, x+2, y, "Avatar:", cl, 7, clip);
+			menu_print(s, x+2, y, "Avatar:", 7, clip);
 
 			y++;
 
@@ -1653,34 +1257,18 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 			int row = y+2;
 
 			if (m->state==2 && data.hover==1)
-				menu_print(s, x, row, ">", cl_menu_c[m->state], 1, clip);
+				menu_print(s, x, row, ">", 1, clip);
 
-			cl = LABEL_CL(m,data.hover==1,0);
-			menu_print(s, x+2, row, "Full", cl, 4, clip);
+			menu_print(s, x+2, row, "Full", 4, clip);
 
 			row+=2;
 
-			if (s->color)
+			for (int i=0; i<4; i++)
 			{
-				for (int i=0; i<4; i++)
-				{
+				if (m->state==2 && data.hover==i+2)
+					menu_print(s, x+2 -(2), row+i, ">", 1, clip);
 
-					if (m->state==2 && data.hover==i+2)
-						menu_print(s, x+2  -(2), row+i, ">", cl_menu_c[m->state], 1, clip);
-
-					cl = LABEL_CL(m,data.hover==i+2,0);
-					menu_print(s, x+2  -(2)+2, row+i, nam[i], cl, strlen(nam[i]), clip);
-				}
-			}
-			else
-			{
-				for (int i=0; i<4; i++)
-				{
-					if (m->state==2 && data.hover==i+2)
-						menu_print(s, x+2 -(2), row+i, ">", 0, 1, clip);
-
-					menu_print(s, x+2  -(2)+2, row+i, nam[i], 0, strlen(nam[i]), clip);
-				}
+				menu_print(s, x+2  -(2)+2, row+i, nam[i], strlen(nam[i]), clip);
 			}
 
 			///////////
@@ -1752,7 +1340,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
 
 					conf_player.avatar=data.avatar;
-					SaveConf();
+
 
 					return 1;
 				}
@@ -1789,7 +1377,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 						data.avatar |= i << b;
 
 						conf_player.avatar=data.avatar;
-						SaveConf();
+
 
 						return 1;
 					}
@@ -1859,7 +1447,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 								data.edit_pos = -1;
 
 								strcpy_s(conf_player.name,16,data.edit_buf);
-								SaveConf();
+
 
 								return 0;
 
@@ -1932,7 +1520,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 							data.avatar |= i << b;
 
 							conf_player.avatar=data.avatar;
-							SaveConf();
+
 
 							return 1;
 						}
@@ -1956,7 +1544,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 								data.avatar |= i << b;
 
 								conf_player.avatar=data.avatar;
-								SaveConf();
+
 							}
 
 							return 1;
@@ -1984,7 +1572,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 							data.avatar |= i << b;
 
 							conf_player.avatar=data.avatar;
-							SaveConf();
+
 
 							return 1;
 						}
@@ -2007,7 +1595,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 								data.avatar |= i << b;
 
 								conf_player.avatar=data.avatar;
-								SaveConf();
+
 
 							}
 
@@ -2065,7 +1653,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
 
 							conf_player.avatar=data.avatar;
-							SaveConf();
+
 
 							return 1;
 						}
@@ -2083,7 +1671,7 @@ int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
 							data.avatar |= i << b;
 
 							conf_player.avatar=data.avatar;
-							SaveConf();
+
 
 							return 1;
 						}
@@ -2507,13 +2095,11 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 			int lev = hold ? hold_level : (data.level<0 ? 0 : data.level);
 			int crs = hold ? hold_course : data.course;
 
-			if (/*s->color &&*/ m->state==2)
+			if (m->state==2)
 			{
 				if (track[crs][lev].path)
 				{
 					int seg = 20;
-					if (!s->color)
-						seg = 5;
 
 					int from = MAX(0,data.head-seg);
 					int to = MIN(data.head,data.map.course[crs].level[lev].seg.len);
@@ -2530,10 +2116,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 							if (hi_x>=clip[0] && hi_x<clip[0]+clip[2] &&
 								hi_y>=clip[1] && hi_y<clip[1]+clip[3])
 							{
-								if (s->color)
-									s->color[hi_x + hi_y*(s->w+1)] |= 0x08;
-								else
-									s->buf[hi_x + hi_y*(s->w+1)] = '.';
+								s->buf[hi_x + hi_y*(s->w+1)] = '.';
 							}
 						}
 					}
@@ -2611,28 +2194,12 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 				{
 					int id = hold ? data.hold_focus + 1 : 0;
 					char label[3][7]= { ">PLAY<", "RESUME", "CLEAR!" };
-					unsigned char attrib[3] = { 0x0A, 0x0E, 0x09 };
 					char* buf = s->buf + (s->w+1)*(car_y-1) + car_x;
-					if (s->color)
+					for (int a=0; a<6; a++)
 					{
-						unsigned char* att = (unsigned char*)s->color + (s->w+1)*(car_y-1) + car_x;
-						for (int a=0; a<6; a++)
+						if (a+car_x >= clip_x1 && a+car_x <= clip_x2)
 						{
-							if (a+car_x >= clip_x1 && a+car_x <= clip_x2)
-							{
-								buf[a] = label[id][a];
-								att[a] = attrib[id];
-							}
-						}
-					}
-					else
-					{
-						for (int a=0; a<6; a++)
-						{
-							if (a+car_x >= clip_x1 && a+car_x <= clip_x2)
-							{
-								buf[a] = label[id][a];
-							}
+							buf[a] = label[id][a];
 						}
 					}
 				}
@@ -2645,44 +2212,40 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 				// GAME ON HOLD INFO + resume/reset UI
 				char tmp[16];
 				int len;
-				unsigned char cl0 = LABEL_CL(m,false,false);
-				unsigned char cl1 = VALUE_CL(m,true,true);
 
-				menu_print(s, x, y, "Game Paused !", cl1, 13, clip);
+				menu_print(s, x, y, "Game Paused !", 13, clip);
 				y+=2;
 
-				menu_print(s, x, y, "Chapter:", cl0, 8, clip);
+				menu_print(s, x, y, "Chapter:", 8, clip);
 				y++;
-				menu_print(s, x+0, y, campaign[hold_course].name, cl1, strlen(campaign[hold_course].name), clip);
+				menu_print(s, x+0, y, campaign[hold_course].name, strlen(campaign[hold_course].name), clip);
 				y+=2;
 
 				len = sprintf_s(tmp,16,"[%c-%c]", campaign[hold_course].level[hold_level].name, campaign[hold_course].level[hold_level].name2);
-				menu_print(s, x, y, "Level: ", cl0, 7, clip);
-				menu_print(s, x+7, y, tmp, cl1, len, clip);
+				menu_print(s, x, y, "Level: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
 				y++;
 
 				len = sprintf_s(tmp,16,"%d", hold_score);
-				menu_print(s, x, y, "Score: ", cl0, 7, clip);
-				menu_print(s, x+7, y, tmp, cl1, len, clip);
+				menu_print(s, x, y, "Score: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
 				y++;
 
 				len = sprintf_s(tmp,16,"%d", hold_lives);
-				menu_print(s, x, y, "Lives: ", cl0, 7, clip);
-				menu_print(s, x+7, y, tmp, cl1, len, clip);
+				menu_print(s, x, y, "Lives: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
 				y+=3;
 
 				if (m->state==2 && data.hold_focus==0)
-					menu_print(s, x, y,  ">", cl_menu_c[m->state], 1, clip);
-				unsigned char cl = LABEL_CL(m,data.hold_focus==0,false);
+					menu_print(s, x, y,  ">", 1, clip);
 				menu_blit(s,x+2,y-1,&tag,0,0,2,2,m->state==2?2:3,clip);
-				menu_print(s, x+5, y, "RESUME", cl, 6, clip);
+				menu_print(s, x+5, y, "RESUME", 6, clip);
 				y+=2;
 
 				if (m->state==2 && data.hold_focus==1)
-					menu_print(s, x, y,  ">", cl_menu_c[m->state], 1, clip);
-				cl = LABEL_CL(m,data.hold_focus==1,false);
+					menu_print(s, x, y,  ">", 1, clip);
 				menu_blit(s,x+2,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
-				menu_print(s, x+5, y, "CLEAR", cl, 5, clip);
+				menu_print(s, x+5, y, "CLEAR", 5, clip);
 				y+=2;
 			}
 			else
@@ -2715,26 +2278,21 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 					if (i==data.course && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
 						y+=data.anim_y;
 
-					unsigned char cl = (i==data.course /*&& data.level<0*/) ? cl_menu_c[m->state] : (i==data.course ? cl_menu_b[m->state] : cl_menu_a[m->state]);
-
 					// paint space 1 line above
-					menu_print(s, x, y-1, clear, cl, 15, clip);
+					menu_print(s, x, y-1, clear, 15, clip);
 
 					if (campaign[i].flags & 0x1)
 					{
-						cl &= 0xF0;
-						if (!cl)
-							cl = 0x08;
-						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[ ] ":"[ ] ") : "[ ] ", cl, 4, clip);
+						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[ ] ":"[ ] ") : "[ ] ", 4, clip);
 					}
 					else
-						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[>] ":"[-] ") : "[+] ", cl, 4, clip);
+						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[>] ":"[-] ") : "[+] ", 4, clip);
 
 					const char* name = campaign[i].name;
 					int nlen = strlen(name);
-					menu_print(s, x+4, y, name, cl, nlen, clip);
+					menu_print(s, x+4, y, name, nlen, clip);
 					if (nlen<11)
-						menu_print(s, x+4+nlen, y, clear, cl, 11-nlen, clip);
+						menu_print(s, x+4+nlen, y, clear, 11-nlen, clip);
 
 					y++;
 
@@ -2744,11 +2302,9 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 						{
 							if (y<m->y+m->h-module.b - menu_window.smooth)
 							{
-								cl = i==data.course && j==data.level ? cl_menu_c[m->state] : cl_menu_b[m->state];
-
 								char name[32];
 								int len = sprintf_s(name,32, i==data.course && j==data.level ? "> (%c-%c)" : "   %c-%c ", campaign[i].level[j].name, campaign[i].level[j].name2);
-								menu_print(s, x+4, y, name, cl, len, clip);
+								menu_print(s, x+4, y, name, len, clip);
 							}
 							y++;
 						}
@@ -2864,7 +2420,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 											int lev = data.level<0 ? 0 : data.level;
 											data.car_to = data.map.course[data.course].level[lev].seg.from;
 
-											SaveConf();
+
 											return 0;
 										}
 									}
@@ -2900,7 +2456,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 												int lev = data.level<0 ? 0 : data.level;
 												data.car_to = data.map.course[data.course].level[lev].seg.from;
 
-												SaveConf();
+
 												return 0;
 											}
 										}
@@ -2955,7 +2511,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 							int lev = data.level<0 ? 0 : data.level;
 							data.car_to = data.map.course[data.course].level[lev].seg.from;
 
-							SaveConf();
+
 
 							return 1;
 						}
@@ -2975,7 +2531,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 							int lev = data.level<0 ? 0 : data.level;
 							data.car_to = data.map.course[data.course].level[lev].seg.from;
 
-							SaveConf();
+
 
 							return 1;
 						}
@@ -3012,7 +2568,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 
 							data.car_to = data.map.course[data.course].level[data.level].seg.from;
 
-							SaveConf();
+
 
 							return 1;
 						}
@@ -3032,7 +2588,7 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 							int lev = data.level<0 ? 0 : data.level;
 							data.car_to = data.map.course[data.course].level[lev].seg.from;
 
-							SaveConf();
+
 
 							return 1;
 						}
@@ -3087,166 +2643,32 @@ int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
 
 int KeyboardProc(MODULE* m, int msg, void* p1, void* p2)
 {
-	struct KeyboardData
-	{
-		char map[6];
-		int hover;
-		bool focus;
-	};
-
-	static KeyboardData data;
-
-	static const char* label[6]=
-	{
-		"Left  (brake)",
-		"Right (accel.)",
-		"Up    (jump)",
-		"Down  (crouch)",
-		"Enter (fire)",
-		"Quit"
+	static const char* label[6] = {
+		"A - Left (brake)",
+		"D - Right (accel.)",
+		"W - Up (jump)",
+		"S - Down (crouch)",
+		"L - Enter (fire)",
+		"Q - Quit"
 	};
 
 	switch (msg)
 	{
-		case MM_LOAD:
-		{
-			memcpy(data.map, conf_keyboard.map, 6);
-			break;
-		}
-
 		case MM_INIT:
-		{
-			memcpy(data.map, conf_keyboard.map, 6);
-			data.hover = 0;
-			data.focus = false;
-
-			return 20; //(module.t+1) + 12;
-		}
-
-		case MM_INPUT:
-		{
-			CON_INPUT* ci = (CON_INPUT*)p1;
-
-			if (ci->EventType == CON_INPUT_TCH_BEGIN)
-			{
-				int y = ci->Event.TouchEvent.y - m->y + menu_window.smooth;
-
-				int h = (y - 5) >> 1;
-
-				if (h>=0 && h<6)
-					data.hover = h;
-			}
-
-			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
-			{
-				if (!data.focus)
-				{
-					switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
-					{
-						case KBD_UP:
-							if (data.hover>0)
-								data.hover--;
-							return 1;
-						case KBD_DN:
-							if (data.hover<5)
-								data.hover++;
-							return 1;
-
-						case 13:
-							data.focus = true;
-							return 1;
-					}
-				}
-				else
-				{
-					char c = ci->Event.KeyEvent.uChar.AsciiChar;
-					if (c>='a' && c<='z')
-						c+='A'-'a';
-					if (c>='0' && c<='9' ||
-						c>='A' && c<='Z' || c==' ')
-					{
-						data.map[data.hover] = c;
-
-						memcpy(conf_keyboard.map,data.map,6);
-						SaveConf();
-					}
-
-					data.focus = false;
-					return 1;
-				}
-
-				break;
-			}
-
-			break;
-		}
+			return 20;
 
 		case MM_PAINT:
 		{
 			CON_OUTPUT* s = (CON_OUTPUT*)p1;
 			int* clip = (int*)p2;
 
-			int x = m->x + (module.l+2);
-			int y = m->y + (module.t+1) - menu_window.smooth + 1;
+			int x = m->x + (module.l + 2);
+			int y = m->y + (module.t + 1) - menu_window.smooth + 1;
 
-			unsigned char cl;
-
-			if (s->color)
+			for (int i = 0; i < 6; i++)
 			{
-				for (int i=0; i<6; i++)
-				{
-
-					if (m->state==2 && data.hover==i)
-						menu_print(s, x+2  -(2), y+2*i, ">", cl_menu_c[m->state], 1, clip);
-
-					cl = LABEL_CL(m,data.hover==i,data.focus);
-					menu_print(s, x+2  -(2)+2, y+2*i, label[i], cl, strlen(label[i]), clip);
-
-					cl = VALUE_CL(m,data.hover==i,data.focus);
-
-					const char* m = &data.map[i];
-					int  l = 1;
-
-					if (*m==' ')
-					{
-						m = "Spc";
-						l = 3;
-					}
-
-					for (int j=0; j<6; j++)
-					{
-						if (i==j)
-							continue;
-
-						if (data.map[i] == data.map[j])
-							cl = (cl&0xF8) | 0x01;
-					}
-
-					menu_print(s, x+2  -(2)+2 + 18 -l/2, y+2*i, m, cl, l, clip);
-				}
+				menu_print(s, x + 2 - 2, y + 2 * i, label[i], strlen(label[i]), clip);
 			}
-			else
-			{
-				for (int i=0; i<6; i++)
-				{
-					if (m->state==2 && data.hover==i)
-						menu_print(s, x+2 -(2), y+2*i, ">", 0, 1, clip);
-
-					menu_print(s, x+2  -(2)+2, y+2*i, label[i], 0, strlen(label[i]), clip);
-
-					const char* m = &data.map[i];
-					int  l = 1;
-
-					if (*m==' ')
-					{
-						m = "Spc";
-						l = 3;
-					}
-
-					menu_print(s, x+2  -(2)+2 + 18 -l/2, y+2*i, m, 0, l, clip);
-				}
-			}
-
 			break;
 		}
 	}
@@ -3268,18 +2690,6 @@ void LoadMenu()
 
 void InitMenu()
 {
-	cl_menu_a[0]=module.color[0][(module.w+1)*6+6];
-	cl_menu_a[1]=module.color[1][(module.w+1)*6+6];
-	cl_menu_a[2]=module.color[2][(module.w+1)*6+6];
-
-	cl_menu_b[0]=module.color[0][(module.w+1)*7+6];
-	cl_menu_b[1]=module.color[1][(module.w+1)*7+6];
-	cl_menu_b[2]=module.color[2][(module.w+1)*7+6];
-
-	cl_menu_c[0]=module.color[0][(module.w+1)*8+6];
-	cl_menu_c[1]=module.color[1][(module.w+1)*8+6];
-	cl_menu_c[2]=module.color[2][(module.w+1)*8+6];
-
 	WINDOW* mw = &menu_window;
 	memset(mw,0,sizeof(WINDOW));
 
@@ -3299,8 +2709,8 @@ void InitMenu()
 	mw->module[1].proc = CampaignProc;
 	mw->module[1].dbl=true;
 
-	mw->module[2].title = "Keyboard Input";
-	mw->module[2].h = 20; // <- will be automaticaly calculated!
+	mw->module[2].title = "Keyboard";
+	mw->module[2].h = 14;
 	mw->module[2].proc = KeyboardProc;
 	mw->module[2].dbl=false;
 
@@ -3425,22 +2835,13 @@ static void PostPaint(CON_OUTPUT* s)
 		if (s->buf[(s->w+1)*y+x] != '_' && s->buf[(s->w+1)*y+x] != '.')
 			s->buf[(s->w+1)*y+x] = ' ';
 	}
-
-	if (s->color)
-	{
-		for (int x=l; x<r; x++)
-		{
-			s->color[(s->w+1)*y+x]&=0x0F;
-		}
-	}
 }
 
 void PaintModule(CON_OUTPUT* s, int x, int y, int w, int h, const char* title, int state, const int* clip = 0)
 {
 	menu_stretch(s,x,y,w,h,&module,state,clip);
 
-	const char* glyph = s->color ? module.shade[state] : module.mono[state];
-	const char* color = s->color ? module.color[state] : 0;
+	const char* glyph = module.mono[state];
 
 	char titbuf[64];
 	int len = strlen(title);
@@ -3462,13 +2863,13 @@ void PaintModule(CON_OUTPUT* s, int x, int y, int w, int h, const char* title, i
 
 	int cx = (w-len)/2;
 
-	menu_print(s,x+cx,y+2,title, color ? color[(module.w+1)*2+6] : 0, len, clip);
+	menu_print(s,x+cx,y+2,title, len, clip);
 
-	menu_fill(s,x+cx-2,y+2, glyph[(module.w+1)*2+4], color ? color[(module.w+1)*2+4] : 0, 1,1, clip);
-	menu_fill(s,x+cx+len+1,y+2, glyph[(module.w+1)*2+8], color ? color[(module.w+1)*2+8] : 0, 1,1, clip);
+	menu_fill(s,x+cx-2,y+2, glyph[(module.w+1)*2+4], 1,1, clip);
+	menu_fill(s,x+cx+len+1,y+2, glyph[(module.w+1)*2+8], 1,1, clip);
 
-	menu_fill(s,x+3,y+2, glyph[(module.w+1)*2+3], color ? color[(module.w+1)*2+3] : 0, cx-5,1, clip);
-	menu_fill(s,x+cx+len+2,y+2, glyph[(module.w+1)*2+9], color ? color[(module.w+1)*2+9] : 0, w-5 -cx-len,1, clip);
+	menu_fill(s,x+3,y+2, glyph[(module.w+1)*2+3], cx-5,1, clip);
+	menu_fill(s,x+cx+len+2,y+2, glyph[(module.w+1)*2+9], w-5 -cx-len,1, clip);
 
 }
 
@@ -3653,7 +3054,7 @@ int RunMenu(CON_OUTPUT* s)
 		{
 			char buf[81];
 			int len = sprintf_s(buf,81,"ascii-patrol ver. alpha 1.7 by Gumix");
-			menu_print(s, (s->w - len)/2, s->h-1, buf,(unsigned char)0x8F, len, 0);
+			menu_print(s, (s->w - len)/2, s->h-1, buf, len, 0);
 		}
 
 		if (mw->prompt_active)
@@ -3685,8 +3086,6 @@ int RunMenu(CON_OUTPUT* s)
 				if (ir[i].EventType == CON_INPUT_TCH_BEGIN && touch_scroll.id<0)
 				{
 					touch_scroll.id = ir[i].Event.TouchEvent.id;
-
-					DBG("begin\n");
 
 					int tx = ir[i].Event.TouchEvent.x;
 					int ty = ir[i].Event.TouchEvent.y;
@@ -3727,8 +3126,6 @@ int RunMenu(CON_OUTPUT* s)
 
 				if (ir[i].EventType == CON_INPUT_TCH_MOVE && touch_scroll.id == ir[i].Event.TouchEvent.id)
 				{
-					DBG("move\n");
-
 					if (!touch_scroll.redirect)
 					{
 						if ( ABS(touch_scroll.cur_x - ir[i].Event.TouchEvent.x) > 1 ||
@@ -3756,7 +3153,6 @@ int RunMenu(CON_OUTPUT* s)
 				{
 					touch_scroll.id = -1;
 
-					DBG("end\n");
 					if (!touch_scroll.dirty && !touch_scroll.redirect)
 					{
 						bool defocus = true;

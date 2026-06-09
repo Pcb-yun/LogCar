@@ -28,7 +28,7 @@
 #include "manual.h"
 
 MODAL* modal = 0;
-SCREEN global_screen(110, 25, ' ', cl_transp);
+SCREEN global_screen(110, 25, ' ');
 
 /**
  * @brief 战役模式模态框
@@ -212,7 +212,7 @@ struct CAMPAIGN_MODAL : MODAL {
 
 				if (iCourse > conf_campaign.passed) {
 					conf_campaign.passed = iCourse;
-					SaveConf();
+
 				}
 
 				if (!current_course->level || (current_course->flags & 0x1)) {
@@ -327,9 +327,14 @@ struct MENU_MODAL : MODAL {
 				hold_modal = sub_modal;
 				sub_modal = 0;
 
+				// 清除屏幕，避免显示之前的游戏画面
+				global_screen.Clear();
+
 				return 0;
 			}
 		} else {
+			// 清除屏幕，避免显示之前的游戏画面
+			global_screen.Clear();
 			int ret = RunMenu(&global_screen);
 
 			if (ret == -3) {
@@ -342,6 +347,18 @@ struct MENU_MODAL : MODAL {
 				if (hold_modal) {
 					sub_modal = hold_modal;
 					hold_modal = 0;
+
+					// 恢复游戏：设置 freeze_fr = -1 让游戏继续运行
+					CAMPAIGN_MODAL* cm = (CAMPAIGN_MODAL*)sub_modal;
+					if (cm->level_modal) {
+						LEVEL_MODAL* lm = (LEVEL_MODAL*)cm->level_modal;
+						// 保存 freeze_fr 的值用于调整 start_tm
+						int saved_freeze_fr = lm->freeze_fr;
+						lm->freeze_fr = -1;
+						// 调整 start_tm 保持时间连续性
+						unsigned long current_tm = get_time();
+						lm->start_tm = current_tm - 10 * saved_freeze_fr;
+					}
 				} else {
 					sub_modal = new CAMPAIGN_MODAL(&global_screen,
 						conf_campaign.course,
@@ -516,10 +533,6 @@ struct INTRO_MODAL : MODAL {
 	{
 		ret = 0;
 
-		bkgnd.attrib_mask = 0x0F;
-		bkcut.attrib_mask = 0x00;
-		bkcut.attrib_over = 0x01;
-		prompt.attrib_mask = 0;
 	}
 
 	/**
@@ -537,10 +550,6 @@ struct INTRO_MODAL : MODAL {
 		const static int fr_wheel_x[3] = {3, 11, 26};
 		const static int wheel_y = 8;
 		const static int suspension[4] = {4, 8, 35, 10};
-
-		if (s->color) {
-			s->tcolor = 0x07;
-		}
 
 		while (1) {
 			unsigned long ct = get_time();
@@ -674,15 +683,7 @@ struct INTRO_MODAL : MODAL {
 			}
 
 			if (fr > half + 150 + 100 && !fade_tm) {
-				if ((fr & 63) < 32) {
-					prompt.attrib_over = 0x0B;
-				} else {
-					prompt.attrib_over = 0x03;
-				}
-
-				if (s->color || (fr & 63) < 32) {
-					prompt.Paint(s, (s->w - prompt.width) / 2, y + chassis.height + (s->h - (y + chassis.height) + 2) / 2, 0, 0);
-				}
+				prompt.Paint(s, (s->w - prompt.width) / 2, y + chassis.height + (s->h - (y + chassis.height) + 2) / 2, 0, 0);
 			}
 
 			s->Write(dw, dh, 0, 0, -1, -1);
@@ -706,12 +707,8 @@ struct INTRO_MODAL : MODAL {
 			break;
 		}
 
-		if (s->color) {
-			s->tcolor = cl_transp;
-		}
-
-		return 0;
-	}
+	return 0;
+}
 };
 
 INTRO_MODAL intro_modal;
@@ -778,8 +775,6 @@ void SetColorMode(SCREEN* s, unsigned char cl)
 		free_con_output(s);
 		s->arr = 0;
 	}
-	s->color = 0;
-	s->tcolor = 0;
 }
 
 /**
@@ -790,9 +785,6 @@ void SetColorMode(SCREEN* s, unsigned char cl)
 void SetColorMode(unsigned char cl)
 {
 	(void)cl;
-
-	cl_transp = 0;
-	SetColorMode(&global_screen, 0);
 }
 
 #endif /* GAME_ENABLE_AP */

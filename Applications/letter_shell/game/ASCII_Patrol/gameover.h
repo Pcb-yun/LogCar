@@ -7,7 +7,7 @@
 
 #include "game_ap.h"
 
-void inter_print(SCREEN* s, int dx, int dy, const char* str, char color);
+void inter_print(SCREEN* s, int dx, int dy, const char* str);
 
 struct GAMEOVER_MODAL : MODAL
 {

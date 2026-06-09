@@ -24,13 +24,13 @@ MANUAL::~MANUAL()
 	}
 }
 
-MANUAL::MANUAL(const ASSET* a, char transp, unsigned char _tcolor) :
-	SCREEN(43,17,transp,_tcolor),
+MANUAL::MANUAL(const ASSET* a, char transp) :
+	SCREEN(43,17,transp),
 	man(a)
 {
 	for (int i=0; i<man.frames; i++)
 	{
-		paper[i] = new SCREEN(43,17,transp,_tcolor);
+		paper[i] = new SCREEN(43,17,transp);
 		ClearPaper(i);
 	}
 
@@ -103,31 +103,13 @@ void MANUAL::Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw, int sh, 
 		int bend = man.width-anim;
 		int y=2;
 		scr->buf[dx+bend+(dy+y)*(scr->w+1)] = ')';
-		if (scr->color)
-			scr->color[dx+bend+(dy+y)*(scr->w+1)] = 0x70;
 
 		for (y=3; y<man.height-1; y++)
 		{
 			scr->buf[dx+bend+(dy+y)*(scr->w+1)] = '|';
-			if (scr->color)
-				scr->color[dx+bend+(dy+y)*(scr->w+1)] = 0x70;
 		}
 
 		scr->buf[dx+bend+(dy+y)*(scr->w+1)] = ')';
-		if (scr->color)
-			scr->color[dx+bend+(dy+y)*(scr->w+1)] = 0x70;
-
-		// 2 cols of shadow, right to the bend edge, TODO: clip!
-		if (scr->color)
-		{
-			int ws = (12 - ABS(12-anim)+2)/4;
-			for (int y=2; y<man.height; y++)
-			{
-				for (int xs=bend+1; xs<bend+1+ws; xs++)
-					scr->color[dx+xs+(dy+y)*(scr->w+1)] =
-						(scr->color[dx+xs+(dy+y)*(scr->w+1)] & 0x0F) | 0x70;
-			}
-		}
 
 		// finaly blend upper side of flipping page
 		paper[page+1]->BlendPage(scr,dx+bend-anim +1,dy,0,0,anim-1,-1);

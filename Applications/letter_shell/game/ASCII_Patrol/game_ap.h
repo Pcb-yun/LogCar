@@ -43,7 +43,6 @@ struct LEVEL
 	int time_limit;
 	int time_perfect;
 	ASSET* bkgnd;
-	unsigned char sky;
 	const char* sprite;
 	const char* height;
 
@@ -57,29 +56,13 @@ struct COURSE
 	int flags;
 };
 
-extern unsigned char cl_transp;
-
-extern unsigned char cl_label;
-extern unsigned char cl_score;
-
-extern unsigned char cl_statbkgnd;
-extern unsigned char cl_statvalue;
-extern unsigned char cl_statlabel;
-
-extern unsigned char cl_ground;
 extern char ch_ground;
 
-extern unsigned char cl_bullet;
 extern char ch_bullet;
 
-extern unsigned char cl_basher;
-extern unsigned char cl_drone;
-extern unsigned char cl_ufo;
 extern char ch_basher;
 extern char ch_drone;
 extern char ch_ufo;
-
-void SetColorMode(unsigned char cl);
 
 extern const LEVEL beginner[];
 extern const LEVEL champion[];
@@ -92,7 +75,7 @@ int InterScreenInput();
 struct SCREEN : CON_OUTPUT
 {
 	virtual ~SCREEN();
-	SCREEN(int _w, int _h, char transp = ' ', unsigned char _tcolor = 0);
+	SCREEN(int _w, int _h, char transp = ' ');
 	void Clear();
 	virtual void Resize(int _w, int _h);
 	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
@@ -102,7 +85,6 @@ struct SCREEN : CON_OUTPUT
 	void BlendPage(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1);
 
 	char t;
-	char  tcolor; // color used during clear
 };
 
 struct SPRITE
@@ -124,14 +106,9 @@ struct SPRITE
 	int cookie_data[4];
 
 	const char* score_anim[2]; // mono & shade
-	const char* score_color[2];
 	ASSET asset;
 
 	char score_text[81];
-	char score_attr[81];
-
-	unsigned char attrib_mask;
-	unsigned char attrib_over;
 
 	virtual ~SPRITE();
 
@@ -158,8 +135,7 @@ struct FNT
 {
 	SPRITE fnt;
 	FNT(const ASSET* f);
-	void Paint(SCREEN* s, int x, int y, unsigned char cl, const char* txt);
-	//void Paint(SCREEN* s, int x, int y, unsigned char cl, int val);
+	void Paint(SCREEN* s, int x, int y, const char* txt);
 };
 
 struct WHEEL:SPRITE
@@ -187,7 +163,7 @@ struct CHASSIS:SPRITE
 struct SCROLL : SCREEN
 {
 	virtual ~SCROLL();
-	SCROLL(int _w, int _h, char transp=' ', unsigned char _tcolor=0x00);
+	SCROLL(int _w, int _h, char transp=' ');
 
 	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
 	virtual void Resize(int _w, int _h);
@@ -199,7 +175,7 @@ struct SCROLL : SCREEN
 struct BACKGROUND : SCROLL
 {
 	virtual ~BACKGROUND();
-	BACKGROUND(int _w, int _h, unsigned char _tcolor);
+	BACKGROUND(int _w, int _h);
 	virtual void Scroll(int s);
 };
 
@@ -208,7 +184,7 @@ struct LANDSCAPE : SCROLL
 	int len;
 	const ASSET* data;
 	virtual ~LANDSCAPE();
-	LANDSCAPE(int _w, int _h, const ASSET* _data, unsigned char _tcolor=0x00);
+	LANDSCAPE(int _w, int _h, const ASSET* _data);
 
 	virtual void Scroll(int s);
 };
@@ -302,7 +278,7 @@ struct TERRAIN : SCROLL
 	BULLET bullet[100];
 
 	virtual ~TERRAIN();
-	TERRAIN(int _w, int _h, int _scrh, unsigned char _tcolor, const char* sprite, const char* height, char* _hitbin, char _base_point='A', char _start_point='@', int _lives=3);
+	TERRAIN(int _w, int _h, int _scrh, const char* sprite, const char* height, char* _hitbin, char _base_point='A', char _start_point='@', int _lives=3);
 
 	virtual void Resize(int _w, int _h);
 	int GetMaxHeight(int x, int n);
@@ -346,11 +322,6 @@ struct LEVEL_MODAL : MODAL
 	int tch_id[32];
 	CON_INPUT tch_quit;
 	*/
-
-	int speed_id; // left / right + down
-	int jump_id;
-	int fire_id;
-	int exit_id;
 
 	int vely;
 	int posy; // grounded

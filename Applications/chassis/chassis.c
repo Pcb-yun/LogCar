@@ -61,42 +61,44 @@ static void Car_Key(void) {
 
 	char prev_key = 0;
 	char key;
+	uint16_t last_time;
 
 	for (;;) {
-        osDelay(10);
+		osDelay(5);
 		short ret = shell->read(&key, 1);
 
-		if (ret <= 0) {	// 超时无输入
-			if (prev_key != 0) {
-				MotionControl_Stop();
-				prev_key = 0;
-			} continue;
+		if (ret > 0) {
+			if (key == 0x03) {	// ^C 退出
+				MotionControl_Stop(); break;
+			}
+
+			if (key != prev_key) {
+				int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
+				bool valid_key = true;
+
+				switch (key) {
+				case 'w': case 'W': x_comp = 127;   break;	// 前进
+				case 's': case 'S': x_comp = -127;  break;	// 后退
+				case 'a': case 'A': y_comp = 127;   break;	// 左移
+				case 'd': case 'D': y_comp = -127;  break;	// 右移
+				case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
+				case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
+				default: valid_key = false; break;
+				}
+
+				if (valid_key) {
+					MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
+					last_time = osKernelGetTickCount();
+				}
+			}
+
+			prev_key = key;
 		}
 
-		if (key == 0x03) {	// ^C 退出
-			MotionControl_Stop(); break;
+		if (prev_key != 0 && (osKernelGetTickCount() - last_time > 50)) {
+			MotionControl_Stop();
+			prev_key = 0;
 		}
-
-		if (key == prev_key) continue;
-
-		int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
-		bool valid_key = true;
-
-		switch (key) {
-		case 'w': case 'W': x_comp = 127;   break;	// 前进
-		case 's': case 'S': x_comp = -127;  break;	// 后退
-		case 'a': case 'A': y_comp = 127;   break;	// 左移
-		case 'd': case 'D': y_comp = -127;  break;	// 右移
-		case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
-		case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
-		default: valid_key = false; break;
-		}
-
-		if (valid_key) {
-			MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
-		}
-
-		prev_key = key;
 	}
     logPrintln("\033[%dA\033[J\033[2A", 1);
 }
