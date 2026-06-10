@@ -159,7 +159,7 @@ static void Track_Time_Shell(int argc, char *argv[]) {
     char *endptr;
     long val = strtol(argv[1], &endptr, 10);
     if(*endptr != '\0') {
-        logPrintln("invalid time value: %s\n%s", argv[1], TRACK_TIME_HELP);
+        logPrintln("invalid time value: %s", argv[1]);
         return;
     } else {
         g_track->time = (uint16_t)val;

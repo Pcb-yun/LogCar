@@ -119,6 +119,10 @@ virtualFolder:
         - path: Applications/letter_shell/game/ASCII_Patrol/temp.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/twister.cpp
       folders: []
+    - name: mission
+      files:
+        - path: Applications/LogCar_mission/mission.c
+      folders: []
     - name: nav
       files:
         - path: Applications/nav/localization/nav_local.c
@@ -194,6 +198,7 @@ targets:
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
         - Applications/letter_shell/src
+        - Applications/LogCar_mission
         - Applications/nav
         - Applications/nav/localization
         - Applications/nav/trajectory_tracking

@@ -142,6 +142,13 @@ const osThreadAttr_t Nav_Track_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
+/* Definitions for Mission */
+osThreadId_t MissionHandle;
+const osThreadAttr_t Mission_attributes = {
+  .name = "Mission",
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityRealtime,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -215,6 +222,7 @@ extern void Servo_Tx_Task(void *argument);
 extern void Battery_Get_Task(void *argument);
 extern void Loc_Update_Task(void *argument);
 extern void Nav_Track_Task(void *argument);
+extern void mission_run(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -416,6 +424,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Nav_Track */
   Nav_TrackHandle = osThreadNew(Nav_Track_Task, NULL, &Nav_Track_attributes);
+
+  /* creation of Mission */
+  MissionHandle = osThreadNew(mission_run, NULL, &Mission_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

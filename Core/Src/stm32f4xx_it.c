@@ -89,8 +89,6 @@ extern TIM_HandleTypeDef htim1;
 void NMI_Handler(void)
 {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] NMI Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -172,8 +170,6 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] HardFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -324,8 +320,6 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] MemManage Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -424,8 +418,6 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] BusFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -534,8 +526,6 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [CRITICAL] UsageFault Handler Triggered\r\n"
              "============================================================\r\n\r\n");
@@ -646,8 +636,6 @@ void UsageFault_Handler(void)
 void DebugMon_Handler(void)
 {
   /* USER CODE BEGIN DebugMonitor_IRQn 0 */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_9, GPIO_PIN_RESET);
-
   my_printf("\r\n============================================================\r\n"
              "  [WARNING] DebugMonitor Handler Triggered\r\n"
              "============================================================\r\n\r\n");
