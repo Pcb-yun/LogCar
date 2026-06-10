@@ -708,25 +708,25 @@ void shellListCommand(Shell *shell)
 }
 
 
-/**
- * @brief shell列出变量
- *
- * @param shell shell对象
- */
-void shellListVar(Shell *shell)
-{
-    ShellCommand *base = (ShellCommand *)shell->commandList.base;
-    shellWriteString(shell, shellText[SHELL_TEXT_VAR_LIST]);
-    for (short i = 0; i < shell->commandList.count; i++)
-    {
-        if (base[i].attr.attrs.type > SHELL_TYPE_CMD_FUNC
-            && base[i].attr.attrs.type <= SHELL_TYPE_VAR_NODE
-            && shellCheckPermission(shell, &base[i]) == 0)
-        {
-            shellListItem(shell, &base[i]);
-        }
-    }
-}
+// /**
+//  * @brief shell列出变量
+//  *
+//  * @param shell shell对象
+//  */
+// void shellListVar(Shell *shell)
+// {
+//     ShellCommand *base = (ShellCommand *)shell->commandList.base;
+//     shellWriteString(shell, shellText[SHELL_TEXT_VAR_LIST]);
+//     for (short i = 0; i < shell->commandList.count; i++)
+//     {
+//         if (base[i].attr.attrs.type > SHELL_TYPE_CMD_FUNC
+//             && base[i].attr.attrs.type <= SHELL_TYPE_VAR_NODE
+//             && shellCheckPermission(shell, &base[i]) == 0)
+//         {
+//             shellListItem(shell, &base[i]);
+//         }
+//     }
+// }
 
 
 /**
@@ -1202,41 +1202,41 @@ static int shellShowVar(Shell *shell, ShellCommand *command)
 }
 
 
-/**
- * @brief shell设置变量
- *
- * @param name 变量名
- * @param value 变量值
- * @return int 返回变量值
- */
-int shellSetVar(char *name, int value)
-{
-    Shell *shell = shellGetCurrent();
-    if (shell == NULL)
-    {
-        return 0;
-    }
-    ShellCommand *command = shellSeekCommand(shell,
-                                             name,
-                                             shell->commandList.base,
-                                             0);
-    if (!command)
-    {
-        shellWriteString(shell, shellText[SHELL_TEXT_VAR_NOT_FOUND]);
-        return 0;
-    }
-    if (command->attr.attrs.type < SHELL_TYPE_VAR_INT
-        || command->attr.attrs.type > SHELL_TYPE_VAR_NODE)
-    {
-        shellWriteString(shell, name);
-        shellWriteString(shell, shellText[SHELL_TEXT_NOT_VAR]);
-        return 0;
-    }
-    return shellSetVarValue(shell, command, value);
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-setVar, shellSetVar, set var);
+// /**
+//  * @brief shell设置变量
+//  *
+//  * @param name 变量名
+//  * @param value 变量值
+//  * @return int 返回变量值
+//  */
+// int shellSetVar(char *name, int value)
+// {
+//     Shell *shell = shellGetCurrent();
+//     if (shell == NULL)
+//     {
+//         return 0;
+//     }
+//     ShellCommand *command = shellSeekCommand(shell,
+//                                              name,
+//                                              shell->commandList.base,
+//                                              0);
+//     if (!command)
+//     {
+//         shellWriteString(shell, shellText[SHELL_TEXT_VAR_NOT_FOUND]);
+//         return 0;
+//     }
+//     if (command->attr.attrs.type < SHELL_TYPE_VAR_INT
+//         || command->attr.attrs.type > SHELL_TYPE_VAR_NODE)
+//     {
+//         shellWriteString(shell, name);
+//         shellWriteString(shell, shellText[SHELL_TEXT_NOT_VAR]);
+//         return 0;
+//     }
+//     return shellSetVarValue(shell, command, value);
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// setVar, shellSetVar, set var);
 
 
 /**
@@ -1936,20 +1936,20 @@ void shellTask(void *param)
 // cmds, shellCmds, list all cmd);
 
 
-/**
- * @brief shell 输出变量列表(shell调用)
- */
-void shellVars(void)
-{
-    Shell *shell = shellGetCurrent();
-    if (shell)
-    {
-        shellListVar(shell);
-    }
-}
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-vars, shellVars, list all var);
+// /**
+//  * @brief shell 输出变量列表(shell调用)
+//  */
+// void shellVars(void)
+// {
+//     Shell *shell = shellGetCurrent();
+//     if (shell)
+//     {
+//         shellListVar(shell);
+//     }
+// }
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// vars, shellVars, list all var);
 
 
 // /**

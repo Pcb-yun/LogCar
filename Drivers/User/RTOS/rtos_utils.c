@@ -44,9 +44,6 @@ static void Task_Info(void) {
     osThreadId_t task_ids[32];
     uint32_t task_count = osThreadEnumerate(task_ids, 32);
 
-    logPrintln("ID        Name          State       Priority    Stack Space    High Water    Runtime\r\n"
-               "------------------------------------------------------------------------------------");
-
     // 获取总运行时间
     uint32_t ulTotalRunTime;
     TaskStatus_t *pxTaskStatusArray;
@@ -60,37 +57,75 @@ static void Task_Info(void) {
     if(pxTaskStatusArray != NULL) {
         ulArraySize = uxTaskGetSystemState(pxTaskStatusArray, ulArraySize, &ulTotalRunTime);
 
-        for(uint32_t i = 0; i < task_count; i++) {
-            const char *task_name = osThreadGetName(task_ids[i]);
-            osThreadState_t state = osThreadGetState(task_ids[i]);
-            osPriority_t priority = osThreadGetPriority(task_ids[i]);
-            uint32_t stack_space = osThreadGetStackSpace(task_ids[i]);
+        // 定义任务信息结构体用于缓存
+        typedef struct {
+            osThreadId_t task_id;
+            const char *task_name;
+            osThreadState_t state;
+            osPriority_t priority;
+            uint32_t stack_space;
+            uint32_t high_water;
+            float cpu_usage;
+        } TaskInfo_t;
 
-            // 获取任务高水位线和运行时间
-            TaskStatus_t xTaskStatus;
-            TaskHandle_t xTask = (TaskHandle_t)task_ids[i];
-            vTaskGetInfo(xTask, &xTaskStatus, pdTRUE, eInvalid);
-            uint32_t high_water = xTaskStatus.usStackHighWaterMark;
-            unsigned long ulRunTimeCounter = xTaskStatus.ulRunTimeCounter;
+        TaskInfo_t *task_info_array = pvPortMalloc(task_count * sizeof(TaskInfo_t));
+        if(task_info_array != NULL) {
+            // 缓存所有任务信息
+            for(uint32_t i = 0; i < task_count; i++) {
+                task_info_array[i].task_id = task_ids[i];
+                task_info_array[i].task_name = osThreadGetName(task_ids[i]);
+                task_info_array[i].state = osThreadGetState(task_ids[i]);
+                task_info_array[i].priority = osThreadGetPriority(task_ids[i]);
+                task_info_array[i].stack_space = osThreadGetStackSpace(task_ids[i]);
 
-            // 计算CPU使用率
-            float cpu_usage = 0.0f;
-            if(ulTotalRunTime > 0) {
-                cpu_usage = (float)ulRunTimeCounter / (float)ulTotalRunTime * 100.0f;
+                // 获取任务高水位线和运行时间
+                TaskStatus_t xTaskStatus;
+                TaskHandle_t xTask = (TaskHandle_t)task_ids[i];
+                vTaskGetInfo(xTask, &xTaskStatus, pdTRUE, eInvalid);
+                task_info_array[i].high_water = xTaskStatus.usStackHighWaterMark;
+
+                // 计算CPU使用率
+                if(ulTotalRunTime > 0) {
+                    task_info_array[i].cpu_usage = (float)xTaskStatus.ulRunTimeCounter / (float)ulTotalRunTime * 100.0f;
+                } else {
+                    task_info_array[i].cpu_usage = 0.0f;
+                }
             }
 
-            const char *state_str;
-            switch(state) {
-                case osThreadInactive: state_str = "Inactive"; break;
-                case osThreadReady: state_str = "Ready"; break;
-                case osThreadRunning: state_str = "Running"; break;
-                case osThreadBlocked: state_str = "Blocked"; break;
-                case osThreadTerminated: state_str = "Terminated"; break;
-                default: state_str = "Unknown"; break;
+            // 按照CPU占用率从高到低排序（冒泡排序）
+            for(uint32_t i = 0; i < task_count - 1; i++) {
+                for(uint32_t j = 0; j < task_count - 1 - i; j++) {
+                    if(task_info_array[j].cpu_usage < task_info_array[j + 1].cpu_usage) {
+                        TaskInfo_t temp = task_info_array[j];
+                        task_info_array[j] = task_info_array[j + 1];
+                        task_info_array[j + 1] = temp;
+                    }
+                }
             }
-            logPrintln("%p  %-12s  %-10s  %-10lu  %-10lu     %-12lu  %-4.2f %%",
-                      task_ids[i], task_name ? task_name : "<unknown>",
-                      state_str, priority, stack_space, high_water, cpu_usage);
+
+            // 打印排序后的任务信息
+            logPrintln("ID        Name          State       Priority    Stack Space    High Water    CPU\r\n"
+                       "------------------------------------------------------------------------------------");
+
+            for(uint32_t i = 0; i < task_count; i++) {
+                const char *state_str;
+                switch(task_info_array[i].state) {
+                    case osThreadInactive: state_str = "Inactive"; break;
+                    case osThreadReady: state_str = "Ready"; break;
+                    case osThreadRunning: state_str = "Running"; break;
+                    case osThreadBlocked: state_str = "Blocked"; break;
+                    case osThreadTerminated: state_str = "Terminated"; break;
+                    default: state_str = "Unknown"; break;
+                }
+                logPrintln("%p  %-12s  %-10s  %-10lu  %-10lu     %-12lu  %-4.2f %%",
+                          task_info_array[i].task_id, task_info_array[i].task_name ? task_info_array[i].task_name : "<unknown>",
+                          state_str, task_info_array[i].priority, task_info_array[i].stack_space,
+                          task_info_array[i].high_water, task_info_array[i].cpu_usage);
+            }
+
+            vPortFree(task_info_array);
+        } else {
+            logPrintln("Failed to allocate memory for task info array");
         }
 
         vPortFree(pxTaskStatusArray);
@@ -201,6 +236,7 @@ static void Event_Info(void) {
         logPrintln("%-20s  %s", "UART3_TX_IDLE", (flags & 0x20) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "UART3_RX_IDLE", (flags & 0x40) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "ADC1_CONVCPLT", (flags & 0x80) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "MISSION_RUN", (flags & 0x100) ? "SET" : "RESET");
     }
 }
 

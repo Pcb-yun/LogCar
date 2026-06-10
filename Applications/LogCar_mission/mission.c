@@ -32,7 +32,7 @@ void mission_run(void *argument) {
  * @brief 总任务执行shell导出
  */
 static void mission_shell(int argc, char *argv[]) {
-    if(argc > 2) {
+    if(argc != 2) {
         logPrintln(MISSION_HELP); return;
     }
 
