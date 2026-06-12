@@ -28,17 +28,17 @@ static uint16_t update_time;    // 电机状态更新时间间隔 (ms)
  */
 bool Motor_Init(void) {
     extern uint8_t rx6Buffer[USART6_RX_BUF_SIZE];
-    MX_USART6_UART_Init();
-    update_time = 100;
+    update_time = 50;
 
     g_motor_status = pvPortMalloc(sizeof(MotorStatusShared_t));
     if (!g_motor_status) {
         return false;
     }
+    MX_USART6_UART_Init();
 
     for (uint8_t i = 0; i < 4; i++) {
 #if USE_HEARTBEAT
-        ZDT_V5_Modify_Heart_Protect(i + 1, false, update_time + 500);
+        ZDT_V5_Modify_Heart_Protect(i + 1, false, update_time + 200);
 #else
         ZDT_V5_Read_Motor_ID(i + 1);
 #endif

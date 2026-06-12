@@ -70,14 +70,14 @@ static void Loc_Update(void) {
     WeightedPose_t sensor_sources[MAX_SENSOR_SOURCES] = {0};
     uint8_t source_count = 0;
 
-    // 获取里程计数据
-    Pose_t enc_pose;
-    bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
-    if (enc_rec) {
-        sensor_sources[source_count].pose = enc_pose;
-        sensor_sources[source_count].weight = 0.6f;    // 里程计权重
-        source_count++;
-    }
+    // // 获取里程计数据
+    // Pose_t enc_pose;
+    // bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
+    // if (enc_rec) {
+    //     sensor_sources[source_count].pose = enc_pose;
+    //     sensor_sources[source_count].weight = 0.6f;    // 里程计权重
+    //     source_count++;
+    // }
 
     // 获取平面定位数据
     Pose_t ops_pose;
@@ -93,9 +93,6 @@ static void Loc_Update(void) {
         source_count++;
     }
 
-
-
-
     // 数据融合
     Pose_t fused_pose;
     if (source_count > 0) {
@@ -109,24 +106,6 @@ static void Loc_Update(void) {
         *g_pose = fused_pose;
         osMutexRelease(Pose_MutexHandle);
     }
-}
-
-/**
- * @brief 导航定位设置
- * @param pose 导航位姿指针
- */
-bool Loc_Set(Pose_t *pose) {
-    extern osMutexId_t Pose_MutexHandle;
-    if (!is_init) return false;
-
-    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
-        *g_pose = *pose;
-        g_pose->timestamp = osKernelGetTickCount();
-        osMutexRelease(Pose_MutexHandle);
-        return true;
-    }
-
-    return false;
 }
 
 /**

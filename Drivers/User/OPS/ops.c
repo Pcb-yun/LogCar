@@ -18,6 +18,7 @@
 static OPSData_t *g_ops = NULL;
 static bool is_init = false;
 static void Data_Analyse(const uint8_t rec);
+static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len);
 
 /**
  * @brief 初始化平面定位模块
@@ -28,7 +29,6 @@ bool OPS_Init(void) {
         return false;
     }
     memset(g_ops, 0, sizeof(OPSData_t));
-    MX_UART4_Init();
     is_init = true;
 
     return true;
@@ -46,12 +46,10 @@ bool OPS_Get(OPSData_t *pose) {
 }
 
 /**
- * @brief 发送命令到定位模块
- * @param cmd 命令字符串
- * @param len 命令长度
- */
-static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len) {
-    HAL_UART_Transmit(&huart4, cmd, len, 100);
+ * @brief 归零定位模块
+ * */
+void OPS_Zero(void) {
+    OPS_Send_Cmd((const uint8_t *)"ACTR", 4);
 }
 
 /**
@@ -68,6 +66,7 @@ void OPS_Update_Task(void *argument) {
         osMessageQueueDelete(Uart4_Rx_DataHandle);
         vTaskDelete(NULL);
     }
+    MX_UART4_Init();
 
     for (;;) {
         osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, osWaitForever);
@@ -161,7 +160,7 @@ static void OPS_Zero_Shell(int argc, char *argv[]) {
         logWarning("OPS module not initialized"); return;
     }
 
-    OPS_Send_Cmd((const uint8_t *)"ACT0", 4);
+    OPS_Zero();
     logPrintln("Position reset");
 }
 #endif /* OPS_ZERO */
@@ -225,7 +224,7 @@ static void OPS_View_Shell(void) {
         logWarning("OPS module not initialized"); return;
     }
 
-    logPrintln("Position Data Viewer - Press ^C to exit\r\n"
+    logPrintln("\033[?25l\rPosition Data Viewer - Press ^C to exit\r\n"
                "X: ------.--  Y: ------.--\r\n"
                "Yaw: ---.--  Pitch: ---.--  Roll: ---.--\r\n"
                "Wz: ---.-- dps  Timestamp:"
@@ -266,7 +265,7 @@ static void OPS_View_Shell(void) {
             if (ch == 0x03) break;
         }
     }
-    logPrintln("\033[4A\033[J\033[2A");
+    logPrintln("\033[4A\033[J\033[2A\033[?25h");
 }
 
 ShellCommand OPSGroup[] = {
@@ -285,6 +284,14 @@ ShellCommand OPSGroup[] = {
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 ops, OPSGroup, OPS Tool Group);
 
+/**
+ * @brief 发送命令到定位模块
+ * @param cmd 命令字符串
+ * @param len 命令长度
+ */
+static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len) {
+    HAL_UART_Transmit(&huart4, cmd, len, 100);
+}
 
 /**
  * @brief 数据解析函数
@@ -311,8 +318,12 @@ static void Data_Analyse(const uint8_t rec) {
 		case 4:
 			if(rec == 0x0d) {
 #if OPS_USE_POS
-				g_ops->x = posture.ActVal[3];
-				g_ops->y = posture.ActVal[4];
+				// g_ops->x = posture.ActVal[3];
+				// g_ops->y = posture.ActVal[4];
+                // 由于实际安装而进行的修改
+                g_ops->x = posture.ActVal[4];
+				g_ops->y = -posture.ActVal[3];
+
 #endif
 #if OPS_USE_YAW
 				g_ops->yaw = posture.ActVal[0];

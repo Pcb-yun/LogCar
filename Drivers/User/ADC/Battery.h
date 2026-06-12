@@ -18,6 +18,7 @@ extern "C" {
 #define BATTERY_DIVIDER_RATIO   5.0f        // 分压比
 #define ADC_VREF_MV             3300        // ADC 参考电压 (VREF+)，通常为 3300mV
 #define ADC_RESOLUTION          4096.0f     // ADC 分辨率
+#define BATTERY_THRESHOLD       11400        // 电池电压阈值(mV)
 
 
 bool Battery_Init(void);

@@ -20,7 +20,7 @@
 
 /******************** 电机参数 **********************/
 
-#define MOTOR_ELECTRICAL   1      // 电气参数（电压/电流/温度）
+#define MOTOR_ELECTRICAL   0      // 电气参数（电压/电流/温度）
 #define MOTOR_MOTION       1      // 运动状态（速度/位置/误差/脉冲）
 #define MOTOR_ENCODER      0      // 编码器信息（线性值/原始值）
 #define MOTOR_STATUS_FLAGS 0      // 状态标志（电机/回零/引脚）

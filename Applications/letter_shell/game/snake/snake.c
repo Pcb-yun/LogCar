@@ -114,7 +114,7 @@ int main_snake(int argc, char *argv[]) {
 
         RenderConsole(&g_game);
 
-        sleep(80);
+        sleep(100);
     }
 
     printf("\r\nGAME OVER! Final Score: %u\r\n", g_game.score);

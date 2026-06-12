@@ -17,13 +17,12 @@ extern "C" {
 
 #define MAX_SENSOR_SOURCES 4    // 最大传感器数据来源数量
 
-bool Loc_Set(Pose_t *pose);
 bool Loc_Get(Pose_t *pose);
 
 
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" }
 #endif /* __cplusplus */
 
 #endif /* __NAV_LOCAL_H__ */

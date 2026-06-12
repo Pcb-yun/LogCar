@@ -96,29 +96,6 @@ static void NavTools_Pose(int argc, char *argv[]) {
 }
 
 /**
- * @brief 设置位姿
- */
-static void NavTools_SetPose(int argc, char *argv[]) {
-    Pose_t pose = {0};
-
-    if (argc != 4) {
-        logPrintln("Usage: nav setpose [x] [y] [yaw]");
-        return;
-    }
-
-    pose.x = atof(argv[2]);
-    pose.y = atof(argv[3]);
-    pose.yaw = atof(argv[4]);
-
-    if (Loc_Set(&pose)) {
-        logPrintln("Pose set to: x=%.2f cm, y=%.2f cm, yaw=%.2f deg",
-               pose.x, pose.y, pose.yaw);
-    } else {
-        logWarning("Failed to set pose");
-    }
-}
-
-/**
  * @brief 获取目标点类型字符串
  * @param type 目标点类型
  * @return 目标点类型字符串
@@ -780,8 +757,7 @@ static void NavTools_MapAdd(void) {
 
 ShellCommand NavToolsGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose, Show Current Pose),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, setpose, NavTools_SetPose, Set Pose),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, goto, NavTools_GoTo, Navigate to Point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
     SHELL_CMD_GROUP_END()

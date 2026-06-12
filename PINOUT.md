@@ -7,6 +7,7 @@
 | LED\_Red | GPIOF  | Pin 9  | 红色LED指示灯 | 输出      | 系统状态指示   |
 | LED\_IDLE | GPIOF  | Pin 10 | 空闲状态指示灯 | 输出      | 系统空闲时闪烁 |
 | KEY\_UP  | GPIOA  | Pin 0  | 按键输入     | 输入      | 用户按键     |
+| START  | GPIOA  | Pin 1  | 按键输入     | 输入      | 启动按键     |
 | BATTERY  | GPIOA  | Pin 2  | 电池电压检测   | 输入(ADC) | 连接ADC1通道 |
 
 ### UART串口引脚

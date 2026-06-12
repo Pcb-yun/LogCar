@@ -70,41 +70,41 @@ osThreadId_t ShellHandle;
 const osThreadAttr_t Shell_attributes = {
   .name = "Shell",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal1,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Track_Get */
 osThreadId_t Track_GetHandle;
 const osThreadAttr_t Track_Get_attributes = {
   .name = "Track_Get",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityHigh1,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for Motor_Get_Sta */
 osThreadId_t Motor_Get_StaHandle;
 const osThreadAttr_t Motor_Get_Sta_attributes = {
   .name = "Motor_Get_Sta",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh1,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for Motor_Ctrl */
 osThreadId_t Motor_CtrlHandle;
 const osThreadAttr_t Motor_Ctrl_attributes = {
   .name = "Motor_Ctrl",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh3,
+  .priority = (osPriority_t) osPriorityHigh4,
 };
 /* Definitions for Motor_Update */
 osThreadId_t Motor_UpdateHandle;
 const osThreadAttr_t Motor_Update_attributes = {
   .name = "Motor_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh5,
+  .priority = (osPriority_t) osPriorityAboveNormal6,
 };
 /* Definitions for OPS_Update */
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
-  .stack_size = 64 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh5,
 };
 /* Definitions for Servo_Ctrl */
@@ -112,14 +112,14 @@ osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal4,
+  .priority = (osPriority_t) osPriorityAboveNormal3,
 };
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
   .name = "Servo_Tx",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal5,
+  .priority = (osPriority_t) osPriorityAboveNormal4,
 };
 /* Definitions for Battery_Get */
 osThreadId_t Battery_GetHandle;
@@ -133,7 +133,7 @@ osThreadId_t Loc_UpdateHandle;
 const osThreadAttr_t Loc_Update_attributes = {
   .name = "Loc_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime4,
+  .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Nav_Track */
 osThreadId_t Nav_TrackHandle;
@@ -146,8 +146,8 @@ const osThreadAttr_t Nav_Track_attributes = {
 osThreadId_t MissionHandle;
 const osThreadAttr_t Mission_attributes = {
   .name = "Mission",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityRealtime1,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -373,16 +373,16 @@ void MX_FREERTOS_Init(void) {
   MotorCmdsHandle = osMessageQueueNew (5, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
   /* creation of Usart6_Rx_Data */
-  Usart6_Rx_DataHandle = osMessageQueueNew (5, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
+  Usart6_Rx_DataHandle = osMessageQueueNew (4, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
 
   /* creation of Uart4_Rx_Data */
   Uart4_Rx_DataHandle = osMessageQueueNew (2, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
 
   /* creation of Servo_Cmd */
-  Servo_CmdHandle = osMessageQueueNew (5, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+  Servo_CmdHandle = osMessageQueueNew (4, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
 
   /* creation of Servo_Tx_Data */
-  Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
+  Servo_Tx_DataHandle = osMessageQueueNew (4, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

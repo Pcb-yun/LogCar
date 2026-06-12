@@ -44,12 +44,12 @@ bool Battery_Init(void) {
     g_battery->voltage = HAL_ADC_GetValue(&hadc1);
     HAL_ADC_Stop(&hadc1);
 
-    g_battery->interval_ms = 5000;
+    g_battery->interval_ms = 500;
 
     float raw_voltage = (float)g_battery->voltage * ADC_VREF_MV / ADC_RESOLUTION;
     g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO);
 
-    if (g_battery->voltage >= 500) {
+    if (g_battery->voltage >= 3300) {
         g_battery->is_init = true;
     }
     return g_battery->is_init;
@@ -71,6 +71,9 @@ void Battery_Get_Task(void *argument) {
         osEventFlagsWait(System_StatusHandle, ADC1_CONVCPLT, osFlagsWaitAny, osWaitForever);
         float voltage_row = (float)voltage * ADC_VREF_MV / ADC_RESOLUTION;
         g_battery->voltage = (uint16_t)(voltage_row * BATTERY_DIVIDER_RATIO);
+        if (g_battery->voltage <= BATTERY_THRESHOLD) {
+            logWarning("Low battery voltage: %d mV", g_battery->voltage);
+        }
         osDelay(g_battery->interval_ms);
     }
 }

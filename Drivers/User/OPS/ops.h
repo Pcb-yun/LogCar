@@ -20,11 +20,11 @@ extern "C" {
  */
 typedef struct {
 #if OPS_USE_POS
-    float x;        // X坐标
-    float y;        // Y坐标
+    float x;        // X坐标 (mm)
+    float y;        // Y坐标 (mm)
 #endif
 #if OPS_USE_YAW
-    float yaw;      // 航向
+    float yaw;      // 航向 (deg)
 #endif
 #if OPS_USE_PITCH
     float pitch;    // 俯仰
@@ -41,6 +41,7 @@ typedef struct {
 
 bool OPS_Init(void);
 bool OPS_Get(OPSData_t *pose);
+void OPS_Zero(void);
 
 
 

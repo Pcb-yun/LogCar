@@ -48,6 +48,25 @@ static void Car_Move(int argc, char *argv[]) {
 #endif /* MOTOR_CMD_POSITION */
 
 #if MOTOR_CMD_VELOCITY
+
+/**
+ * @brief 设置小车速度
+ */
+static void Car_Vel(int argc, char *argv[]) {
+	if (!is_init) {
+		logWarning("Chassis not initialized"); return;
+	}
+    if (argc != 4) {
+        logPrintln("Usage: car vel [x] [y] [yaw]"); return;
+    }
+
+    int32_t x = atoi(argv[1]);
+    int32_t y = atoi(argv[2]);
+    int32_t yaw = atoi(argv[3]);
+
+	MotionControl_SetVelocity(x, y, yaw);
+}
+
 /**
  * @brief 按键遥控
  */
@@ -61,18 +80,19 @@ static void Car_Key(void) {
 
 	char prev_key = 0;
 	char key;
-	uint16_t last_time;
+	uint32_t last_time;
 
 	for (;;) {
-		osDelay(5);
-		short ret = shell->read(&key, 1);
+		uint8_t ret = shell->read(&key, 1);
 
 		if (ret > 0) {
 			if (key == 0x03) {	// ^C 退出
 				MotionControl_Stop(); break;
 			}
 
-			if (key != prev_key) {
+			if (key == prev_key) {
+				last_time = osKernelGetTickCount();
+			} else {
 				int8_t x_comp = 0, y_comp = 0, yaw_comp = 0;
 				bool valid_key = true;
 
@@ -89,16 +109,17 @@ static void Car_Key(void) {
 				if (valid_key) {
 					MotionControl_SetVelocity(x_comp, y_comp, yaw_comp);
 					last_time = osKernelGetTickCount();
+					prev_key = key;
 				}
 			}
 
-			prev_key = key;
 		}
 
-		if (prev_key != 0 && (osKernelGetTickCount() - last_time > 50)) {
-			MotionControl_Stop();
+		if (osKernelGetTickCount() - last_time > 100) {
 			prev_key = 0;
+			MotionControl_Stop();
 		}
+		osDelay(1);
 	}
     logPrintln("\033[%dA\033[J\033[2A", 1);
 }
@@ -138,6 +159,7 @@ ShellCommand MoveGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
 #endif
 #if MOTOR_CMD_VELOCITY
+	SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, vel, Car_Vel, Car Key Control),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
 #endif
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, par, Car_Params, Set Car Motion Params),

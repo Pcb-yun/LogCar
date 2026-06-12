@@ -17,7 +17,7 @@ static uint8_t Servo_CalcChecksum(Package_t *pkg);
 static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
 StreamBufferHandle_t Servo_Rx_StreamHandle = NULL;
 
-#if SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR 
+#if SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR
 ServoData servodata[SERVO_MAX_COUNT];
 #endif
 
@@ -956,7 +956,7 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     uint32_t startTime = osKernelGetTickCount();
 
     memset(pkg, 0, sizeof(Package_t));
-    
+
     while ((osKernelGetTickCount() - startTime) < 100) {
      /* 1. 查找帧头 —— [CHANGE] 内层循环加总超时检查，防止死循环 */
         while ((osKernelGetTickCount() - startTime) < 100 &&
@@ -1030,7 +1030,7 @@ static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
     }
 
     return SERVO_STATUS_TIMEOUT;
-    
+
 }
 
 /**
@@ -1248,18 +1248,6 @@ static uint16_t Servo_PackageToBytes(Package_t *pkg, uint8_t *buffer) {
 }
 
 /**
- * @brief 向串口发送数据
- * @param data 发送数据指针
- * @param size 发送数据大小
- */
-static void Servo_Uart_Send(uint8_t* data, uint16_t size) {
-    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
-    HAL_UART_Transmit_DMA(&huart3, data, size);
-
-    osEventFlagsWait(System_StatusHandle, UART3_TX_IDLE, osFlagsWaitAny, osWaitForever);
-}
-
-/**
  * @brief 串口发送任务
  * @param argument 任务参数
  */
@@ -1277,8 +1265,9 @@ void Servo_Tx_Task(void *argument) {
         if(osMessageQueueGet(Servo_Tx_DataHandle, &pkg, NULL, osWaitForever) == osOK) {
             len = Servo_PackageToBytes(&pkg, txBuffer);
 
-            // 同步发送（等待发送完成）
-            Servo_Uart_Send(txBuffer, len);
+            osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
+            HAL_UART_Transmit_DMA(&huart3, txBuffer, len);
+            osEventFlagsWait(System_StatusHandle, UART3_TX_IDLE, osFlagsWaitAny, osWaitForever);
         }
     }
 }

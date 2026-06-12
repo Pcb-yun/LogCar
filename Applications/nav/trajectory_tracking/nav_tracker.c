@@ -223,7 +223,7 @@ void Nav_Track_Task(void *argument) {
 
     for (;;) {
         if (g_tracker->state != TRACK_STATE_RUNNING) {
-            osDelay(10); continue;
+            osDelay(2); continue;
         }
 
         if (g_tracker->cached_target == NULL) {
@@ -302,6 +302,6 @@ void Nav_Track_Task(void *argument) {
             default: nav_error(); break;
         }
 
-        osDelay(5);
+        osDelay(2);
     }
 }

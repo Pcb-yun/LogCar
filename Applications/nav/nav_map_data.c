@@ -35,159 +35,75 @@ static TargetPoint_t g_map_points[] = {
         },
         .enable = true
     },
-
-    // 取货点A
     {
         .id = 1,
-        .name = "Pickup_A",
+        .name = "Test_1",
         .type = TARGET_POINT_PICKUP,
         .pose = {
             .x = 100.0f,
             .y = 0.0f,
-            .yaw = 0.0f
+            .yaw = 90.0f
         },
         .motion = {
-            .target_speed = 30.0f,
-            .target_angular_speed = 0.5f,
-            .acceleration = 20.0f,
-            .deceleration = 30.0f,
-            .angular_acceleration = 1.0f
+            .target_speed = 20.0f,
+            .target_angular_speed = 0.3f,
+            .acceleration = 15.0f,
+            .deceleration = 20.0f,
+            .angular_acceleration = 0.5f
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 3.0f,
-            .yaw_threshold = 0.1f,
-            .timeout_ms = 15000
+            .distance_threshold = 2.0f,
+            .yaw_threshold = 0.05f,
+            .timeout_ms = 10000
         },
         .enable = true
     },
-
-    // 取货点B
     {
         .id = 2,
-        .name = "Pickup_B",
+        .name = "Test_2",
         .type = TARGET_POINT_PICKUP,
         .pose = {
-            .x = 200.0f,
-            .y = 0.0f,
-            .yaw = 0.0f
-        },
-        .motion = {
-            .target_speed = 30.0f,
-            .target_angular_speed = 0.5f,
-            .acceleration = 20.0f,
-            .deceleration = 30.0f,
-            .angular_acceleration = 1.0f
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 3.0f,
-            .yaw_threshold = 0.1f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-
-    // 送货点1
-    {
-        .id = 3,
-        .name = "Delivery_1",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 150.0f,
+            .x = 100.0f,
             .y = 100.0f,
             .yaw = 180.0f
         },
         .motion = {
-            .target_speed = 25.0f,
-            .target_angular_speed = 0.4f,
+            .target_speed = 20.0f,
+            .target_angular_speed = 0.3f,
             .acceleration = 15.0f,
-            .deceleration = 25.0f,
-            .angular_acceleration = 0.8f
+            .deceleration = 20.0f,
+            .angular_acceleration = 0.5f
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.08f,
-            .timeout_ms = 12000
+            .yaw_threshold = 0.05f,
+            .timeout_ms = 10000
         },
         .enable = true
     },
-
-    // 送货点2
     {
-        .id = 4,
-        .name = "Delivery_2",
+        .id = 3,
+        .name = "Test_3",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 300.0f,
-            .y = 150.0f,
-            .yaw = 90.0f
+            .x = 0.0f,
+            .y = 100.0f,
+            .yaw = 270.0f
         },
         .motion = {
-            .target_speed = 25.0f,
-            .target_angular_speed = 0.4f,
+            .target_speed = 20.0f,
+            .target_angular_speed = 0.3f,
             .acceleration = 15.0f,
-            .deceleration = 25.0f,
-            .angular_acceleration = 0.8f
+            .deceleration = 20.0f,
+            .angular_acceleration = 0.5f
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.08f,
-            .timeout_ms = 12000
-        },
-        .enable = true
-    },
-
-    // 等待点1
-    {
-        .id = 5,
-        .name = "Wait_1",
-        .type = TARGET_POINT_WAIT,
-        .pose = {
-            .x = 100.0f,
-            .y = 50.0f,
-            .yaw = 0.0f
-        },
-        .motion = {
-            .target_speed = 20.0f,
-            .target_angular_speed = 0.3f,
-            .acceleration = 15.0f,
-            .deceleration = 20.0f,
-            .angular_acceleration = 0.5f
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_DISTANCE,
-            .distance_threshold = 2.0f,
-            .yaw_threshold = 0.1f,
-            .timeout_ms = 8000
-        },
-        .enable = true
-    },
-
-    // 暂停点
-    {
-        .id = 6,
-        .name = "Pause_1",
-        .type = TARGET_POINT_PAUSE,
-        .pose = {
-            .x = 200.0f,
-            .y = 50.0f,
-            .yaw = 0.0f
-        },
-        .motion = {
-            .target_speed = 20.0f,
-            .target_angular_speed = 0.3f,
-            .acceleration = 15.0f,
-            .deceleration = 20.0f,
-            .angular_acceleration = 0.5f
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_DISTANCE,
-            .distance_threshold = 2.0f,
-            .yaw_threshold = 0.1f,
-            .timeout_ms = 5000
+            .yaw_threshold = 0.05f,
+            .timeout_ms = 10000
         },
         .enable = true
     }
