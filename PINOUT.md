@@ -15,9 +15,9 @@
 | 串口                | TX引脚 | RX引脚 | 功能描述     |
 | :---------------- | :--- | :--- | :------- |
 | Terminal (USART1) | PA9  | PA10 | 终端调试串口   |
-| SERVO (USART6)    | PB10 | PB11 | 舵机控制串口   |
-| STEP (UART4)      | PC6  | PC7  | 步进电机驱动串口 |
-| OPS (USART3)      | PC10 | PC11 | 平面定位模块串口     |
+| SERVO (USART3)    | PB10 | PB11 | 舵机控制串口   |
+| STEP (USART6)      | PC6  | PC7  | 步进电机驱动串口 |
+| OPS (UART4)      | PC10 | PC11 | 平面定位模块串口     |
 
 ### I2C引脚
 

@@ -47,7 +47,7 @@ bool Loc_Init(void) {
 }
 
 /**
- * @brief 导航定位任务
+ * @brief 定位任务
  */
 void Loc_Update_Task(void *argument) {
     (void)argument;
@@ -57,12 +57,12 @@ void Loc_Update_Task(void *argument) {
 
     for (;;) {
         Loc_Update();
-        osDelay(10);
+        osDelay(1);
     }
 }
 
 /**
- * @brief 导航定位更新
+ * @brief 定位更新
  */
 static void Loc_Update(void) {
     extern osMutexId_t Pose_MutexHandle;
@@ -84,8 +84,8 @@ static void Loc_Update(void) {
     OPSData_t ops_data;
     bool ops_rec = OPS_Get(&ops_data);
     if (ops_rec) {
-        ops_pose.x = ops_data.x;
-        ops_pose.y = ops_data.y;
+        ops_pose.x = ops_data.x / 10.0f;
+        ops_pose.y = ops_data.y / 10.0f;
         ops_pose.yaw = ops_data.yaw;
         ops_pose.timestamp = ops_data.timestamp;
         sensor_sources[source_count].pose = ops_pose;

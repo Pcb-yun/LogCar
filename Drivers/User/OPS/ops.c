@@ -49,7 +49,7 @@ bool OPS_Get(OPSData_t *pose) {
  * @brief 归零定位模块
  * */
 void OPS_Zero(void) {
-    OPS_Send_Cmd((const uint8_t *)"ACTR", 4);
+    OPS_Send_Cmd((const uint8_t *)"ACT0", 4);
 }
 
 /**
@@ -264,6 +264,7 @@ static void OPS_View_Shell(void) {
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break;
         }
+        osDelay(10);
     }
     logPrintln("\033[4A\033[J\033[2A\033[?25h");
 }

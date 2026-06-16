@@ -598,7 +598,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         }
-
         HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx3Buffer, USART3_RX_BUF_SIZE);
     }
   }
@@ -623,6 +622,13 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 		huart->gState = HAL_UART_STATE_READY;
 
 		HAL_UARTEx_ReceiveToIdle_DMA(huart, rx1Buffer, USART1_RX_BUF_SIZE);
+  } else if (huart->Instance == UART4) {
+		__HAL_UART_CLEAR_FLAG(huart, UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_NE | UART_FLAG_ORE);
+
+		huart->RxState = HAL_UART_STATE_READY;
+		huart->gState = HAL_UART_STATE_READY;
+
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, rx4Buf.data, USART4_RX_BUF_SIZE);
   }
 }
 

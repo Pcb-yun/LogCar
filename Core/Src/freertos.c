@@ -125,7 +125,7 @@ const osThreadAttr_t Servo_Tx_attributes = {
 osThreadId_t Battery_GetHandle;
 const osThreadAttr_t Battery_Get_attributes = {
   .name = "Battery_Get",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow3,
 };
 /* Definitions for Loc_Update */

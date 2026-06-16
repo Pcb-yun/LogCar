@@ -35,7 +35,7 @@ bool Track_Init(void) {
     }
     memset(g_track, 0, sizeof(TrackData_t));
 
-    g_track->mode = TRACK_STOP;
+    g_track->mode = TRACK_DIGITAL;
     g_track->time = 100;
     is_init = true;
 
@@ -184,14 +184,14 @@ static void Track_View_Shell(void) {
     for(;;) {
         logPrintln("\033[2A\033[2K\rDigital: %d %d %d %d %d %d %d %d\r\n"
                    "Timestamp: %d",
-                    (g_track->digitalData & 0x80) ? 1 : 0,
-                    (g_track->digitalData & 0x40) ? 1 : 0,
-                    (g_track->digitalData & 0x20) ? 1 : 0,
-                    (g_track->digitalData & 0x10) ? 1 : 0,
-                    (g_track->digitalData & 0x08) ? 1 : 0,
-                    (g_track->digitalData & 0x04) ? 1 : 0,
-                    (g_track->digitalData & 0x02) ? 1 : 0,
-                    (g_track->digitalData & 0x01) ? 1 : 0,
+                    (g_track->digitalData & 0x80) ? 0 : 1,
+                    (g_track->digitalData & 0x40) ? 0 : 1,
+                    (g_track->digitalData & 0x20) ? 0 : 1,
+                    (g_track->digitalData & 0x10) ? 0 : 1,
+                    (g_track->digitalData & 0x08) ? 0 : 1,
+                    (g_track->digitalData & 0x04) ? 0 : 1,
+                    (g_track->digitalData & 0x02) ? 0 : 1,
+                    (g_track->digitalData & 0x01) ? 0 : 1,
                     g_track->timestamp);
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break; // ^C

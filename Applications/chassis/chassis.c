@@ -13,7 +13,7 @@
 #include "stdlib.h"
 #include "cmsis_os2.h"
 
-bool is_init = false;
+static bool is_init = false;
 
 /**
  * @brief 初始化车体控制模块

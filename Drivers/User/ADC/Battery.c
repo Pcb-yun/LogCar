@@ -11,7 +11,7 @@
 #include "task.h"
 #include "cmsis_os.h"
 #include "Events.h"
-#include "shell_cmd_group.h"
+#include "shell.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -22,10 +22,11 @@
 typedef struct {
     uint16_t voltage;           // 实际电压
     uint16_t interval_ms;       // 任务间隔
-    bool is_init;               // 初始化标志
+    uint32_t last_warn_tick;  // 上次警告时间戳
 } BatteryData_t;
 
 static BatteryData_t *g_battery = NULL;
+static bool is_init = false;
 
 /**
  * @brief 初始化电池电压监控模块
@@ -50,9 +51,9 @@ bool Battery_Init(void) {
     g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO);
 
     if (g_battery->voltage >= 3300) {
-        g_battery->is_init = true;
+        is_init = true;
     }
-    return g_battery->is_init;
+    return is_init;
 }
 
 /**
@@ -63,8 +64,7 @@ void Battery_Get_Task(void *argument) {
     uint16_t voltage = 0;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-
-    if (!g_battery->is_init) vTaskDelete(NULL);
+    if (!is_init) vTaskDelete(NULL);
 
     for (;;) {
         HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&voltage, 1);
@@ -72,17 +72,14 @@ void Battery_Get_Task(void *argument) {
         float voltage_row = (float)voltage * ADC_VREF_MV / ADC_RESOLUTION;
         g_battery->voltage = (uint16_t)(voltage_row * BATTERY_DIVIDER_RATIO);
         if (g_battery->voltage <= BATTERY_THRESHOLD) {
-            logWarning("Low battery voltage: %d mV", g_battery->voltage);
+            uint32_t now = xTaskGetTickCount();
+            if (now - g_battery->last_warn_tick >= 30000) {
+                g_battery->last_warn_tick = now;
+                logWarning("Low battery voltage: %d mV", g_battery->voltage);
+            }
         }
         osDelay(g_battery->interval_ms);
     }
-}
-
-/**
- * @brief 显示当前电池电压
- */
-static void Battery_ShowVoltage(void) {
-    logPrintln("Battery Voltage: %d mV", g_battery->voltage);
 }
 
 /**
@@ -108,37 +105,38 @@ static void Battery_ViewRealtime(void) {
 }
 
 /**
- * @brief 获取或设置电池电压采样间隔
+ * @brief 电池工具
  */
-static void Battery_Time_Shell(int argc, char *argv[]) {
+static void Battery_Tool(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("Battery module not initialized"); return;
+    }
+
     if (argc == 1) {
-        logPrintln("Current interval: %d ms", g_battery->interval_ms);
-    } else if (argc == 2) {
-        char *endptr;
-        long val = strtol(argv[1], &endptr, 10);
-        if (*endptr != '\0') {
-            logPrintln("Invalid time: %s", argv[1]);
-        } else {
-            g_battery->interval_ms = (uint16_t)val;
-            logPrintln("time set to %d ms", g_battery->interval_ms);
+        logPrintln("Battery Voltage: %d mV", g_battery->voltage);
+    } else if (argc <= 3) {
+        if (strcmp(argv[1], "time") == 0){
+            if (argc == 2) {
+                logPrintln("Current interval: %d ms", g_battery->interval_ms);
+            } else if (argc == 3) {
+                char *endptr;
+                long val = strtol(argv[2], &endptr, 10);
+                if (*endptr != '\0') {
+                    logPrintln("Invalid time: %s", argv[2]);
+                } else {
+                    g_battery->interval_ms = (uint16_t)val;
+                    logPrintln("time set to %d ms", g_battery->interval_ms);
+                }
+            } else {
+                logPrintln("Usage: battery time [ms]");
+            }
+        }
+        if (strcmp(argv[1], "view") == 0){
+            Battery_ViewRealtime();
         }
     } else {
-        logPrintln("Usage: battery time [ms]");
+        logPrintln("Usage: battery time|view");
     }
 }
-
-/**
- * @brief 电池电压监控模块的 Shell 命令组
- */
-ShellCommand BatteryGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN | SHELL_CMD_DISABLE_RETURN, show, Battery_ShowVoltage,
-                         show current battery voltage),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN | SHELL_CMD_DISABLE_RETURN, time, Battery_Time_Shell,
-                         get/set sampling time (ms)),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC | SHELL_CMD_DISABLE_RETURN, view, Battery_ViewRealtime,
-                         realtime view voltage),
-    SHELL_CMD_GROUP_END()
-};
-
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
-                       battery, BatteryGroup, Battery Voltage Monitor);
+SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+battery, Battery_Tool, Battery Tool);
