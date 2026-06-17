@@ -8,6 +8,8 @@
 #define __NAV_CONFIG_H__
 
 
+// 电机到位窗口大小(度)
+#define MOTOR_WINDOW_DEG 2.0f
 
 
 

@@ -331,6 +331,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
 #endif
             break;
 #endif /* MOTOR batch read guards */
+        case 0x00: break;   // 忽略0x00命令
         default: logWarning("Received motor response, but command unknown:"
                             " id:%d, cmd:%d", motor_id, cmd_code); break;
     }

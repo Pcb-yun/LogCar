@@ -81,6 +81,8 @@ static void Car_Key(void) {
 	char prev_key = 0;
 	char key;
 	uint32_t last_time;
+	float linear_speed, yaw_speed, acc, dec;
+	MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
 
 	for (;;) {
 		uint8_t ret = shell->read(&key, 1);
@@ -97,12 +99,12 @@ static void Car_Key(void) {
 				bool valid_key = true;
 
 				switch (key) {
-				case 'w': case 'W': x_comp = 127;   break;	// 前进
-				case 's': case 'S': x_comp = -127;  break;	// 后退
-				case 'a': case 'A': y_comp = 127;   break;	// 左移
-				case 'd': case 'D': y_comp = -127;  break;	// 右移
-				case 'q': case 'Q': yaw_comp = 127; break;	// 逆时针旋转
-				case 'e': case 'E': yaw_comp = -127; break;	// 顺时针旋转
+				case 'w': case 'W': x_comp = linear_speed;   break;	// 前进
+				case 's': case 'S': x_comp = -linear_speed;  break;	// 后退
+				case 'a': case 'A': y_comp = linear_speed;   break;	// 左移
+				case 'd': case 'D': y_comp = -linear_speed;  break;	// 右移
+				case 'q': case 'Q': yaw_comp = yaw_speed; break;	// 逆时针旋转
+				case 'e': case 'E': yaw_comp = -yaw_speed; break;	// 顺时针旋转
 				default: valid_key = false; break;
 				}
 

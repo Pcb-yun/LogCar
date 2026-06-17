@@ -15,7 +15,7 @@
 #include "nav_math.h"
 #include "motion_control.h"
 #include "ops.h"
-
+#include "log.h"
 
 /**
  * @brief 带权重的位姿数据
@@ -25,6 +25,7 @@ typedef struct {
     float weight;             // 置信度权重 (0.0-1.0)
 } WeightedPose_t;
 
+extern osMutexId_t Pose_MutexHandle;
 static Pose_t *g_pose = NULL;
 static bool is_init = false;
 static void Loc_Update(void);
@@ -65,19 +66,17 @@ void Loc_Update_Task(void *argument) {
  * @brief 定位更新
  */
 static void Loc_Update(void) {
-    extern osMutexId_t Pose_MutexHandle;
-
     WeightedPose_t sensor_sources[MAX_SENSOR_SOURCES] = {0};
     uint8_t source_count = 0;
 
-    // // 获取里程计数据
-    // Pose_t enc_pose;
-    // bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
-    // if (enc_rec) {
-    //     sensor_sources[source_count].pose = enc_pose;
-    //     sensor_sources[source_count].weight = 0.6f;    // 里程计权重
-    //     source_count++;
-    // }
+    // 获取里程计数据
+    Pose_t enc_pose;
+    bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
+    if (enc_rec) {
+        sensor_sources[source_count].pose = enc_pose;
+        sensor_sources[source_count].weight = 0.6f;    // 里程计权重
+        source_count++;
+    }
 
     // 获取平面定位数据
     Pose_t ops_pose;
@@ -100,6 +99,7 @@ static void Loc_Update(void) {
     } else {
         fused_pose = *g_pose;
         fused_pose.timestamp = osKernelGetTickCount();
+        logWarning("No valid data sources");
     }
 
     if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
@@ -114,7 +114,6 @@ static void Loc_Update(void) {
  * @return 获取结果
  */
 bool Loc_Get(Pose_t *pose) {
-    extern osMutexId_t Pose_MutexHandle;
     if (!is_init) return false;
 
     if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {

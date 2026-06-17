@@ -30,6 +30,7 @@ static MotionControl_t *g_motion = NULL;
 static WheelEncoderData_t *g_last_enc = NULL;
 static Pose_t *g_enc_pose = NULL;
 static bool is_init = false;
+extern osMutexId_t Motor_MutexHandle;
 
 /**
  * @brief 小车线加速度 (cm/s²) 转 电机加速度 (RPM/s)
@@ -79,21 +80,24 @@ bool MotionControl_Init(void) {
     extern MotorStatusShared_t *g_motor_status;
     MotorStatus_t *motor;
 
-    for (int i = 0; i < 4; i++) {
-        motor = &g_motor_status->motors[i];
-        switch(motor->motor_id) {
-            case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->pos; break;
-            case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->pos; break;
-            case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->pos; break;
-            case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->pos; break;
+    if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+        for (int i = 0; i < 4; i++) {
+            motor = &g_motor_status->motors[i];
+            switch(motor->motor_id) {
+                case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->pos; break;
+                case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->pos; break;
+                case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->pos; break;
+                case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->pos; break;
+            }
         }
+        osMutexRelease(Motor_MutexHandle);
     }
     g_last_enc->timestamp = osKernelGetTickCount();
 
-    g_motion->linear_speed = 30.0f;
-    g_motion->yaw_speed = 20.0f;
-    g_motion->car_acc = acc_car_to_motor(10.0f);
-    g_motion->car_dec = acc_car_to_motor(10.0f);
+    g_motion->linear_speed = 80.0f;
+    g_motion->yaw_speed = 50.0f;
+    g_motion->car_acc = acc_car_to_motor(30.0f);
+    g_motion->car_dec = acc_car_to_motor(30.0f);
 
     is_init = true;
     return true;
@@ -106,12 +110,11 @@ bool MotionControl_Init(void) {
  */
 bool MotionControl_OdomUpdate(Pose_t *pose) {
     extern MotorStatusShared_t *g_motor_status;
-    extern osMutexId_t Pose_MutexHandle;
     MotorStatus_t *motor;
     WheelEncoderData_t enc;
 
     if (!is_init) return false;
-    if (osMutexAcquire(Pose_MutexHandle, osWaitForever) == osOK) {
+    if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
         for (int i = 0; i < 4; i++) {
             motor = &g_motor_status->motors[i];
             switch(motor->motor_id) {
@@ -122,7 +125,7 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
             }
         }
         enc.timestamp = osKernelGetTickCount();
-        osMutexRelease(Pose_MutexHandle);
+        osMutexRelease(Motor_MutexHandle);
     }
 
     // 计算脉冲增量
@@ -197,17 +200,13 @@ static void send_wheel_velocity_commands(Wheel_t *wheels) {
 
 /**
  * @brief 速度控制
- * @param x_component X分量
- * @param y_component Y分量
- * @param yaw_component Yaw分量
+ * @param x X分量
+ * @param y Y分量
+ * @param yaw Yaw分量
  */
-void MotionControl_SetVelocity(float x_component, float y_component, float yaw_component) {
-    float vx = x_component * g_motion->linear_speed;
-    float vy = y_component * g_motion->linear_speed;
-    float w = yaw_component * g_motion->yaw_speed;
-
+void MotionControl_SetVelocity(float x, float y, float yaw) {
     Wheel_t wheels;
-    Kinematics_Inverse(vx, vy, w, &wheels);
+    Kinematics_Inverse(x, y, yaw, &wheels);
     send_wheel_velocity_commands(&wheels);
 }
 #endif /* MOTOR_CMD_VELOCITY */

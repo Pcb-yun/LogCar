@@ -8,5 +8,4 @@ keilkilll.bat
 .trae/
 .cmsis/
 
-Drivers/User/STEP/docs/
-Drivers/User/OPS/docs/
+UserTemp/

@@ -8,6 +8,7 @@
 #include "nav_local.h"
 #include "nav_math.h"
 #include "nav_map.h"
+#include "nav_config.h"
 #include "motion_control.h"
 #include "step_ttl.h"
 #include "cmsis_os2.h"
@@ -17,7 +18,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <chassis_config.h>
-
+#include "log.h"
 
 /**
  * @brief 导航跟踪状态
@@ -45,22 +46,14 @@ extern MotorStatusShared_t *g_motor_status;
  * @return true-全部到位，false-未到位
  */
 static bool motors_reached_target() {
-    // 角度阈值(度) → 轮子位移 → 电机脉冲数
-    // 位移 = yaw_threshold * π/180 * (L+W)
-    // 脉冲 = 位移 / (2πR) * pulses_per_rev
-    float rotation_radius = (WHEEL_BASE_LENGTH + WHEEL_BASE_WIDTH) / 2.0f;
-    float wheel_circumference = 2.0f * M_PI * WHEEL_RADIUS;
-    float pulses = g_tracker->cached_target->arrive.yaw_threshold
-                   * (M_PI / 180.0f)
-                   * rotation_radius / wheel_circumference
-                   * MOTOR_PULSES_PER_REV;
-    uint16_t threshold = (uint16_t)(pulses + 0.5f); // 四舍五入
+    uint32_t threshold = (uint32_t)(MOTOR_WINDOW_DEG / 360.0f * MOTOR_PULSES_PER_REV + 0.5f);
 
     for (uint8_t i = 0; i < 4; i++) {
-        int32_t err = g_motor_status->motors[i].pos_error;
+        int32_t err = g_motor_status->motors[i].set_pos - g_motor_status->motors[i].pos;
         if (err < 0) err = -err;
         if ((uint32_t)err > threshold) return false;
     }
+
     return true;
 }
 
@@ -211,6 +204,31 @@ static bool check_yaw_arrival(Pose2D_t *current_pose) {
 }
 
 /**
+ * @brief 偏差修正函数
+ * @param current_pose 当前位姿
+ * @return true-已修正并重新发布指令，false-无需修正
+ */
+static bool correct_deviation(Pose2D_t *current_pose) {
+    float dx = g_tracker->cached_target->pose.x - current_pose->x;
+    float dy = g_tracker->cached_target->pose.y - current_pose->y;
+    float yaw_error = normalize_angle(g_tracker->cached_target->pose.yaw - current_pose->yaw);
+
+    if (fabsf(yaw_error) < g_tracker->cached_target->arrive.yaw_threshold &&
+        sqrtf(dx * dx + dy * dy) < g_tracker->cached_target->arrive.distance_threshold) {
+        return false;
+    }
+
+    float cos_yaw = cosf(current_pose->yaw * DEG_TO_RAD);
+    float sin_yaw = sinf(current_pose->yaw * DEG_TO_RAD);
+    float x_offset = dx * cos_yaw + dy * sin_yaw;
+    float y_offset = -dx * sin_yaw + dy * cos_yaw;
+
+    MotionControl_SetPosition(x_offset, y_offset, yaw_error);
+    g_tracker->cmd_sent = true;
+    return true;
+}
+
+/**
  * @brief 导航轨迹跟踪任务
  */
 void Nav_Track_Task(void *argument) {
@@ -223,7 +241,7 @@ void Nav_Track_Task(void *argument) {
 
     for (;;) {
         if (g_tracker->state != TRACK_STATE_RUNNING) {
-            osDelay(2); continue;
+            osDelay(10); continue;
         }
 
         if (g_tracker->cached_target == NULL) {
@@ -254,6 +272,9 @@ void Nav_Track_Task(void *argument) {
                         g_tracker->cmd_sent = true;
                     }
                 } else if (motors_reached_target()) {
+                    if (correct_deviation(&current_pose)) {
+                        break;
+                    }
                     enter_phase(TRACK_PHASE_TRANSLATE);
                 }
                 break;
@@ -275,8 +296,11 @@ void Nav_Track_Task(void *argument) {
                     MotionControl_SetPosition(x_offset, y_offset, 0.0f);
                     g_tracker->cmd_sent = true;
                 } else if (motors_reached_target()) {
-                    if (!check_translate_arrival(&current_pose)) {
-                        enter_phase(TRACK_PHASE_TRANSLATE);
+                    if (correct_deviation(&current_pose)) {
+                        break;
+                    }
+                    if (check_translate_arrival(&current_pose)) {
+                        enter_phase(TRACK_PHASE_ADJUST_YAW);
                     }
                 }
                 break;
@@ -292,16 +316,16 @@ void Nav_Track_Task(void *argument) {
                     MotionControl_SetPosition(0.0f, 0.0f, final_yaw_error);
                     g_tracker->cmd_sent = true;
                 } else if (motors_reached_target()) {
-                    if (!check_yaw_arrival(&current_pose)) {
-                        enter_phase(TRACK_PHASE_ADJUST_YAW);
+                    if (correct_deviation(&current_pose)) {
+                        break;
+                    }
+                    if (check_yaw_arrival(&current_pose)) {
+                        break;
                     }
                 }
                 break;
             }
-
-            default: nav_error(); break;
         }
-
-        osDelay(2);
+        osDelay(1);
     }
 }

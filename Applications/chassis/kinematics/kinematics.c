@@ -34,7 +34,7 @@ void Kinematics_Forward(WheelEncoderData_t *encoder_delta, PoseDelta_t *pose_del
     }
 
     pose_delta->dx = (delta_s[0] + delta_s[1] + delta_s[2] + delta_s[3]) / 4.0f;
-    pose_delta->dy = (delta_s[0] - delta_s[1] - delta_s[2] + delta_s[3]) / 4.0f;
+    pose_delta->dy = (-delta_s[0] + delta_s[1] + delta_s[2] - delta_s[3]) / 4.0f;
     pose_delta->dyaw = (-delta_theta[0] + delta_theta[1] - delta_theta[2] + delta_theta[3]) / 4.0f;
 }
 
@@ -52,8 +52,8 @@ void Kinematics_Inverse(float vx, float vy, float w, Wheel_t *wheels) {
     float W = WHEEL_BASE_WIDTH / 2.0f;
     float R = WHEEL_RADIUS;
 
-    wheels->fl = (vx + vy - (L + W) * omega) / R;  // 前左轮
-	wheels->fr = (vx - vy + (L + W) * omega) / R;  // 前右轮
-	wheels->rl = (vx - vy - (L + W) * omega) / R;  // 后左轮
-	wheels->rr = (vx + vy + (L + W) * omega) / R;  // 后右轮
+    wheels->fl = (vx - vy - (L + W) * omega) / R;  // 前左轮
+	wheels->fr = (vx + vy + (L + W) * omega) / R;  // 前右轮
+	wheels->rl = (vx + vy - (L + W) * omega) / R;  // 后左轮
+	wheels->rr = (vx - vy + (L + W) * omega) / R;  // 后右轮
 }

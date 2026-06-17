@@ -19,6 +19,7 @@ static OPSData_t *g_ops = NULL;
 static bool is_init = false;
 static void Data_Analyse(const uint8_t rec);
 static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len);
+extern osMutexId_t OPS_MutexHandle;
 
 /**
  * @brief 初始化平面定位模块
@@ -40,9 +41,13 @@ bool OPS_Init(void) {
  * */
 bool OPS_Get(OPSData_t *pose) {
     if(!is_init) return false;
+    if (osMutexAcquire(OPS_MutexHandle, osWaitForever) == osOK) {
+        memcpy(pose, g_ops, sizeof(OPSData_t));
+        osMutexRelease(OPS_MutexHandle);
+        return true;
+    }
 
-    memcpy(pose, g_ops, sizeof(OPSData_t));
-    return true;
+    return false;
 }
 
 /**
@@ -58,7 +63,6 @@ void OPS_Zero(void) {
 void OPS_Update_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
-    extern osMutexId_t OPS_MutexHandle;
     Uart4_RxBuf_t rx_buf;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);

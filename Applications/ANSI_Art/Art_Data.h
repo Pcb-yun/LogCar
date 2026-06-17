@@ -8,8 +8,8 @@
 #define __ART_DATA_H__
 
 #define NINA_EN 1
-#define HARUHI_EN 1
-#define IZUMI_EN 1
+#define HARUHI_EN 0
+#define IZUMI_EN 0
 
 #if NINA_EN
 static const char NINA_DATA[] = \

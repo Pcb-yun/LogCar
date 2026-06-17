@@ -149,8 +149,8 @@ static void NavTools_MapList(void) {
     for (uint8_t i = 0; i < info->point_count; i++) {
         TargetPoint_t *point = Map_GetPoint(i);
         if (point == NULL) {
-            logError("Failed to get point ID:%u", i);
-            return;
+            logWarning("Failed to get point ID:%u", i);
+            continue;
         }
         NavTools_PrintPoint(point);
     }

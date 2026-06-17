@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern osMutexId_t Motor_MutexHandle;
 extern osMessageQueueId_t Usart6_Rx_DataHandle;
 extern osMessageQueueId_t MotorCmdsHandle;
 MotorStatusShared_t *g_motor_status;
@@ -92,7 +93,6 @@ void Motor_Ctrl_Task(void *argument) {
 void Motor_Get_Sta_Task(void *argument) {
     (void)argument;
     Usart6_RxBuf_t rxBuf;
-    extern osMutexId_t Motor_MutexHandle;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) {

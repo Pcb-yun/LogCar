@@ -30,7 +30,7 @@ static TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.05f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         },
         .enable = true
@@ -54,7 +54,7 @@ static TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.05f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         },
         .enable = true
@@ -78,7 +78,7 @@ static TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.05f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         },
         .enable = true
@@ -102,7 +102,7 @@ static TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 2.0f,
-            .yaw_threshold = 0.05f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         },
         .enable = true

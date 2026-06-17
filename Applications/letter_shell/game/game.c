@@ -21,7 +21,7 @@ extern int main_snake(int argc, char *argv[]);
 extern int main_ascii_patrol(int argc, char *argv[]);
 #endif
 
-
+#if GAME_COUNT > 0
 ShellCommand gameGroup[] =
 {
 #if GAME_ENABLE_2048
@@ -41,3 +41,4 @@ ShellCommand gameGroup[] =
 SHELL_EXPORT_CMD_GROUP(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 game, gameGroup, games);
+#endif /* GAME_COUNT > 0 */

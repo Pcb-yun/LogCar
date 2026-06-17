@@ -139,7 +139,7 @@ const osThreadAttr_t Loc_Update_attributes = {
 osThreadId_t Nav_TrackHandle;
 const osThreadAttr_t Nav_Track_attributes = {
   .name = "Nav_Track",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Mission */
@@ -370,7 +370,7 @@ void MX_FREERTOS_Init(void) {
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
   /* creation of MotorCmds */
-  MotorCmdsHandle = osMessageQueueNew (5, sizeof(MotorCmd_t), &MotorCmds_attributes);
+  MotorCmdsHandle = osMessageQueueNew (4, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
   /* creation of Usart6_Rx_Data */
   Usart6_Rx_DataHandle = osMessageQueueNew (4, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
@@ -458,6 +458,8 @@ void Sys_Init_Task(void *argument)
   extern void MX_IWDG_Init(void);
   MX_IWDG_Init();
   SHOW_DMESG(dmesg_ok, NULL);
+#else
+  my_printf("[info] Debug Mode, Watch Dog Disabled.\r\n");
 #endif
 
   SHOW_DMESG(dmesg_wait, "Initialize Shell");
@@ -526,4 +528,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-
