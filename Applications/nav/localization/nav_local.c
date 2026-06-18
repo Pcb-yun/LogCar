@@ -69,14 +69,14 @@ static void Loc_Update(void) {
     WeightedPose_t sensor_sources[MAX_SENSOR_SOURCES] = {0};
     uint8_t source_count = 0;
 
-    // 获取里程计数据
-    Pose_t enc_pose;
-    bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
-    if (enc_rec) {
-        sensor_sources[source_count].pose = enc_pose;
-        sensor_sources[source_count].weight = 0.6f;    // 里程计权重
-        source_count++;
-    }
+    // // 获取里程计数据
+    // Pose_t enc_pose;
+    // bool enc_rec = MotionControl_OdomUpdate(&enc_pose);
+    // if (enc_rec) {
+    //     sensor_sources[source_count].pose = enc_pose;
+    //     sensor_sources[source_count].weight = 0.6f;    // 里程计权重
+    //     source_count++;
+    // }
 
     // 获取平面定位数据
     Pose_t ops_pose;

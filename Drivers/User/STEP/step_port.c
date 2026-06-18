@@ -180,6 +180,17 @@ void Motor_Update_Task(void *argument) {
 }
 
 /**
+ * @brief 电机位置清零
+ */
+void Motor_zero(void) {
+    MotorCmd_t cmd;
+    cmd.op_type = OP_CONTROL;
+    cmd.type.ctrl.type = CMD_ZERO;
+    cmd.motor_id = 0;
+    while (!Motor_Send_Cmd(&cmd));
+}
+
+/**
  * @brief 检查电机是否在线
  * @param motor_id 电机ID
  * @return true 电机在线，false 电机不在线
@@ -274,6 +285,10 @@ static void Tool_Help(void) {
                "  zero      Reset Motor Position to Zero\r\n"
                "  home      Trigger Motor Homing\r\n"
 #endif
+#if MOTOR_CONTROL
+               "  window    Set Motor Window\r\n"
+               "  pid       Set motor PID and integral limit\r\n"
+#endif
                "  cal       Calibrate Motor Encoder");
 }
 
@@ -332,6 +347,8 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
     if (argc < 2) { Tool_Help(); return; }
     uint8_t motor_id;
+    bool save = false;
+    char *endptr;
 
     if (strcmp(argv[1], "cmd") == 0) {
         if (argc != 3) {
@@ -354,7 +371,12 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #if MOTOR_CMD_ENABLE
     else if (strcmp(argv[1], "en") == 0) {
         if (argc != 4) { logPrintln("Usage: tool en [id] [state]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
         bool state = atoi(argv[3]);
 
         MotorCmd_t cmd; cmd.op_type = OP_CONTROL; cmd.type.ctrl.type = CMD_ENABLE;
@@ -369,7 +391,12 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #if MOTOR_CMD_STOP
     else if (strcmp(argv[1], "stop") == 0) {
         if (argc != 3) { logPrintln("Usage: tool stop [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
         ZDT_V5_Stop_Now(motor_id, false);
         logPrintln("Motor %d is stopped", motor_id);
@@ -378,15 +405,28 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #if MOTOR_CMD_HOME
     else if (strcmp(argv[1], "zero") == 0) {
         if (argc != 3) { logPrintln("Usage: tool zero [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
-        ZDT_V5_Reset_CurPos_To_Zero(motor_id);
-        ZDT_V5_Origin_Set_O(motor_id, true);
-        logPrintln("Motor %d position reset to zero", motor_id);
+        MotorCmd_t cmd; cmd.op_type = OP_CONTROL; cmd.motor_id = motor_id;
+        cmd.type.ctrl.type = CMD_ZERO;
+        if (Motor_Send_Cmd(&cmd)) {
+            logPrintln("Motor %d position reset to zero", motor_id);
+            ZDT_V5_Origin_Set_O(motor_id, true);
+        } else logPrintln("Failed to send zero command");
     }
     else if (strcmp(argv[1], "home") == 0) {
         if (argc != 3) { logPrintln("Usage: tool home [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
         ZDT_V5_Origin_Trigger_Return(motor_id, 0, false);
         logPrintln("Motor %d homing triggered", motor_id);
@@ -394,7 +434,12 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #endif /* MOTOR_CMD_HOME */
     else if (strcmp(argv[1], "cal") == 0) {
         if (argc != 3) { logPrintln("Usage: tool cal [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
         ZDT_V5_Trig_Encoder_Cal(motor_id);
         logPrintln("Starting calibration for motor %d...", motor_id);
@@ -415,14 +460,24 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
         logPrintln("Motor update time set to: %d ms", update_time);
     } else if (strcmp(argv[1], "online") == 0){
         if (argc != 3) { logPrintln("Usage: tool online [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
         logPrintln("Motor %d is %s", motor_id, Motor_isonline(motor_id) ? "online" : "offline");
     }
 #if MOTOR_CMD_VELOCITY
     else if (strcmp(argv[1], "found") == 0) {
         if (argc != 3) { logPrintln("Usage: tool found [id]"); return; }
-        motor_id = atoi(argv[2]);
+        long val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') {
+            logPrintln("invalid id value: %s", argv[2]);
+            return;
+        }
+        motor_id = (uint8_t)val;
 
         MotorCmd_t cmd; cmd.op_type = OP_CONTROL; cmd.motor_id = motor_id;
         cmd.type.ctrl.type = CMD_VELOCITY; cmd.type.ctrl.p.vel.dir = 0;
@@ -436,6 +491,90 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
         while (!Motor_Send_Cmd(&cmd));
     }
 #endif /* MOTOR_CMD_VELOCITY */
+#if MOTOR_CONTROL
+    else if (strcmp(argv[1], "window") == 0) {
+        if (argc != 5) { logPrintln("Usage: tool window [id] [deg*10] [save]"); return; }
+        long id_val = strtol(argv[2], &endptr, 10);
+        if(*endptr != '\0') { logPrintln("invalid id value: %s", argv[2]); return; }
+        long win_val = strtol(argv[3], &endptr, 10);
+        if(*endptr != '\0') { logPrintln("invalid window value: %s", argv[3]); return; }
+        long save_val = strtol(argv[4], &endptr, 10);
+        if(*endptr != '\0') { logPrintln("invalid save value: %s", argv[4]); return; }
+        motor_id = (uint8_t)id_val;
+        uint16_t window = (uint16_t)win_val;
+        save = (save_val != 0);
+
+        MotorCmd_t cmd;
+        cmd.op_type = OP_PARAM_WRITE;
+        cmd.motor_id = motor_id;
+        cmd.type.param.type = PARAM_CONTROL;
+        if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+        cmd.type.param.p.pid.integral_limit = g_motor_status->motors[motor_id - 1].integral_limit;
+        cmd.type.param.p.pid.kd = g_motor_status->motors[motor_id - 1].kd;
+        cmd.type.param.p.pid.ki = g_motor_status->motors[motor_id - 1].ki;
+        cmd.type.param.p.pid.kp = g_motor_status->motors[motor_id - 1].kp;
+        osMutexRelease(Motor_MutexHandle);
+        }
+        cmd.type.param.p.pid.pos_window = window;
+        cmd.type.param.p.pid.save = save;
+
+        if (Motor_Send_Cmd(&cmd)) {
+            logPrintln("Motor %d window set: %d save=%d", motor_id, window, save);
+        } else {
+            logPrintln("Failed to send window command");
+        }
+    } else if (strcmp(argv[1], "pid") == 0) {
+        if (argc == 3 || argc == 7) {
+            long id_val = strtol(argv[2], &endptr, 10);
+            if (*endptr != '\0') { logPrintln("invalid id value: %s", argv[2]); return; }
+            motor_id = (uint8_t)id_val;
+
+            if (argc == 3) {
+                if (motor_id > 4) { logPrintln("Motor must be 1-4"); return; }
+                if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+                    logPrintln("id=%d kp=%lu ki=%lu kd=%lu il=%lu window=%u", motor_id,
+                               (unsigned long)g_motor_status->motors[motor_id - 1].kp, (unsigned long)g_motor_status->motors[motor_id - 1].ki,
+                               (unsigned long)g_motor_status->motors[motor_id - 1].kd, (unsigned long)g_motor_status->motors[motor_id - 1].integral_limit,
+                               (unsigned)g_motor_status->motors[motor_id - 1].pos_window);
+                    osMutexRelease(Motor_MutexHandle);
+                } return;
+            }
+
+            uint32_t kp = (uint32_t)strtoul(argv[3], &endptr, 10);
+            if (*endptr != '\0') { logPrintln("invalid kp value: %s", argv[3]); return; }
+            uint32_t ki = (uint32_t)strtoul(argv[4], &endptr, 10);
+            if (*endptr != '\0') { logPrintln("invalid ki value: %s", argv[4]); return; }
+            uint32_t kd = (uint32_t)strtoul(argv[5], &endptr, 10);
+            if (*endptr != '\0') { logPrintln("invalid kd value: %s", argv[5]); return; }
+            uint32_t il = (uint32_t)strtoul(argv[6], &endptr, 10);
+            if (*endptr != '\0') { logPrintln("invalid integral_limit value: %s", argv[6]); return; }
+            long save_val = strtol(argv[7], &endptr, 10);
+            if(*endptr != '\0') { logPrintln("invalid save value: %s", argv[7]); return; }
+            save = (save_val != 0);
+
+            MotorCmd_t cmd;
+            cmd.op_type = OP_PARAM_WRITE; cmd.motor_id = motor_id; cmd.type.param.type = PARAM_CONTROL;
+            cmd.type.param.p.pid.kp = kp; cmd.type.param.p.pid.ki = ki; cmd.type.param.p.pid.kd = kd;
+            cmd.type.param.p.pid.integral_limit = il;
+            if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+                cmd.type.param.p.pid.pos_window = g_motor_status->motors[motor_id - 1].pos_window;
+                osMutexRelease(Motor_MutexHandle);
+            }
+            cmd.type.param.p.pid.save = save;
+
+            if (Motor_Send_Cmd(&cmd)) {
+                logPrintln("Motor %d PID/limit set: kp=%lu ki=%lu kd=%lu il=%lu save=%d", motor_id, (unsigned long)kp,
+                           (unsigned long)ki, (unsigned long)kd, (unsigned long)il, save);
+            } else {
+                logPrintln("Failed to send pid command");
+            }
+        } else {
+            logPrintln("Usage: tool pid [id]            - show motor PID parameters");
+            logPrintln("       tool pid [id] [kp] [ki] [kd] [integral_limit] [save]");
+            return;
+        }
+    }
+#endif /* MOTOR_CONTROL */
     else {
         logPrintln("Invalid command: %s", argv[1]);
         Tool_Help();
@@ -738,21 +877,27 @@ static void Motor_View_Shell(void) {
 #endif
 #endif
 #if MOTOR_STATUS_FLAGS
-        logPrintln("\033[2K\rSta  |  %04X |  %04X |  %04X |  %04X |\r\n"
-                "\033[2K\rHom  |  %04X |  %04X |  %04X |  %04X |\r\n"
-                "\033[2K\rPin  |  %04X |  %04X |  %04X |  %04X |",
-                g_motor_status->motors[0].status,
-                g_motor_status->motors[1].status,
-                g_motor_status->motors[2].status,
-                g_motor_status->motors[3].status,
-                g_motor_status->motors[0].home_status,
-                g_motor_status->motors[1].home_status,
-                g_motor_status->motors[2].home_status,
-                g_motor_status->motors[3].home_status,
-                g_motor_status->motors[0].pin_status,
-                g_motor_status->motors[1].pin_status,
-                g_motor_status->motors[2].pin_status,
-                g_motor_status->motors[3].pin_status);
+        {
+            uint8_t sta[4], hom[4];
+            for (int i = 0; i < 4; i++) {
+                sta[i] = (g_motor_status->motors[i].oac << 7) | (g_motor_status->motors[i].esi_r << 6) |
+                         (g_motor_status->motors[i].esi_l << 4) | (g_motor_status->motors[i].cgp << 3) |
+                         (g_motor_status->motors[i].cgi << 2) | (g_motor_status->motors[i].prf << 1) |
+                         g_motor_status->motors[i].ens;
+                hom[i] = (g_motor_status->motors[i].ocp_tf << 7) | (g_motor_status->motors[i].otp_tf << 4) |
+                         (g_motor_status->motors[i].org_cf << 3) | (g_motor_status->motors[i].org_sf << 2) |
+                         (g_motor_status->motors[i].cal_rdy << 1) | g_motor_status->motors[i].enc_rdy;
+            }
+            logPrintln("\033[2K\rSta  |  %04X |  %04X |  %04X |  %04X |\r\n"
+                    "\033[2K\rHom  |  %04X |  %04X |  %04X |  %04X |\r\n"
+                    "\033[2K\rPin  |  %04X |  %04X |  %04X |  %04X |",
+                    sta[0], sta[1], sta[2], sta[3],
+                    hom[0], hom[1], hom[2], hom[3],
+                    g_motor_status->motors[0].pin_status,
+                    g_motor_status->motors[1].pin_status,
+                    g_motor_status->motors[2].pin_status,
+                    g_motor_status->motors[3].pin_status);
+        }
 #endif
 #if MOTOR_MOTION
         logPrintln("\033[2K\rSPos |%7s|%7s|%7s|%7s|\r\n"

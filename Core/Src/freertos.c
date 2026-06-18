@@ -132,7 +132,7 @@ const osThreadAttr_t Battery_Get_attributes = {
 osThreadId_t Loc_UpdateHandle;
 const osThreadAttr_t Loc_Update_attributes = {
   .name = "Loc_Update",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
 /* Definitions for Nav_Track */
@@ -528,3 +528,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

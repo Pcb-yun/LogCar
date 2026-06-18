@@ -23,9 +23,9 @@
 #define MOTOR_ELECTRICAL   0      // 电气参数（电压/电流/温度）
 #define MOTOR_MOTION       1      // 运动状态（速度/位置/误差/脉冲）
 #define MOTOR_ENCODER      0      // 编码器信息（线性值/原始值）
-#define MOTOR_STATUS_FLAGS 0      // 状态标志（电机/回零/引脚）
+#define MOTOR_STATUS_FLAGS 1      // 状态标志（电机/回零/引脚）
 #define MOTOR_SYSTEM       0      // 系统信息（固件/硬件/电阻/电感/选项）
-#define MOTOR_CONTROL      0      // 控制参数（PID/积分限幅/位置窗口）
+#define MOTOR_CONTROL      1      // 控制参数（PID/积分限幅/位置窗口）
 #define MOTOR_PROTECTION   0      // 保护参数（过热/过流/心跳/碰撞角度）
 #define MOTOR_CLOG         0      // 堵转保护参数（使能/转速/电流/延时）
 #define MOTOR_HOME         0      // 回零参数（模式/方向/速度/超时/碰撞）

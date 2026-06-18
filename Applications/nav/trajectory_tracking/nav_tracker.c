@@ -46,12 +46,17 @@ extern MotorStatusShared_t *g_motor_status;
  * @return true-全部到位，false-未到位
  */
 static bool motors_reached_target() {
+    extern osMutexId_t Motor_MutexHandle;
     uint32_t threshold = (uint32_t)(MOTOR_WINDOW_DEG / 360.0f * MOTOR_PULSES_PER_REV + 0.5f);
 
-    for (uint8_t i = 0; i < 4; i++) {
-        int32_t err = g_motor_status->motors[i].set_pos - g_motor_status->motors[i].pos;
-        if (err < 0) err = -err;
-        if ((uint32_t)err > threshold) return false;
+    if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+        for (uint8_t i = 0; i < 4; i++) {
+            int32_t err = g_motor_status->motors[i].set_pos - g_motor_status->motors[i].pos;
+            if (err < 0) err = -err;
+            logInfo("motor %d err: %d, threshold: %d", i, err, threshold);
+            if ((uint32_t)err > threshold) return false;
+        }
+        osMutexRelease(Motor_MutexHandle);
     }
 
     return true;
@@ -260,6 +265,7 @@ void Nav_Track_Task(void *argument) {
         switch (g_tracker->phase) {
             case TRACK_PHASE_ROTATE_TO_TARGET: {
                 if (!g_tracker->cmd_sent) {
+                    logInfo("1. Rotating to target");
                     float dx = g_tracker->cached_target->pose.x - current_pose.x;
                     float dy = g_tracker->cached_target->pose.y - current_pose.y;
                     float angle_to_target = atan2f(dy, dx) * RAD_TO_DEG;
@@ -268,13 +274,12 @@ void Nav_Track_Task(void *argument) {
                     if (fabsf(yaw_error) < g_tracker->cached_target->arrive.yaw_threshold) {
                         enter_phase(TRACK_PHASE_TRANSLATE);
                     } else {
+                        logInfo("Yaw error: %f", yaw_error);
                         MotionControl_SetPosition(0.0f, 0.0f, yaw_error);
                         g_tracker->cmd_sent = true;
                     }
                 } else if (motors_reached_target()) {
-                    if (correct_deviation(&current_pose)) {
-                        break;
-                    }
+                    if (correct_deviation(&current_pose)) break;
                     enter_phase(TRACK_PHASE_TRANSLATE);
                 }
                 break;
@@ -282,6 +287,7 @@ void Nav_Track_Task(void *argument) {
 
             case TRACK_PHASE_TRANSLATE: {
                 if (!g_tracker->cmd_sent) {
+                    logInfo("2. Translating to target");
                     if (check_translate_arrival(&current_pose)) {
                         break;
                     }
@@ -293,21 +299,22 @@ void Nav_Track_Task(void *argument) {
                     float x_offset = dx * cos_yaw + dy * sin_yaw;
                     float y_offset = -dx * sin_yaw + dy * cos_yaw;
 
+                    logInfo("X offset: %f, Y offset: %f", x_offset, y_offset);
                     MotionControl_SetPosition(x_offset, y_offset, 0.0f);
                     g_tracker->cmd_sent = true;
                 } else if (motors_reached_target()) {
-                    if (correct_deviation(&current_pose)) {
+                    if (check_translate_arrival(&current_pose)) {
                         break;
                     }
-                    if (check_translate_arrival(&current_pose)) {
-                        enter_phase(TRACK_PHASE_ADJUST_YAW);
-                    }
+                    if (correct_deviation(&current_pose)) break;
+                    enter_phase(TRACK_PHASE_ADJUST_YAW);
                 }
                 break;
             }
 
             case TRACK_PHASE_ADJUST_YAW: {
                 if (!g_tracker->cmd_sent) {
+                    logInfo("3. Adjusting yaw");
                     if (check_yaw_arrival(&current_pose)) {
                         break;
                     }
@@ -316,12 +323,11 @@ void Nav_Track_Task(void *argument) {
                     MotionControl_SetPosition(0.0f, 0.0f, final_yaw_error);
                     g_tracker->cmd_sent = true;
                 } else if (motors_reached_target()) {
-                    if (correct_deviation(&current_pose)) {
-                        break;
-                    }
                     if (check_yaw_arrival(&current_pose)) {
                         break;
                     }
+                    if (correct_deviation(&current_pose)) break;
+                    logInfo("deviation corrected");
                 }
                 break;
             }

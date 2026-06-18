@@ -69,11 +69,11 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
         case CMD_SET_OPENLOOP_CURRENT: case CMD_SET_CLOSEDLOOP_CURRENT: case CMD_SET_PID_PARAMS: case CMD_SET_DMX512_PARAMS:
         case CMD_SET_POS_WINDOW: case CMD_SET_PROTECT_THRESHOLD: case CMD_SET_HEARTBEAT_TIME: case CMD_SET_INTEGRAL_LIMIT:
         case CMD_SET_COLLISION_ANGLE: case CMD_SET_LOCK_PARAMS: case CMD_SET_DRIVER_CONFIG: case CMD_RESET_CURPOS_TO_ZERO:
-            if (len >= 4) {
-                uint8_t response_code = data[2];
-                if (response_code == 0xE2) { logError("Motor %d parameter error", motor_id); }
-                else if (response_code == 0xEE) logError("Motor %d command format error", motor_id);
-            } break;
+        if (len >= 4) {
+            uint8_t response_code = data[2];
+            if (response_code == 0xE2) { logError("Motor %d parameter error", motor_id); }
+            else if (response_code == 0xEE) logError("Motor %d command format error", motor_id);
+        } break;
         case CMD_BROADCAST_READ_ID: motor->is_online = true; break;
 #if MOTOR_ELECTRICAL
         case CMD_READ_BUS_VOLTAGE: if (len >= 5) motor->voltage = (data[2] << 8) | data[3]; break;
@@ -100,7 +100,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
             } break;
         case CMD_READ_POSITION:
             if (len >= 8) {
-                int32_t pos = (data[3] << 24) | (data[4] << 16) | (data[5] << 8) | data[6];
+                int32_t pos = ((int32_t)data[3] << 24) | ((uint32_t)data[4] << 16) | ((uint32_t)data[5] << 8) | (uint32_t)data[6];
                 if (data[2] == 0x01) pos = -pos;
 #if CURRENT_FIRMWARE == FIRMWARE_X
                 pos = pos / 10;
@@ -109,7 +109,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
             } break;
         case CMD_READ_TARGET_POSITION:
             if (len >= 8) {
-                int32_t pos = (data[3] << 24) | (data[4] << 16) | (data[5] << 8) | data[6];
+                int32_t pos = ((int32_t)data[3] << 24) | ((uint32_t)data[4] << 16) | ((uint32_t)data[5] << 8) | (uint32_t)data[6];
                 if (data[2] == 0x01) pos = -pos;
 #if CURRENT_FIRMWARE == FIRMWARE_X
                 pos = pos / 10;
@@ -118,7 +118,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
             } break;
         case CMD_READ_SET_POSITION:
             if (len >= 8) {
-                int32_t pos = (data[3] << 24) | (data[4] << 16) | (data[5] << 8) | data[6];
+                int32_t pos = ((int32_t)data[3] << 24) | ((uint32_t)data[4] << 16) | ((uint32_t)data[5] << 8) | (uint32_t)data[6];
                 if (data[2] == 0x01) pos = -pos;
 #if CURRENT_FIRMWARE == FIRMWARE_X
                 pos = pos / 10;
@@ -146,10 +146,27 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
         case CMD_READ_ENCODER_VALUE: if (len >= 5) motor->encoder_linear = (data[2] << 8) | data[3]; break;
 #endif /* MOTOR_ENCODER */
 #if MOTOR_STATUS_FLAGS
-        case CMD_READ_MOTOR_STATUS: if (len >= 4) motor->status = data[2]; break;
-        case CMD_READ_HOME_STATUS: if (len >= 4) motor->home_status = data[2]; break;
-        case CMD_READ_STATUS_FLAGS: if (len >= 5) { motor->home_status = data[2]; motor->status = data[3]; } break;
-        case CMD_READ_PIN_STATUS: if (len >= 4) motor->pin_status = data[2]; break;
+        case CMD_READ_MOTOR_STATUS:
+            if (len >= 4) {
+                uint8_t status = data[2];
+                motor->ens = (status & 0x01) != 0;
+                motor->prf = (status & 0x02) != 0;
+                motor->cgi = (status & 0x04) != 0;
+                motor->cgp = (status & 0x08) != 0;
+                motor->esi_l = (status & 0x10) != 0;
+                motor->esi_r = (status & 0x40) != 0;
+                motor->oac = (status & 0x80) != 0;
+            } break;
+        case CMD_READ_HOME_STATUS:
+            if (len >= 4) {
+                uint8_t status = data[2];
+                motor->enc_rdy = (status & 0x01) != 0;
+                motor->cal_rdy = (status & 0x02) != 0;
+                motor->org_sf = (status & 0x04) != 0;
+                motor->org_cf = (status & 0x08) != 0;
+                motor->otp_tf = (status & 0x10) != 0;
+                motor->ocp_tf = (status & 0x80) != 0;
+            } break;
 #elif USE_HEARTBEAT
         case CMD_READ_MOTOR_STATUS: break;
 #endif /* MOTOR_STATUS_FLAGS */
@@ -188,9 +205,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
             }
 #endif
             break;
-#if CURRENT_FIRMWARE == FIRMWARE_X
         case CMD_READ_POSITION_WINDOW: if (len >= 5) motor->pos_window = (data[2] << 8) | data[3]; break;
-#endif
 #endif /* MOTOR_CONTROL */
 #if MOTOR_PROTECTION
         case CMD_READ_PROTECT_THRESHOLD:
@@ -247,8 +262,16 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
                 if (data[21] == 0x01) error = -error; motor->pos_error = error;
 #endif
 #if MOTOR_STATUS_FLAGS
-                motor->home_status = data[28];
-                motor->status = data[29];
+                {
+                    uint8_t status = data[29];
+                    motor->ens = (status & 0x01) != 0;
+                    motor->prf = (status & 0x02) != 0;
+                    motor->cgi = (status & 0x04) != 0;
+                    motor->cgp = (status & 0x08) != 0;
+                    motor->esi_l = (status & 0x10) != 0;
+                    motor->esi_r = (status & 0x40) != 0;
+                    motor->oac = (status & 0x80) != 0;
+                }
 #endif
             }
 #elif CURRENT_FIRMWARE == FIRMWARE_X
@@ -277,8 +300,16 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
                 if (data[25] == 0x01) error = -error; motor->pos_error = error;
 #endif
 #if MOTOR_STATUS_FLAGS
-                motor->home_status = data[32];
-                motor->status = data[33];
+                {
+                    uint8_t status = data[33];
+                    motor->ens = (status & 0x01) != 0;
+                    motor->prf = (status & 0x02) != 0;
+                    motor->cgi = (status & 0x04) != 0;
+                    motor->cgp = (status & 0x08) != 0;
+                    motor->esi_l = (status & 0x10) != 0;
+                    motor->esi_r = (status & 0x40) != 0;
+                    motor->oac = (status & 0x80) != 0;
+                }
 #endif
             }
 #endif
@@ -331,7 +362,12 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
 #endif
             break;
 #endif /* MOTOR batch read guards */
-        case 0x00: break;   // 忽略0x00命令
+        case 0x00:
+            if (len >= 4) {
+                uint8_t response_code = data[2];
+                if (response_code == 0xE2) { logError("Motor %d parameter error", motor_id); }
+                // else if (response_code == 0xEE) logError("Motor %d command format error", motor_id);     // 接收经常误报，不处理
+            } break;
         default: logWarning("Received motor response, but command unknown:"
                             " id:%d, cmd:%d", motor_id, cmd_code); break;
     }
@@ -420,6 +456,7 @@ static void Motor_Process_Ctrl(uint8_t motor_id, MotorCtrl_t *ctrl) {
                                 ctrl->p.fast_set.mode, ctrl->p.fast_set.sync); break;
         case CMD_FAST_SEND: ZDT_V5_Fast_Send_Pos(motor_id, ctrl->p.fast_send.pos); break;
 #endif /* MOTOR_CMD_FAST */
+        case CMD_ZERO: ZDT_V5_Reset_CurPos_To_Zero(motor_id); break;
         case CMD_NONE: default: logWarning("Unknown control command type: %d", ctrl->type); break;
     }
 }
@@ -470,8 +507,11 @@ static void Motor_Process_Param_Read(uint8_t motor_id, MotorParam_t *param) {
 #if CURRENT_FIRMWARE == FIRMWARE_X
             ZDT_V5_Read_Sys_Params(motor_id, S_FLAG); osDelay(2);
 #endif
-            ZDT_V5_Read_Sys_Params(motor_id, S_OFLAG); osDelay(2);
-            ZDT_V5_Read_Sys_Params(motor_id, S_PIN); break;
+#if CURRENT_FIRMWARE == FIRMWARE_Y42
+            ZDT_V5_Read_Sys_Params(motor_id, S_PIN); osDelay(2);
+#endif
+            ZDT_V5_Read_Sys_Params(motor_id, S_OFLAG);
+            break;
 #endif /* MOTOR_STATUS_FLAGS */
 #if MOTOR_SYSTEM
         case PARAM_SYSTEM:
@@ -483,10 +523,8 @@ static void Motor_Process_Param_Read(uint8_t motor_id, MotorParam_t *param) {
 #if MOTOR_CONTROL
         case PARAM_CONTROL:
             ZDT_V5_Read_PID_Params(motor_id); osDelay(2);
-#if CURRENT_FIRMWARE == FIRMWARE_X
             ZDT_V5_Read_Pos_Window(motor_id); osDelay(2);
             ZDT_V5_Read_Integral_Limit(motor_id);
-#endif
             break;
 #endif /* MOTOR_CONTROL */
 #if MOTOR_PROTECTION
@@ -535,13 +573,13 @@ static void Motor_Process_Param_Write(uint8_t motor_id, bool save, MotorParam_t 
 #if MOTOR_CONTROL
         case PARAM_CONTROL:
             ZDT_V5_Modify_PID_Params(motor_id, save, param->p.pid.kp, param->p.pid.ki, param->p.pid.kd); osDelay(2);
+            ZDT_V5_Modify_Pos_Window(motor_id, save, param->p.pid.pos_window); osDelay(2);
             ZDT_V5_Modify_Integral_Limit(motor_id, save, param->p.pid.integral_limit); break;
 #endif
 #if MOTOR_PROTECTION && CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
         case PARAM_PROTECT:
             ZDT_V5_Modify_Otocp(motor_id, save, param->p.protect.temp_threshold,
                                 param->p.protect.current_threshold, param->p.protect.protect_time); osDelay(2);
-            ZDT_V5_Modify_Pos_Window(motor_id, save, param->p.protect.pos_window); osDelay(2);
             ZDT_V5_Modify_Heart_Protect(motor_id, save, param->p.protect.heartbeat_time); break;
 #endif
 #if MOTOR_COMM

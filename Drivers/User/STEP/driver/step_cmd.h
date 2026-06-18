@@ -39,6 +39,7 @@ typedef enum {
     CMD_STOP,           // 停止命令
     CMD_HOME,           // 回零命令
     CMD_SYNC,           // 同步执行
+    CMD_ZERO,           // 编码器计数清零
     CMD_FAST_SET,       // 快速位置模式 - 设定参数
     CMD_FAST_SEND,      // 快速位置模式 - 发送位置
 } MotorCmdType_t;
@@ -204,6 +205,7 @@ typedef struct {
             uint32_t ki;                // PID积分系数
             uint32_t kd;                // PID微分系数
             uint32_t integral_limit;    // 积分限幅/刚性系数
+            uint16_t pos_window;            // 位置到达窗口
             bool save;                  // 存储标志：true-存储，false-不存储
         } pid;
 #endif
@@ -215,7 +217,6 @@ typedef struct {
             uint16_t current_threshold;     // 过流保护阈值（mA）
             uint16_t protect_time;          // 保护检测时间（ms）
             uint32_t heartbeat_time;        // 心跳保护时间（ms）
-            uint16_t pos_window;            // 位置到达窗口
             uint16_t collision_angle;       // 碰撞回零角度（0.1°）
             bool save;                      // 存储标志：true-存储，false-不存储
         } protect;

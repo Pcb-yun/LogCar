@@ -553,7 +553,7 @@ void ZDT_V5_Modify_Motor_ID(uint8_t addr, bool svF, uint8_t id) {
   */
 void ZDT_V5_Modify_MicroStep(uint8_t addr, bool svF, uint8_t mstep) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x84; cmd[2] = 0xAD; cmd[3] = svF; cmd[4] = mstep; cmd[5] = 0x6B;
+    cmd[0] = addr; cmd[1] = 0x84; cmd[2] = 0x8A; cmd[3] = svF; cmd[4] = mstep; cmd[5] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 6);
 }
 
@@ -600,7 +600,7 @@ void ZDT_V5_Modify_Firmware_Type(uint8_t addr, bool svF, bool fwtype) {
   */
 void ZDT_V5_Modify_Ctrl_Mode(uint8_t addr, bool svF, bool ctrl_mode) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0xD8; cmd[2] = 0x56; cmd[3] = svF; cmd[4] = ctrl_mode; cmd[5] = 0x6B;
+    cmd[0] = addr; cmd[1] = 0xD8; cmd[2] = 0xA6; cmd[3] = svF; cmd[4] = ctrl_mode; cmd[5] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 6);
 }
 
@@ -612,7 +612,7 @@ void ZDT_V5_Modify_Ctrl_Mode(uint8_t addr, bool svF, bool ctrl_mode) {
   */
 void ZDT_V5_Modify_Motor_Dir(uint8_t addr, bool svF, bool dir) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0xD4; cmd[2] = 0xAD; cmd[3] = svF; cmd[4] = dir; cmd[5] = 0x6B;
+    cmd[0] = addr; cmd[1] = 0xD4; cmd[2] = 0x60; cmd[3] = svF; cmd[4] = dir; cmd[5] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 6);
 }
 
@@ -636,7 +636,7 @@ void ZDT_V5_Modify_Lock_Btn(uint8_t addr, bool svF, bool lockbtn) {
   */
 void ZDT_V5_Modify_Lock_Params(uint8_t addr, bool svF, uint8_t lock_level) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0xD6; cmd[2] = 0x37; cmd[3] = svF; cmd[4] = lock_level; cmd[5] = 0x6B;
+    cmd[0] = addr; cmd[1] = 0xD6; cmd[2] = 0x4B; cmd[3] = svF; cmd[4] = lock_level; cmd[5] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 6);
 }
 #endif
@@ -664,7 +664,7 @@ void ZDT_V5_Modify_OM_mA(uint8_t addr, bool svF, uint16_t om_ma) {
   */
 void ZDT_V5_Modify_FOC_mA(uint8_t addr, bool svF, uint16_t foc_mA) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x45; cmd[2] = 0x3C; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x45; cmd[2] = 0x66; cmd[3] = svF;
     cmd[4] = (uint8_t)(foc_mA >> 8); cmd[5] = (uint8_t)(foc_mA >> 0);
     cmd[6] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 7);
@@ -692,7 +692,7 @@ void ZDT_V5_Read_PID_Params(uint8_t addr) {
   */
 void ZDT_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, uint32_t kd) {
     uint8_t cmd[24] = {0};
-    cmd[0] = addr; cmd[1] = 0x4A; cmd[2] = 0xFA; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x4A; cmd[2] = 0xC3; cmd[3] = svF;
     cmd[4] = (uint8_t)(kp >> 24); cmd[5] = (uint8_t)(kp >> 16); cmd[6] = (uint8_t)(kp >> 8); cmd[7] = (uint8_t)(kp >> 0);
     cmd[8] = (uint8_t)(ki >> 24); cmd[9] = (uint8_t)(ki >> 16); cmd[10] = (uint8_t)(ki >> 8); cmd[11] = (uint8_t)(ki >> 0);
     cmd[12] = (uint8_t)(kd >> 24); cmd[13] = (uint8_t)(kd >> 16); cmd[14] = (uint8_t)(kd >> 8); cmd[15] = (uint8_t)(kd >> 0);
@@ -708,7 +708,7 @@ void ZDT_V5_Modify_PID_Params(uint8_t addr, bool svF, uint32_t kp, uint32_t ki, 
   */
 void ZDT_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x4B; cmd[2] = 0xF5; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x4B; cmd[2] = 0x57; cmd[3] = svF;
     cmd[4] = (uint8_t)(il >> 24); cmd[5] = (uint8_t)(il >> 16); cmd[6] = (uint8_t)(il >> 8); cmd[7] = (uint8_t)(il >> 0);
     cmd[8] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 9);
@@ -722,7 +722,7 @@ void ZDT_V5_Modify_Integral_Limit(uint8_t addr, bool svF, uint32_t il) {
   */
 void ZDT_V5_Modify_Pos_Window(uint8_t addr, bool svF, uint16_t prw) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0xD1; cmd[2] = 0x3A; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0xD1; cmd[2] = 0x07; cmd[3] = svF;
     cmd[4] = (uint8_t)(prw >> 8); cmd[5] = (uint8_t)(prw >> 0);
     cmd[6] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 7);
@@ -770,7 +770,7 @@ void ZDT_V5_Read_Otocp(uint8_t addr) {
   */
 void ZDT_V5_Modify_Otocp(uint8_t addr, bool svF, uint16_t otp, uint16_t ocp, uint16_t time_ms) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0xD3; cmd[2] = 0xEC; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0xD3; cmd[2] = 0x56; cmd[3] = svF;
     cmd[4] = (uint8_t)(otp >> 8); cmd[5] = (uint8_t)(otp >> 0);
     cmd[6] = (uint8_t)(ocp >> 8); cmd[7] = (uint8_t)(ocp >> 0);
     cmd[8] = (uint8_t)(time_ms >> 8); cmd[9] = (uint8_t)(time_ms >> 0);
@@ -820,7 +820,7 @@ void ZDT_V5_Read_Collision_Angle(uint8_t addr) {
   */
 void ZDT_V5_Modify_Collision_Angle(uint8_t addr, bool svF, uint16_t angle) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x5C; cmd[2] = 0x22; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x5C; cmd[2] = 0xAC; cmd[3] = svF;
     cmd[4] = (uint8_t)(angle >> 8); cmd[5] = (uint8_t)(angle >> 0);
     cmd[6] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 7);
@@ -853,7 +853,7 @@ void ZDT_V5_Modify_Heart_Protect(uint8_t addr, bool svF, uint32_t hp) {
   */
 void ZDT_V5_Modify_Comm_Params(uint8_t addr, bool svF, uint8_t uart_baudrate, uint8_t can_baudrate, uint8_t verify_mode, uint8_t response_mode) {
     uint8_t cmd[16] = {0};
-    cmd[0] = addr; cmd[1] = 0x48; cmd[2] = 0xEE; cmd[3] = svF;
+    cmd[0] = addr; cmd[1] = 0x48; cmd[2] = 0xD1; cmd[3] = svF;
     cmd[4] = uart_baudrate; cmd[5] = can_baudrate; cmd[6] = verify_mode; cmd[7] = response_mode;
     cmd[8] = 0x6B;
     ZDT_V5_SEND_CMD(cmd, 9);

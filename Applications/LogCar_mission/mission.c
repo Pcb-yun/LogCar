@@ -13,6 +13,7 @@
 #include "nav_tracker.h"
 #include "nav_map.h"
 #include "ops.h"
+#include "step_port.h"
 
 static uint8_t current_point = 0;
 
@@ -40,6 +41,7 @@ void mission_run(void *argument) {
 
     osEventFlagsWait(System_StatusHandle, MISSION_RUN, osFlagsWaitAny, osWaitForever);
     OPS_Zero();
+    Motor_zero();
     logInfo("Mission Start");
 
     for(;;) {

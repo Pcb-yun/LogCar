@@ -48,7 +48,7 @@ bool Battery_Init(void) {
     g_battery->interval_ms = 500;
 
     float raw_voltage = (float)g_battery->voltage * ADC_VREF_MV / ADC_RESOLUTION;
-    g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO);
+    g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO + BATTERY_OFFSET);
 
     if (g_battery->voltage >= 3300) {
         is_init = true;
@@ -67,10 +67,15 @@ void Battery_Get_Task(void *argument) {
     if (!is_init) vTaskDelete(NULL);
 
     for (;;) {
-        HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&voltage, 1);
-        osEventFlagsWait(System_StatusHandle, ADC1_CONVCPLT, osFlagsWaitAny, osWaitForever);
-        float voltage_row = (float)voltage * ADC_VREF_MV / ADC_RESOLUTION;
-        g_battery->voltage = (uint16_t)(voltage_row * BATTERY_DIVIDER_RATIO);
+        uint32_t sum = 0;
+        for (int i = 0; i < ADC_SAMPLE_COUNT; i++) {
+            HAL_ADC_Start_DMA(&hadc1, (uint32_t*)&voltage, 1);
+            osEventFlagsWait(System_StatusHandle, ADC1_CONVCPLT, osFlagsWaitAny, osWaitForever);
+            sum += voltage;
+        }
+        float avg_raw = (float)sum / ADC_SAMPLE_COUNT;
+        float voltage_row = avg_raw * ADC_VREF_MV / ADC_RESOLUTION;
+        g_battery->voltage = (uint16_t)(voltage_row * BATTERY_DIVIDER_RATIO + BATTERY_OFFSET);
         if (g_battery->voltage <= BATTERY_THRESHOLD) {
             uint32_t now = xTaskGetTickCount();
             if (now - g_battery->last_warn_tick >= 30000) {

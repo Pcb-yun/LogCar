@@ -53,8 +53,23 @@ typedef struct {
 #endif
 
 #if MOTOR_STATUS_FLAGS
-	uint8_t status;				// 电机状态标志
-	uint8_t home_status;		// 回零状态标志
+	// 电机状态标志 (CMD_READ_MOTOR_STATUS 0x3A)
+	bool ens;					// bit0: Ens_TF - 使能状态标志，0=未使能，1=已使能
+	bool prf;					// bit1: Prf_TF - 位置到达标志，0=未到达，1=已到达
+	bool cgi;					// bit2: Cgi_TF - 堵转标志，0=未触发，1=已触发
+	bool cgp;					// bit3: Cgp_TF - 堵转保护标志
+	bool esi_l;					// bit4: Esi_LF - 左限位开关状态，0=低电平，1=高电平
+	bool esi_r;					// bit6: Esi_RF - 右限位开关状态
+	bool oac;					// bit7: Oac_TF - 掉电标志
+
+	// 回零状态标志 (CMD_READ_HOME_STATUS 0x3B)
+	bool enc_rdy;				// bit0: Enc_Rdy - 编码器就绪标志，0=编码器异常，1=编码器正常
+	bool cal_rdy;				// bit1: Cal_Rdy - 校准表就绪标志，0=未校准，1=已校准
+	bool org_sf;				// bit2: Org_SF - 正在回零标志
+	bool org_cf;				// bit3: Org_CF - 回零失败标志
+	bool otp_tf;				// bit4: Otp_TF - 过热保护标志
+	bool ocp_tf;				// bit7: Ocp_TF - 过流保护标志
+
 	uint8_t pin_status;			// 引脚IO电平
 #endif
 
