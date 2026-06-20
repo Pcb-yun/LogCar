@@ -41,7 +41,7 @@ void mission_run(void *argument) {
 
     osEventFlagsWait(System_StatusHandle, MISSION_RUN, osFlagsWaitAny, osWaitForever);
     OPS_Zero();
-    Motor_zero();
+    Motor_zero(0);
     logInfo("Mission Start");
 
     for(;;) {

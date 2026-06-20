@@ -15,16 +15,12 @@ extern "C" {
 #include <stdbool.h>
 #include "step_cmd.h"
 #include "step_ttl.h"
+#include "step_port_def.h"
 
 
 bool Motor_Init(void);
-void Motor_zero(void);
+void Motor_zero(uint8_t motor_id);
 bool Motor_Send_Cmd(MotorCmd_t *cmd);
-
-
-
-// 发送命令宏
-#define ZDT_V5_SEND_CMD(cmd, len) Motor_TTL_Send(cmd, len)
 
 
 #ifdef __cplusplus

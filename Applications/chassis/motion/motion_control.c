@@ -157,7 +157,7 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
     return true;
 }
 
-#if MOTOR_CMD_VELOCITY
+#if MOTOR_VELOCITY_MODE
 /**
  * @brief 发送轮子速度命令
  * @param wheels 四个轮子的角位移 (rad)
@@ -165,7 +165,7 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
 static void send_wheel_velocity_commands(Wheel_t *wheels) {
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
-    cmd.type.ctrl.type = CMD_VELOCITY;
+    cmd.type.ctrl.type = CTRL_VELOCITY;
     cmd.type.ctrl.p.vel.acc = (uint16_t)g_motion->car_acc;
     cmd.type.ctrl.p.vel.sync = true;
 
@@ -194,7 +194,7 @@ static void send_wheel_velocity_commands(Wheel_t *wheels) {
     Motor_Send_Cmd(&cmd);
 
     cmd.motor_id = 0;
-    cmd.type.ctrl.type = CMD_SYNC;
+    cmd.type.ctrl.type = CTRL_SYNC;
     Motor_Send_Cmd(&cmd);
 }
 
@@ -209,9 +209,9 @@ void MotionControl_SetVelocity(float x, float y, float yaw) {
     Kinematics_Inverse(x, y, yaw, &wheels);
     send_wheel_velocity_commands(&wheels);
 }
-#endif /* MOTOR_CMD_VELOCITY */
+#endif /* MOTOR_VELOCITY_MODE */
 
-#if MOTOR_CMD_POSITION
+#if MOTOR_POS_MODE_TRAPEZOIDAL
 /**
  * @brief 发送轮子位置命令
  * @param wheels 四个轮子的角位移 (rad)
@@ -221,7 +221,7 @@ static void send_wheel_position_commands(Wheel_t *wheels) {
 
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
-    cmd.type.ctrl.type = CMD_POSITION;
+    cmd.type.ctrl.type = CTRL_POSITION;
     cmd.type.ctrl.p.pos.acc = (uint16_t)g_motion->car_acc;
     cmd.type.ctrl.p.pos.mode = 0;
 #if CURRENT_FIRMWARE == FIRMWARE_X
@@ -262,7 +262,7 @@ static void send_wheel_position_commands(Wheel_t *wheels) {
     Motor_Send_Cmd(&cmd);
 
     cmd.motor_id = 0;
-    cmd.type.ctrl.type = CMD_SYNC;
+    cmd.type.ctrl.type = CTRL_SYNC;
     Motor_Send_Cmd(&cmd);
 }
 
@@ -277,7 +277,7 @@ void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset)
     Kinematics_Inverse(x_offset, y_offset, yaw_offset, &wheels);
     send_wheel_position_commands(&wheels);
 }
-#endif /* MOTOR_CMD_POSITION */
+#endif /* MOTOR_POS_MODE_TRAPEZOIDAL */
 
 /**
  * @brief 设置运动参数
@@ -323,7 +323,7 @@ void MotionControl_Stop(void) {
     uint8_t motor_ids[] = {MOTOR_FRONT_LEFT, MOTOR_FRONT_RIGHT, MOTOR_BACK_LEFT, MOTOR_BACK_RIGHT};
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
-    cmd.type.ctrl.type = CMD_STOP;
+    cmd.type.ctrl.type = CTRL_STOP;
     cmd.type.ctrl.p.stop.sync = true;
 
     for (uint8_t i = 0; i < 4; i++) {
@@ -332,7 +332,7 @@ void MotionControl_Stop(void) {
     }
 
     cmd.motor_id = 0;
-    cmd.type.ctrl.type = CMD_SYNC;
+    cmd.type.ctrl.type = CTRL_SYNC;
     Motor_Send_Cmd(&cmd);
 }
 #endif /* MOTOR_CMD_STOP */

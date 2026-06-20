@@ -158,6 +158,7 @@ virtualFolder:
         - path: Drivers/User/STEP/driver/step_ttl.c
         - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
+        - path: Drivers/User/STEP/step_port_dlc.c
       folders: []
     - name: track
       files:

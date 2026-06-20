@@ -26,7 +26,7 @@ bool Chassis_Init(void) {
     return true;
 }
 
-#if MOTOR_CMD_POSITION
+#if MOTOR_POS_MODE_TRAPEZOIDAL
 /**
  * @brief 将车移动指定距离
  */
@@ -45,10 +45,9 @@ static void Car_Move(int argc, char *argv[]) {
 
     MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
 }
-#endif /* MOTOR_CMD_POSITION */
+#endif /* MOTOR_POS_MODE_TRAPEZOIDAL */
 
-#if MOTOR_CMD_VELOCITY
-
+#if MOTOR_VELOCITY_MODE
 /**
  * @brief 设置小车速度
  */
@@ -125,7 +124,7 @@ static void Car_Key(void) {
 	}
     logPrintln("\033[%dA\033[J\033[2A", 1);
 }
-#endif /* MOTOR_CMD_VELOCITY */
+#endif /* MOTOR_VELOCITY_MODE */
 
 /**
  * @brief 设置车的运动参数
@@ -157,10 +156,10 @@ static void Car_Params(int argc, char *argv[]) {
 }
 
 ShellCommand MoveGroup[] = {
-#if MOTOR_CMD_POSITION
+#if MOTOR_POS_MODE_TRAPEZOIDAL
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
 #endif
-#if MOTOR_CMD_VELOCITY
+#if MOTOR_VELOCITY_MODE
 	SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, vel, Car_Vel, Car Key Control),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, key, Car_Key, Car Key Control),
 #endif
