@@ -21,7 +21,7 @@
 #include "i2c.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "track.h"
 /* USER CODE END 0 */
 
 I2C_HandleTypeDef hi2c1;
@@ -145,5 +145,24 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
 /* USER CODE BEGIN 1 */
 
+/**
+ * @brief I2C1 接收完成完成回调函数
+ */
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *i2cHandle)
+{
+    if (i2cHandle == TRACK_I2C_HANDLE) {
+        track_i2c_status = TRACK_STATUS_IDLE;                     // 标记成功
+    }
+}
+
+/**
+ * @brief I2C1 错误完成函数
+ */
+void HAL_I2C_MemErrorCallback(I2C_HandleTypeDef *i2cHandle)
+{
+    if (i2cHandle == TRACK_I2C_HANDLE) {
+        track_i2c_status = TRACK_STATUS_ERROR;                    // 标记失败
+    }
+}
 /* USER CODE END 1 */
 

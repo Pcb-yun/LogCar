@@ -26,6 +26,15 @@ typedef enum {
 } TrackMode_t;
 
 /**
+ * @brief 巡线模块状态枚举
+ */
+typedef enum {
+    TRACK_STATUS_IDLE = 1,
+    TRACK_STATUS_BUSY = 0,
+    TRACK_STATUS_ERROR = -1,
+} TrackI2CStatus_t;
+
+/**
  * @brief 巡线模块数据结构体
  */
 typedef struct {
@@ -35,7 +44,9 @@ typedef struct {
     TrackMode_t mode;
 } TrackData_t;
 
+extern TrackI2CStatus_t track_i2c_status;
 bool Track_Init(void);
+
 
 // GPIO引脚定义
 #define TRACK_KEY_Port  GPIOG

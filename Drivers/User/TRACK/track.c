@@ -16,6 +16,7 @@
 #include "i2c.h"
 
 TrackData_t *g_track = NULL;
+TrackI2CStatus_t track_i2c_status;
 static bool is_init = false;
 
 static void Track_Reset(void);
@@ -34,6 +35,7 @@ bool Track_Init(void) {
         return false;
     }
     memset(g_track, 0, sizeof(TrackData_t));
+    track_i2c_status = TRACK_STATUS_IDLE;
 
     g_track->mode = TRACK_DIGITAL;
     g_track->time = 100;
@@ -236,7 +238,12 @@ static void Track_Key(void) {
  */
 static int16_t I2C_ReadDigital(void) {
     int16_t value = 0;
-    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x30, I2C_MEMADD_SIZE_8BIT, (uint8_t*)&value, 1, 100) != HAL_OK) {
+    if (track_i2c_status != TRACK_STATUS_IDLE) {
+        return -1;
+    }
+    track_i2c_status = TRACK_STATUS_BUSY;
+    if (HAL_I2C_Mem_Read_DMA(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x30, I2C_MEMADD_SIZE_8BIT, (uint8_t*)&value, 1) != HAL_OK) {
+        track_i2c_status = TRACK_STATUS_IDLE;
         return -1;
     }
     return value;
