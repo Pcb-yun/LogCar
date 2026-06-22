@@ -46,26 +46,35 @@ typedef enum {
 	CTRL_NONE = 0,       // 无命令
 	CTRL_ENABLE,         // 使能控制
 	CTRL_VELOCITY,       // 速度模式控制
+#if MOTOR_VELOCITY_MODE_LIMIT
+	CTRL_VELOCITY_LIMIT, // 速度模式限电流控制
+#endif
 	CTRL_POSITION,       // 位置模式控制
-
 #if MOTOR_POS_MODE_DIRECT
 	CTRL_POS_DIRECT,     // 直通限速位置模式
 #endif
-
+#if MOTOR_POS_MODE_DIRECT_LIMIT
+	CTRL_POS_DIRECT_LIMIT, // 直通限速位置模式限电流控制
+#endif
+#if MOTOR_POS_MODE_TRAPEZOIDAL
+	CTRL_POS_TRAPEZOIDAL, // 梯形曲线位置模式
+#endif
+#if MOTOR_POS_MODE_TRAPEZOIDAL_LIMIT
+	CTRL_POS_TRAPEZOIDAL_LIMIT, // 梯形曲线位置模式限电流控制
+#endif
 #if MOTOR_TORQUE_MODE
 	CTRL_TORQUE,         // 力矩模式
 #endif
-
+#if MOTOR_TORQUE_MODE_LIMIT
+	CTRL_TORQUE_LIMIT,   // 力矩模式限速控制
+#endif
 	CTRL_STOP,           // 立即停止电机运动
-
 #if MOTOR_SYNC_TRIGGER
 	CTRL_SYNC,           // 触发多机同步运动
 #endif
-
 #if MOTOR_MULTI_CMD
 	CTRL_MULTI,          // 多电机命令（通过一条命令控制多个电机）
 #endif
-
 #if MOTOR_POS_MODE_FAST
 	CTRL_FAST_SET,       // 快速位置模式-设定参数（第一步）
 	CTRL_FAST_SEND      // 快速位置模式-发送位置（第二步）
@@ -164,6 +173,17 @@ typedef struct {
 			int32_t pos;            // 目标位置, Emm:脉冲数, X:角度(单位0.1°)
 		} fast_send;
 #endif
+
+#if MOTOR_MULTI_CMD
+		struct {
+			uint8_t len;            // 命令数据总字节数
+			uint8_t *data;          // 命令数据指针（包含多个电机的命令）
+		} multi;
+#endif
+
+		struct {
+			bool dummy;  // 空成员保证编译
+		} dummy;
 	} p;
 } MotorCtrl_t;
 
@@ -226,6 +246,10 @@ typedef struct {
 			bool sync;      // 同步标志: true=先缓存等待同步触发, false=立即执行
 		} home;
 #endif
+
+		struct {
+			bool dummy;  // 空成员保证编译
+		} dummy;
 	} p;
 } MotorTrigger_t;
 
@@ -280,7 +304,7 @@ typedef enum {
 	PARAM_SCALE_INPUT,          // 缩小倍数输入
 #endif
 
-#if MOTOR_SET_DRIVER_CONFIG_ALL
+#if MOTOR_SET_DRIVER_CONFIG_BATCH
 	PARAM_DRIVER_CONFIG_ALL,    // 修改驱动配置参数
 #endif
 
@@ -316,7 +340,7 @@ typedef enum {
 	PARAM_DMX512,               // DMX512协议参数
 #endif
 
-#if MOTOR_HOME_WRITE
+#if MOTOR_DRIVER_HOME_WRITE
 	PARAM_HOME_PARAMS,          // 回零参数
 #endif
 
@@ -347,7 +371,7 @@ typedef struct {
 
 #if MOTOR_SET_POWER_FLAG
 		struct {
-			bool enable;    // true=使能掉电存储位置, false=禁止
+			bool enable;    // 上电默认为true，修改为false可知是否掉电
 		} power_flag;
 #endif
 
@@ -466,7 +490,7 @@ typedef struct {
 
 #if MOTOR_COLLISION_ANGLE_WRITE
 		struct {
-			uint16_t angle;     // 碰撞回零返回角度, 单位:0.1°
+			uint16_t angle;     // 碰撞回零返回角度, 单位:0.1° 0自适应
 			bool save;          // 是否存储到内存: true=存储, false=不存储
 		} collision_angle;
 #endif
@@ -484,7 +508,7 @@ typedef struct {
 		} dmx512;
 #endif
 
-#if MOTOR_HOME_WRITE
+#if MOTOR_DRIVER_HOME_WRITE
 		struct {
 			uint8_t mode;       // 回零模式: 0=单圈就近, 1=单圈方向, 2=无限位碰撞,
 			                    //           3=限位回零, 4=回到绝对坐标零点, 5=回到上次掉电位置
@@ -498,6 +522,17 @@ typedef struct {
 			bool save;          // 是否存储到内存: true=存储, false=不存储
 		} home_params;
 #endif
+
+#if MOTOR_PERIODIC_RETURN
+		struct {
+			SysParams_t param;  // 定时返回的参数类型
+			uint16_t time_ms;   // 定时时间, 单位:ms, 0=关闭定时返回
+		} periodic_return;
+#endif
+
+		struct {
+			bool dummy;  // 空成员保证编译
+		} dummy;
 	} p;
 } MotorParamWrite_t;
 

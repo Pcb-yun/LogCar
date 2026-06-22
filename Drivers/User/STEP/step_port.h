@@ -19,8 +19,10 @@ extern "C" {
 
 
 bool Motor_Init(void);
-void Motor_zero(uint8_t motor_id);
 bool Motor_Send_Cmd(MotorCmd_t *cmd);
+#if MOTOR_TRIGGER_RESET_POS
+void Motor_zero(uint8_t motor_id);
+#endif
 
 
 #ifdef __cplusplus

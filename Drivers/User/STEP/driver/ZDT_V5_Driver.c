@@ -17,6 +17,9 @@ void ZDT_V5_Read_Sys_Params(uint8_t addr, SysParams_t s) {
 	uint8_t i = 0; uint8_t cmd[16] = {0};
 	cmd[i] = addr; ++i;
 	switch(s) {
+#if MOTOR_STATUS_READ_BATCH
+	case S_BATCH: cmd[i] = CMD_READ_SYSTEM_STATUS; ++i; cmd[i] = AUX_CODE_SYSTEM_STATUS; ++i; break;
+#endif
 #if MOTOR_STATUS_BUS_VOLTAGE
 	case S_VBUS : cmd[i] = CMD_READ_BUS_VOLTAGE; ++i; break;
 #endif
@@ -85,52 +88,52 @@ void ZDT_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t t
 	cmd[i] = AUX_CODE_TIMER_REPORT; ++i;
 	switch(s) {
 #if MOTOR_STATUS_BUS_VOLTAGE
-	case S_VBUS : cmd[i] = CMD_READ_BUS_VOLTAGE; ++i; break;
+		case S_VBUS : cmd[i] = CMD_READ_BUS_VOLTAGE; ++i; break;
 #endif
 #if MOTOR_STATUS_BUS_CURRENT
-	case S_CBUS : cmd[i] = CMD_READ_BUS_CURRENT; ++i; break;
+		case S_CBUS : cmd[i] = CMD_READ_BUS_CURRENT; ++i; break;
 #endif
 #if MOTOR_STATUS_PHASE_CURRENT
-	case S_CPHA : cmd[i] = CMD_READ_PHASE_CURRENT; ++i; break;
+		case S_CPHA : cmd[i] = CMD_READ_PHASE_CURRENT; ++i; break;
 #endif
 #if MOTOR_STATUS_ENCODER_VALUE
-	case S_ENCL : cmd[i] = CMD_READ_ENCODER_VALUE; ++i; break;
+		case S_ENCL : cmd[i] = CMD_READ_ENCODER_VALUE; ++i; break;
 #endif
 #if MOTOR_STATUS_INPUT_PULSES
-	case S_CLKI : cmd[i] = CMD_READ_INPUT_PULSES; ++i; break;
+		case S_CLKI : cmd[i] = CMD_READ_INPUT_PULSES; ++i; break;
 #endif
 #if MOTOR_STATUS_TARGET_POS
-	case S_TPOS : cmd[i] = CMD_READ_TARGET_POSITION; ++i; break;
+		case S_TPOS : cmd[i] = CMD_READ_TARGET_POSITION; ++i; break;
 #endif
 #if MOTOR_STATUS_SET_POS
-	case S_SPOS : cmd[i] = CMD_READ_SET_POSITION; ++i; break;
+		case S_SPOS : cmd[i] = CMD_READ_SET_POSITION; ++i; break;
 #endif
 #if MOTOR_STATUS_SPEED
-	case S_VEL  : cmd[i] = CMD_READ_SPEED; ++i; break;
+		case S_VEL  : cmd[i] = CMD_READ_SPEED; ++i; break;
 #endif
 #if MOTOR_STATUS_REAL_POS
-	case S_CPOS : cmd[i] = CMD_READ_POSITION; ++i; break;
+		case S_CPOS : cmd[i] = CMD_READ_POSITION; ++i; break;
 #endif
 #if MOTOR_STATUS_POS_ERROR
-	case S_PERR : cmd[i] = CMD_READ_POSITION_ERROR; ++i; break;
+		case S_PERR : cmd[i] = CMD_READ_POSITION_ERROR; ++i; break;
 #endif
 #if MOTOR_STATUS_BATTERY_VOLTAGE
-	case S_VBAT : cmd[i] = CMD_READ_BATTERY_VOLTAGE; ++i; break;
+		case S_VBAT : cmd[i] = CMD_READ_BATTERY_VOLTAGE; ++i; break;
 #endif
 #if MOTOR_STATUS_TEMPERATURE
-	case S_TEMP : cmd[i] = CMD_READ_TEMPERATURE; ++i; break;
+		case S_TEMP : cmd[i] = CMD_READ_TEMPERATURE; ++i; break;
 #endif
 #if MOTOR_STATUS_MOTOR_FLAGS
-	case S_FLAG : cmd[i] = CMD_READ_MOTOR_STATUS; ++i; break;
+		case S_FLAG : cmd[i] = CMD_READ_MOTOR_STATUS; ++i; break;
 #endif
 #if MOTOR_STATUS_HOME_FLAGS
-	case S_OFLAG: cmd[i] = CMD_READ_HOME_STATUS; ++i; break;
+		case S_OFLAG: cmd[i] = CMD_READ_HOME_STATUS; ++i; break;
 #endif
 #if MOTOR_STATUS_FLAGS_COMBINED
-	case S_OAF  : cmd[i] = CMD_READ_STATUS_FLAGS; ++i; break;
+		case S_OAF  : cmd[i] = CMD_READ_STATUS_FLAGS; ++i; break;
 #endif
 #if MOTOR_STATUS_PIN_STATUS
-	case S_PIN  : cmd[i] = CMD_READ_PIN_STATUS; ++i; break;
+		case S_PIN  : cmd[i] = CMD_READ_PIN_STATUS; ++i; break;
 #endif
 	default: break;
 	}
@@ -141,22 +144,10 @@ void ZDT_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t t
 }
 #endif
 
-#if MOTOR_STATUS_READ_BATCH
-/**
- * @brief 一次性读取所有系统状态参数
- * @param addr 电机地址
- */
-void ZDT_V5_Read_All_Sys_Params(uint8_t addr) {
-	uint8_t cmd[16] = {0};
-	cmd[0] = addr; cmd[1] = CMD_READ_SYSTEM_STATUS; cmd[2] = AUX_CODE_SYSTEM_STATUS; cmd[3] = END_CODE;
-	ZDT_V5_SEND_CMD(cmd, 4);
-}
-#endif
-
 /******************** 驱动配置参数 *********************/
 
 /**
- * @brief 读取单个驱动参数
+ * @brief 读取驱动参数
  * @param addr 电机地址
  * @param d 驱动参数类型
  */
@@ -164,8 +155,14 @@ void ZDT_V5_Read_Driver_Params(uint8_t addr, DriverParams_t d) {
 	uint8_t i = 0; uint8_t cmd[16] = {0};
 	cmd[i] = addr; ++i;
 	switch(d) {
+#if MOTOR_DRIVER_READ_BATCH
+		case D_BATCH: cmd[i] = CMD_READ_DRIVER_CONFIG; ++i; cmd[i] = AUX_CODE_DRIVER_CONFIG; ++i; break;
+#endif
 #if MOTOR_DRIVER_POS_WINDOW
-	case D_POS_WINDOW : cmd[i] = CMD_READ_POSITION_WINDOW; ++i; break;
+		case D_POS_WINDOW: cmd[i] = CMD_READ_POSITION_WINDOW; ++i; break;
+#endif
+#if MOTOR_DRIVER_HOME
+		case D_HOME: cmd[i] = CMD_READ_HOME_PARAMS; ++i; break;
 #endif
 	default: break;
 	}
@@ -173,22 +170,10 @@ void ZDT_V5_Read_Driver_Params(uint8_t addr, DriverParams_t d) {
 	ZDT_V5_SEND_CMD(cmd, i);
 }
 
-#if MOTOR_DRIVER_CONFIG_READ_BATCH
-/**
- * @brief 批量读取驱动配置参数
- * @param addr 电机地址
- */
-void ZDT_V5_Read_Batch_Config(uint8_t addr) {
-	uint8_t cmd[16] = {0};
-	cmd[0] = addr; cmd[1] = CMD_READ_DRIVER_CONFIG; cmd[2] = AUX_CODE_DRIVER_CONFIG; cmd[3] = END_CODE;
-	ZDT_V5_SEND_CMD(cmd, 4);
-}
-#endif
-
 /******************** 控制参数 *********************/
 
 /**
- * @brief 读取单个控制参数
+ * @brief 读取控制参数
  * @param addr 电机地址
  * @param c 控制参数类型
  */
@@ -199,10 +184,7 @@ void ZDT_V5_Read_Ctrl_Params(uint8_t addr, CtrlParams_t c) {
 #if MOTOR_PID_READ
 	case C_PID : cmd[i] = CMD_READ_PID_PARAMS; ++i; break;
 #endif
-#if MOTOR_HOME_READ
-	case C_HOME : cmd[i] = CMD_READ_HOME_PARAMS; ++i; break;
-#endif
-#if MOTOR_DRIVER_INTEGRAL_LIMIT
+#if MOTOR_INTEGRAL_LIMIT_READ
 	case C_INTEGRAL_LIMIT : cmd[i] = CMD_READ_INTEGRAL_LIMIT; ++i; break;
 #endif
 #if MOTOR_PROTECT_THRESHOLD_READ
@@ -783,7 +765,7 @@ void ZDT_V5_Origin_Interrupt(uint8_t addr) {
 }
 #endif
 
-#if MOTOR_HOME_WRITE
+#if MOTOR_DRIVER_HOME_WRITE
 /**
  * @brief 修改回零参数
  * @param addr 电机地址
@@ -844,11 +826,11 @@ void ZDT_V5_Modify_MicroStep(uint8_t addr, bool svF, uint8_t mstep) {
 /**
  * @brief 修改断电标志位
  * @param addr 电机地址
- * @param pdf 是否掉电存储位置功能,false为禁止,true为使能
+ * @param pdf 标志位,上电默认为true
  */
 void ZDT_V5_Modify_PDFlag(uint8_t addr, bool pdf) {
 	uint8_t cmd[16] = {0};
-	cmd[0] = addr; cmd[1] = CMD_SET_POWER_FLAG; cmd[2] = AUX_CODE_SET_POWER_FLAG; cmd[3] = pdf; cmd[4] = END_CODE;
+	cmd[0] = addr; cmd[1] = CMD_SET_POWER_FLAG; cmd[3] = pdf; cmd[4] = END_CODE;
 	ZDT_V5_SEND_CMD(cmd, 5);
 }
 #endif
@@ -969,7 +951,7 @@ void ZDT_V5_Modify_S_Vel(uint8_t addr, bool svF, bool s_vel) {
 }
 #endif
 
-#if MOTOR_SET_DRIVER_CONFIG_ALL
+#if MOTOR_SET_DRIVER_CONFIG_BATCH
 /**
  * @brief 批量修改驱动配置参数
  * @param addr 电机地址

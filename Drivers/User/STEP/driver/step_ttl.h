@@ -82,7 +82,7 @@ typedef struct {
 	uint16_t encoder_raw;		// 编码器原始值
 #endif
 
-#if MOTOR_STATUS_MOTOR_FLAGS
+#if MOTOR_STATUS_MOTOR_FLAGS || MOTOR_STATUS_FLAGS_COMBINED
 	bool ens;					// bit0: Ens_TF - 使能状态，0=未使能，1=已使能
 	bool prf;					// bit1: Prf_TF - 位置到达，0=未到达，1=已到达
 	bool cgi;					// bit2: Cgi_TF - 堵转标志，0=未触发，1=已触发
@@ -92,7 +92,7 @@ typedef struct {
 	bool oac;					// bit7: Oac_TF - 掉电标志
 #endif
 
-#if MOTOR_STATUS_HOME_FLAGS
+#if MOTOR_STATUS_HOME_FLAGS || MOTOR_STATUS_FLAGS_COMBINED
 	bool enc_rdy;				// bit0: Enc_Rdy - 编码器就绪
 	bool cal_rdy;				// bit1: Cal_Rdy - 校准表就绪
 	bool org_sf;				// bit2: Org_SF - 正在回零
@@ -106,24 +106,32 @@ typedef struct {
 #endif
 
 	/* ========== 驱动配置参数 ========== */
-#if MOTOR_DRIVER_LOCK_KEY
-	bool lock_key;				// 按键锁定 0=关闭 1=开启
+#if MOTOR_DRIVER_PULSE_PORT_MODE
+	uint8_t pulse_port_mode;	// 脉冲端口复用模式
 #endif
 
-#if MOTOR_DRIVER_CONTROL_MODE
-	bool control_mode;			// 控制模式 0=开环 1=闭环
+#if MOTOR_DRIVER_COMM_PORT_MODE
+	uint8_t comm_port_mode;		// 通讯端口复用模式
+#endif
+
+#if MOTOR_DRIVER_EN_PIN_LEVEL
+	uint8_t en_pin_level;		// En引脚有效电平
+#endif
+
+#if MOTOR_DRIVER_DIR_PIN_LEVEL
+	uint8_t dir_pin_level;		// Dir引脚有效电平
 #endif
 
 #if MOTOR_DRIVER_MICRO_STEP
 	uint8_t micro_step;			// 细分
 #endif
 
-#if MOTOR_DRIVER_DIRECTION
-	uint8_t motor_direction;	// 电机运动方向 0=CW 1=CCW
+#if MOTOR_DRIVER_FIRMWARE_TYPE
+	bool interpolation;			// 细分插补 0/1
 #endif
 
-#if MOTOR_DRIVER_MOTOR_TYPE
-	uint8_t motor_type;			// 电机类型 25=0.9° 50=1.8°
+#if MOTOR_DRIVER_AUTO_SCREEN_OFF
+	bool auto_screen_off;		// 自动息屏 0/1
 #endif
 
 #if MOTOR_DRIVER_OPENLOOP_CURRENT
@@ -134,20 +142,20 @@ typedef struct {
 	uint16_t close_current;		// 闭环电流 mA
 #endif
 
-#if MOTOR_DRIVER_FIRMWARE_TYPE
-	bool interpolation;			// 细分插补 0/1
-#endif
-
-#if MOTOR_DRIVER_POWER_FLAG
-	bool power_flag;			// 掉电标志 0=正常 1=掉电保存
-#endif
-
 #if MOTOR_DRIVER_BAUDRATE
 	uint8_t uart_baudrate;		// 串口波特率编码 0-8
 #endif
 
 #if MOTOR_DRIVER_CAN_RATE
 	uint8_t can_baudrate;		// CAN波特率编码 0-8
+#endif
+
+#if MOTOR_DRIVER_COMM_CHECK_MODE
+	uint8_t comm_check_mode;	// 通讯校验方式
+#endif
+
+#if MOTOR_DRIVER_CMD_RESPONSE_MODE
+	uint8_t cmd_response_mode;	// 控制命令应答方式
 #endif
 
 #if MOTOR_DRIVER_STALL_PROTECT
@@ -170,18 +178,24 @@ typedef struct {
 	uint16_t pos_window;		// 位置到达窗口（÷10=度，如8→0.8°）
 #endif
 
-#if MOTOR_DRIVER_POS_ARRIVE
-	bool pos_arrive;			// 位置到达检测 0=关闭 1=开启
+#if MOTOR_DRIVER_CLOSEDLOOP_MAX_SPEED
+	uint16_t close_max_speed;	// 闭环模式最大速度 RPM
 #endif
 
-#if MOTOR_DRIVER_PULSE_THRESHOLD
-	uint16_t pulse_threshold;	// 脉冲阈值
+#if MOTOR_DRIVER_CURRENT_LOOP_BANDWIDTH
+	uint16_t current_loop_bw;	// 电流环带宽 Hz
 #endif
 
-/* ========== 设备信息与特殊功能 ========== */
+#if MOTOR_DRIVER_CLOSEDLOOP_MAX_VOLTAGE
+	uint16_t close_max_voltage;	// 闭环模式最大输出电压 （值×4=mV）
+#endif
+
+	/* ========== 设备信息与特殊功能 ========== */
 #if MOTOR_READ_VERSION
-	uint16_t firmware_version;	// 固件版本
-	uint8_t hardware_version;	// 硬件版本
+	uint16_t firmware_version;	// 固件版本（如200=V2.0.0）
+	uint8_t hardware_series;	// 硬件系列（bit7-4: 0=X系列, 1=Y系列）
+	uint8_t hardware_type;		// 硬件类型（bit3-0: 0/1/2/3/4/5/6=20/28/35/42/57/86）
+	uint8_t hardware_version;	// 硬件版本（如20=V2.0）
 #endif
 
 #if MOTOR_READ_PHASE_PARAMS
@@ -189,9 +203,32 @@ typedef struct {
 	uint16_t phase_inductance;	// 相电感 uH
 #endif
 
-#if MOTOR_READ_OPTION_PARAMS
-	uint8_t option_params;		// 选项参数
+#if MOTOR_DRIVER_MOTOR_TYPE
+	bool motor_type;			// 电机类型 0=1.8° 1=0.9°
+#endif
+
+#if MOTOR_LOCK_PARAMS
 	uint8_t lock_level;			// 锁定参数等级 0-3
+#endif
+
+#if MOTOR_FIRMWARE_TYPE
+	bool firmware_type;		// 固件类型 0=X固件 1=Emm固件
+#endif
+
+#if MOTOR_DIRECTION
+	bool motor_dir;			// 电机运动方向 0=CW 1=CCW
+#endif
+
+#if MOTOR_DRIVER_LOCK_KEY
+	bool lock_key;				// 按键锁定 0=关闭 1=开启
+#endif
+
+#if MOTOR_DRIVER_CONTROL_MODE
+	bool control_mode;			// 控制模式 0=开环 1=闭环
+#endif
+
+#if MOTOR_DRIVER_SCALE_10X
+	bool scale_10x;				// 缩小10倍输入（Emm：速度， X：角度）
 #endif
 
 	/* ========== 控制参数 ========== */
@@ -208,7 +245,7 @@ typedef struct {
 #endif
 #endif
 
-#if MOTOR_DRIVER_INTEGRAL_LIMIT
+#if MOTOR_INTEGRAL_LIMIT_READ
 	uint32_t integral_limit;	// 积分限幅(Emm)/刚性系数(X)
 #endif
 
@@ -226,27 +263,28 @@ typedef struct {
 	uint16_t collision_angle;	// 碰撞回零返回角度（÷10=度）
 #endif
 
-#if MOTOR_HOME_READ
+#if MOTOR_DRIVER_HOME
 	uint8_t home_mode;			// 回零模式 0-5
 	uint8_t home_dir;			// 回零方向 0=CW 1=CCW
 	uint16_t home_speed;		// 回零速度 RPM
 	uint32_t home_timeout;		// 回零超时 ms
 #endif
 
-#if MOTOR_DRIVER_HOME_SPEED
+#if MOTOR_DRIVER_HOME_COLLISION_SPEED
 	uint16_t sl_vel;			// 碰撞检测转速 RPM
 #endif
 
-#if MOTOR_DRIVER_HOME_MODE
-	bool home_auto_enable;		// 上电自动回零 0=关闭 1=开启
-#endif
 
-#if MOTOR_DRIVER_HOME_DIR
+#if MOTOR_DRIVER_HOME_COLLISION_CURRENT
 	uint16_t sl_current;		// 碰撞检测电流 mA
 #endif
 
-#if MOTOR_DRIVER_HOME_TIMEOUT
+#if MOTOR_DRIVER_HOME_COLLISION_TIME
 	uint16_t sl_time;			// 碰撞检测时间 ms
+#endif
+
+#if MOTOR_DRIVER_AUTO_HOME
+	bool auto_home;		// 上电自动回零 0=关闭 1=开启
 #endif
 } MotorStatus_t;
 
@@ -255,7 +293,7 @@ typedef struct {
  */
 typedef struct {
 	MotorStatus_t motors[4];
-	uint16_t update_time;		// 电机状态更新时间间隔 (ms)
+	uint32_t update_time;		// 电机状态更新时间间隔 (ms)
 } MotorStatusShared_t;
 
 

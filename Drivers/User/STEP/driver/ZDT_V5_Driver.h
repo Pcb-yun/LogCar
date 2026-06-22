@@ -89,28 +89,23 @@ void ZDT_V5_Read_Sys_Params(uint8_t addr, SysParams_t s);
 void ZDT_V5_Auto_Return_Sys_Params_Timed(uint8_t addr, SysParams_t s, uint16_t time_ms);
 #endif
 
-#if MOTOR_STATUS_READ_BATCH
-void ZDT_V5_Read_All_Sys_Params(uint8_t addr);
-#endif
-
 /**
  * @brief 驱动配置参数枚举
  */
 typedef enum {
 	D_NULL = 0, // 无指令
-#if MOTOR_DRIVER_CONFIG_READ_BATCH
+#if MOTOR_DRIVER_READ_BATCH
 	D_BATCH,	// 批量读取
 #endif
 #if MOTOR_DRIVER_POS_WINDOW
 	D_POS_WINDOW,     // 位置到达窗口
 #endif
+#if MOTOR_DRIVER_HOME
+	D_HOME,           // 读取回零参数
+#endif
 } DriverParams_t;
 
 void ZDT_V5_Read_Driver_Params(uint8_t addr, DriverParams_t d);
-
-#if MOTOR_DRIVER_CONFIG_READ_BATCH
-void ZDT_V5_Read_Batch_Config(uint8_t addr);
-#endif
 
 /**
  * @brief 电机控制参数枚举
@@ -120,10 +115,7 @@ typedef enum {
 #if MOTOR_PID_READ
 	C_PID,            // 读取PID参数
 #endif
-#if MOTOR_HOME_READ
-	C_HOME,           // 读取回零参数
-#endif
-#if MOTOR_DRIVER_INTEGRAL_LIMIT
+#if MOTOR_INTEGRAL_LIMIT_READ
 	C_INTEGRAL_LIMIT, // 读取积分限幅/刚性系数
 #endif
 #if MOTOR_PROTECT_THRESHOLD_READ
@@ -282,7 +274,7 @@ void ZDT_V5_Origin_Trigger_Return(uint8_t addr, uint8_t o_mode, bool snF);
 void ZDT_V5_Origin_Interrupt(uint8_t addr);
 #endif
 
-#if MOTOR_HOME_WRITE
+#if MOTOR_DRIVER_HOME_WRITE
 void ZDT_V5_Origin_Modify_Params(uint8_t addr, bool svF, uint8_t o_mode, uint8_t o_dir, uint16_t o_vel, uint32_t o_tm, uint16_t sl_vel, uint16_t sl_ma, uint16_t sl_ms, bool potF);
 #endif
 
@@ -332,7 +324,7 @@ void ZDT_V5_Modify_Lock_Btn(uint8_t addr, bool svF, bool lockbtn);
 void ZDT_V5_Modify_S_Vel(uint8_t addr, bool svF, bool s_vel);
 #endif
 
-#if MOTOR_SET_DRIVER_CONFIG_ALL
+#if MOTOR_SET_DRIVER_CONFIG_BATCH
 void ZDT_V5_Modify_Batch_Config(uint8_t addr, bool svF, uint8_t *params);
 #endif
 

@@ -20,6 +20,13 @@
 #include <chassis_config.h>
 #include "log.h"
 
+#if !MOTOR_POS_MODE_TRAPEZOIDAL
+    #error "MOTOR_POS_MODE_TRAPEZOIDAL must be enabled"
+#endif
+#if !MOTOR_VELOCITY_MODE
+    #error "MOTOR_VELOCITY_MODE must be enabled"
+#endif
+
 /**
  * @brief 导航跟踪状态
  */
@@ -47,14 +54,13 @@ extern MotorStatusShared_t *g_motor_status;
  */
 static bool motors_reached_target() {
     extern osMutexId_t Motor_MutexHandle;
-    uint32_t threshold = (uint32_t)(MOTOR_WINDOW_DEG / 360.0f * MOTOR_PULSES_PER_REV + 0.5f);
 
     if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
         for (uint8_t i = 0; i < 4; i++) {
-            int32_t err = g_motor_status->motors[i].set_pos - g_motor_status->motors[i].pos;
-            if (err < 0) err = -err;
-            logInfo("motor %d err: %d, threshold: %d", i, err, threshold);
-            if ((uint32_t)err > threshold) return false;
+            if (!g_motor_status->motors[i].prf) {
+                logInfo("Motor %d not reached target", i);
+                return false;
+            }
         }
         osMutexRelease(Motor_MutexHandle);
     }
@@ -220,6 +226,7 @@ static bool correct_deviation(Pose2D_t *current_pose) {
 
     if (fabsf(yaw_error) < g_tracker->cached_target->arrive.yaw_threshold &&
         sqrtf(dx * dx + dy * dy) < g_tracker->cached_target->arrive.distance_threshold) {
+        logInfo("Deviation pass");
         return false;
     }
 
@@ -228,6 +235,7 @@ static bool correct_deviation(Pose2D_t *current_pose) {
     float x_offset = dx * cos_yaw + dy * sin_yaw;
     float y_offset = -dx * sin_yaw + dy * cos_yaw;
 
+    logInfo("Correcting deviation: x_offset = %f, y_offset = %f, yaw_offset = %f", x_offset, y_offset, yaw_error);
     MotionControl_SetPosition(x_offset, y_offset, yaw_error);
     g_tracker->cmd_sent = true;
     return true;
@@ -272,6 +280,8 @@ void Nav_Track_Task(void *argument) {
                     float yaw_error = normalize_angle(angle_to_target - current_pose.yaw);
 
                     if (fabsf(yaw_error) < g_tracker->cached_target->arrive.yaw_threshold) {
+                        logInfo("Yaw error: %f, pass", yaw_error);
+                        logInfo("Enter phase: TRACK_PHASE_TRANSLATE");
                         enter_phase(TRACK_PHASE_TRANSLATE);
                     } else {
                         logInfo("Yaw error: %f", yaw_error);
@@ -281,56 +291,57 @@ void Nav_Track_Task(void *argument) {
                 } else if (motors_reached_target()) {
                     if (correct_deviation(&current_pose)) break;
                     enter_phase(TRACK_PHASE_TRANSLATE);
+                    logInfo("Enter phase: TRACK_PHASE_TRANSLATE");
                 }
                 break;
             }
 
-            case TRACK_PHASE_TRANSLATE: {
-                if (!g_tracker->cmd_sent) {
-                    logInfo("2. Translating to target");
-                    if (check_translate_arrival(&current_pose)) {
-                        break;
-                    }
-
-                    float dx = g_tracker->cached_target->pose.x - current_pose.x;
-                    float dy = g_tracker->cached_target->pose.y - current_pose.y;
-                    float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
-                    float sin_yaw = sinf(current_pose.yaw * DEG_TO_RAD);
-                    float x_offset = dx * cos_yaw + dy * sin_yaw;
-                    float y_offset = -dx * sin_yaw + dy * cos_yaw;
-
-                    logInfo("X offset: %f, Y offset: %f", x_offset, y_offset);
-                    MotionControl_SetPosition(x_offset, y_offset, 0.0f);
-                    g_tracker->cmd_sent = true;
-                } else if (motors_reached_target()) {
-                    if (check_translate_arrival(&current_pose)) {
-                        break;
-                    }
-                    if (correct_deviation(&current_pose)) break;
-                    enter_phase(TRACK_PHASE_ADJUST_YAW);
-                }
-                break;
-            }
-
-            case TRACK_PHASE_ADJUST_YAW: {
-                if (!g_tracker->cmd_sent) {
-                    logInfo("3. Adjusting yaw");
-                    if (check_yaw_arrival(&current_pose)) {
-                        break;
-                    }
-
-                    float final_yaw_error = normalize_angle(g_tracker->cached_target->pose.yaw - current_pose.yaw);
-                    MotionControl_SetPosition(0.0f, 0.0f, final_yaw_error);
-                    g_tracker->cmd_sent = true;
-                } else if (motors_reached_target()) {
-                    if (check_yaw_arrival(&current_pose)) {
-                        break;
-                    }
-                    if (correct_deviation(&current_pose)) break;
-                    logInfo("deviation corrected");
-                }
-                break;
-            }
+//             case TRACK_PHASE_TRANSLATE: {
+//                 if (!g_tracker->cmd_sent) {
+//                     logInfo("2. Translating to target");
+//                     if (check_translate_arrival(&current_pose)) {
+//                         break;
+//                     }
+//
+//                     float dx = g_tracker->cached_target->pose.x - current_pose.x;
+//                     float dy = g_tracker->cached_target->pose.y - current_pose.y;
+//                     float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
+//                     float sin_yaw = sinf(current_pose.yaw * DEG_TO_RAD);
+//                     float x_offset = dx * cos_yaw + dy * sin_yaw;
+//                     float y_offset = -dx * sin_yaw + dy * cos_yaw;
+//
+//                     logInfo("X offset: %f, Y offset: %f", x_offset, y_offset);
+//                     MotionControl_SetPosition(x_offset, y_offset, 0.0f);
+//                     g_tracker->cmd_sent = true;
+//                 } else if (motors_reached_target()) {
+//                     if (check_translate_arrival(&current_pose)) {
+//                         break;
+//                     }
+//                     if (correct_deviation(&current_pose)) break;
+//                     enter_phase(TRACK_PHASE_ADJUST_YAW);
+//                 }
+//                 break;
+//             }
+//
+//             case TRACK_PHASE_ADJUST_YAW: {
+//                 if (!g_tracker->cmd_sent) {
+//                     logInfo("3. Adjusting yaw");
+//                     if (check_yaw_arrival(&current_pose)) {
+//                         break;
+//                     }
+//
+//                     float final_yaw_error = normalize_angle(g_tracker->cached_target->pose.yaw - current_pose.yaw);
+//                     MotionControl_SetPosition(0.0f, 0.0f, final_yaw_error);
+//                     g_tracker->cmd_sent = true;
+//                 } else if (motors_reached_target()) {
+//                     if (check_yaw_arrival(&current_pose)) {
+//                         break;
+//                     }
+//                     if (correct_deviation(&current_pose)) break;
+//                     logInfo("deviation corrected");
+//                 }
+//                 break;
+//             }
         }
         osDelay(1);
     }

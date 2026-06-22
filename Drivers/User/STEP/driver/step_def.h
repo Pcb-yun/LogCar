@@ -14,14 +14,15 @@ extern "C" {
  /**
  * @brief 固件版本定义
  */
-#define FIRMWARE_EMM             1   // Emm固件
-#define FIRMWARE_X               0   // X固件
+#define FIRMWARE_EMM             0
+#define FIRMWARE_X               1
 
 /**
  * @brief 电机型号支持宏定义
  */
-#define MOTOR_MODEL_X42S         1   // X42S电机
-#define MOTOR_MODEL_Y42          0   // Y42电机
+#define MOTOR_MODEL_X42          0
+#define MOTOR_MODEL_Y42          2
+#define MOTOR_MODEL_X42S         1
 
 /**
  * @brief 电机命令功能码宏定义
@@ -130,7 +131,6 @@ extern "C" {
 #define AUX_CODE_SET_HOME_PARAMS   0xAE  // 修改回零参数辅助码
 #define AUX_CODE_SET_MOTOR_ID      0x4B  // 修改ID辅助码
 #define AUX_CODE_SET_MICRO_STEP    0x8A  // 修改细分辅助码
-#define AUX_CODE_SET_POWER_FLAG    0x5E  // 修改掉电标志辅助码
 #define AUX_CODE_SET_MOTOR_TYPE    0x23  // 修改电机类型辅助码
 #define AUX_CODE_SET_FIRMWARE_TYPE 0x69  // 修改固件类型辅助码
 #define AUX_CODE_SET_OPENLOOP_CURRENT 0x48  // 修改开环电流辅助码
@@ -152,6 +152,11 @@ extern "C" {
 /* 系统命令 */
 #define CMD_BROADCAST_READ_ID    0x15  // 广播读取ID地址
 #define END_CODE                 0x6B  // 通用校验码
+
+/* 电机响应定义 */
+#define RESPONSE_PASS           0x02
+#define RESPONSE_PARAM_ERR      0xE2
+#define RESPONSE_COD_ERR        0xEE
 
 #ifdef __cplusplus
 }

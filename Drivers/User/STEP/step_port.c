@@ -37,14 +37,19 @@ bool Motor_Init(void) {
     MX_USART6_UART_Init();
 
 	memset(g_motor_status, 0, sizeof(MotorStatusShared_t));
-	g_motor_status->update_time = 50;
+	g_motor_status->update_time = 30;
 
 	for (uint8_t i = 0; i < 4; i++) {
 #if USE_HEARTBEAT
-        ZDT_V5_Modify_Heart_Protect(i + 1, false, g_motor_status->update_time + 200);
+        ZDT_V5_Modify_Heart_Protect(i + 1, false, g_motor_status->update_time + 100);
 #else
+#if MOTOR_BROADCAST_READ_ID
 		ZDT_V5_Read_Device_Info_Params(0, I_ID);
+#else
+		is_init = true;
+		logWarning("MOTOR_BROADCAST_READ_ID is not enabled, the motor state cannot be detected");
 #endif
+#endif /* USE_HEARTBEAT */
         if (HAL_UART_Receive(&huart6, rx6Buffer, 4, 10) == HAL_OK) {
             is_init |= true;
         }
@@ -227,7 +232,6 @@ static void Tool_Help(void) {
 			   "\r\n"
 			   "commands:\r\n"
 			   "  cmd       Send Motor Command\r\n"
-               "  time      View or Set Update Time\r\n"
 #if MOTOR_BROADCAST_READ_ID
 			   "  online    Check Motor Online\r\n"
 #endif
@@ -252,9 +256,16 @@ static void Tool_Help(void) {
 #if MOTOR_PID_WRITE
 			   "  pid       Set motor PID\r\n"
 #endif
-#if MOTOR_TRIGGER_ENCODER_CALIB
-			   "  cal       Calibrate Motor Encoder");
+#if MOTOR_INTEGRAL_LIMIT_WRITE
+			   "  ilimit    Set motor integral limit\r\n"
 #endif
+#if MOTOR_TRIGGER_ENCODER_CALIB
+			   "  cal       Calibrate Motor Encoder\r\n"
+#endif
+#if MOTOR_TRIGGER_RESTART
+			   "  rstrt     Restart Motor\r\n"
+#endif
+			   "  time      View or Set Update Time\r\n");
             }
 
 #if MOTOR_POS_MODE_TRAPEZOIDAL
@@ -325,6 +336,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 	}
 
 	if (argc < 2) { Tool_Help(); return; }
+	MotorCmd_t cmd;
 	uint8_t motor_id;
 	bool save = false;
 	char *endptr;
@@ -358,7 +370,6 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		motor_id = (uint8_t)val;
 		bool state = atoi(argv[3]);
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
 		cmd.type.ctrl.type = CTRL_ENABLE;
@@ -368,7 +379,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d is %s", motor_id, state ? "enabled" : "disabled");
 		else
-			logPrintln("Failed to send enable command");
+			logPrintln("Failed to sen command");
 	}
 #endif /* MOTOR_CMD_ENABLE */
 #if MOTOR_CMD_STOP
@@ -381,13 +392,14 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 		motor_id = (uint8_t)val;
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
 		cmd.type.ctrl.type = CTRL_STOP;
 		cmd.type.ctrl.p.stop.sync = false;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d is stopped", motor_id);
+		else
+			logPrintln("Failed to sen command");
 	}
 #endif /* MOTOR_CMD_STOP */
 #if MOTOR_TRIGGER_RESET_POS
@@ -400,15 +412,13 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 		motor_id = (uint8_t)val;
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
 		cmd.type.trigger.type = TRIG_RESET_POS;
-		if (Motor_Send_Cmd(&cmd)) {
+		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d position reset to zero", motor_id);
-		} else {
-			logPrintln("Failed to send zero command");
-		}
+		else
+			logPrintln("Failed to sen command");
 	}
 #endif /* MOTOR_TRIGGER_RESET_POS */
 #if MOTOR_HOME_TRIGGER
@@ -421,7 +431,6 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 		motor_id = (uint8_t)val;
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
 		cmd.type.trigger.type = TRIG_HOME_RETURN;
@@ -429,6 +438,8 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		cmd.type.trigger.p.home.sync = false;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d homing triggered", motor_id);
+		else
+			logPrintln("Failed to sen command");
 	}
 #endif /* MOTOR_HOME_TRIGGER */
 #if MOTOR_TRIGGER_ENCODER_CALIB
@@ -441,12 +452,13 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 		motor_id = (uint8_t)val;
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
 		cmd.type.trigger.type = TRIG_ENCODER_CALIB;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Starting calibration for motor %d...", motor_id);
+		else
+			logPrintln("Failed to sen command");
 	}
 #endif /* MOTOR_TRIGGER_ENCODER_CALIB */
     else if (strcmp(argv[1], "time") == 0) {
@@ -455,14 +467,23 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		} else if (argc == 2) {
 			logPrintln("current time: %d ms", g_motor_status->update_time); return;
 		}
-		g_motor_status->update_time = atoi(argv[2]);
 
 #if MOTOR_HEARTBEAT_WRITE
-		for (uint8_t i = 0; i < 4; i++) {
-			ZDT_V5_Modify_Heart_Protect(i + 1, false, g_motor_status->update_time + 500);
+		cmd.motor_id = motor_id;
+		cmd.op_type = OP_PARAM_WRITE;
+		cmd.type.write.type = PARAM_HEARTBEAT;
+		cmd.type.write.p.heartbeat.save = false;
+		cmd.type.write.p.heartbeat.time_ms = atoi(argv[2]) + 100;
+		if (Motor_Send_Cmd(&cmd)) {
+			g_motor_status->update_time = atoi(argv[2]);
+			logPrintln("Motor update time set to: %d ms", g_motor_status->update_time);
+		} else {
+			logPrintln("Failed to sen command");
 		}
-#endif /* MOTOR_HEARTBEAT_WRITE */
+#else
+		g_motor_status->update_time = atoi(argv[2]);
 		logPrintln("Motor update time set to: %d ms", g_motor_status->update_time);
+#endif /* MOTOR_HEARTBEAT_WRITE */
 	}
 #if MOTOR_BROADCAST_READ_ID
     else if (strcmp(argv[1], "online") == 0){
@@ -487,7 +508,6 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 		motor_id = (uint8_t)val;
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
 		cmd.type.ctrl.type = CTRL_VELOCITY;
@@ -516,18 +536,17 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		uint16_t window = (uint16_t)win_val;
 		save = (save_val != 0);
 
-		MotorCmd_t cmd;
 		cmd.op_type = OP_PARAM_WRITE;
 		cmd.motor_id = motor_id;
 		cmd.type.write.type = PARAM_POS_WINDOW;
 		cmd.type.write.p.pos_window.window = window;
 		cmd.type.write.p.pos_window.save = save;
 
-		if (Motor_Send_Cmd(&cmd)) {
+		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d window set: %d save=%d", motor_id, window, save);
-		} else {
-			logPrintln("Failed to send window command");
-		}
+		else
+			logPrintln("Failed to sen command");
+
 	}
 #endif /* MOTOR_POS_WINDOW_WRITE */
 #if MOTOR_PID_WRITE
@@ -578,17 +597,19 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			if(*endptr != '\0') { logPrintln("invalid save value: %s", argv[6]); return; }
 			save = (save_val != 0);
 
-			MotorCmd_t cmd = { .motor_id = motor_id };
+			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
 			cmd.type.write.type = PARAM_PID;
 			cmd.type.write.p.pid.kp = kp;
 			cmd.type.write.p.pid.ki = ki;
 			cmd.type.write.p.pid.kd = kd;
 			cmd.type.write.p.pid.save = save;
-			Motor_Send_Cmd(&cmd);
+			if (Motor_Send_Cmd(&cmd))
+				logPrintln("Motor %d PID set: kp=%lu ki=%lu kd=%lu save=%d",
+						motor_id, (unsigned long)kp, (unsigned long)ki, (unsigned long)kd, save);
+			else
+				logPrintln("Failed to sen command");
 
-			logPrintln("Motor %d PID set: kp=%lu ki=%lu kd=%lu save=%d",
-					   motor_id, (unsigned long)kp, (unsigned long)ki, (unsigned long)kd, save);
 #elif CURRENT_FIRMWARE == FIRMWARE_X
 			uint32_t trap_kp = (uint32_t)strtoul(argv[3], &endptr, 10);
 			if (*endptr != '\0') { logPrintln("invalid trapezoidal_kp value: %s", argv[3]); return; }
@@ -602,7 +623,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			if(*endptr != '\0') { logPrintln("invalid save value: %s", argv[7]); return; }
 			save = (save_val != 0);
 
-			MotorCmd_t cmd = { .motor_id = motor_id };
+			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
 			cmd.type.write.type = PARAM_PID;
 			cmd.type.write.p.pid.trapezoidal_kp = trap_kp;
@@ -610,11 +631,11 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			cmd.type.write.p.pid.vel_kp = vel_kp;
 			cmd.type.write.p.pid.vel_ki = vel_ki_val;
 			cmd.type.write.p.pid.save = save;
-			Motor_Send_Cmd(&cmd);
-
-			logPrintln("Motor %d PID set: trap_kp=%lu direct_kp=%lu vel_kp=%lu vel_ki=%lu save=%d",
-					   motor_id, (unsigned long)trap_kp, (unsigned long)direct_kp,
-					   (unsigned long)vel_kp, (unsigned long)vel_ki_val, save);
+			if (Motor_Send_Cmd(&cmd))
+				logPrintln("Motor %d PID set: trap_kp=%lu direct_kp=%lu vel_kp=%lu vel_ki=%lu save=%d",
+						motor_id, (unsigned long)trap_kp, (unsigned long)direct_kp, (unsigned long)vel_kp, (unsigned long)vel_ki_val, save);
+			else
+				logPrintln("Failed to sen command");
 #endif
 		} else {
 			logPrintln("Usage: tool pid [id]                - show motor PID parameters");
@@ -627,6 +648,66 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 		}
 	}
 #endif /* MOTOR_PID_WRITE */
+#if MOTOR_INTEGRAL_LIMIT_WRITE
+	else if (strcmp(argv[1], "ilimit") == 0) {
+		int req_argc = 5;
+		if (argc == 3 || argc == req_argc) {
+			long id_val = strtol(argv[2], &endptr, 10);
+			if (*endptr != '\0') { logPrintln("invalid id value: %s", argv[2]); return; }
+			motor_id = (uint8_t)id_val;
+
+			if (argc == 3) {
+				if (motor_id > 4 || motor_id < 1) { logPrintln("Motor must be 1-4"); return; }
+				if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
+					MotorStatus_t *m = &g_motor_status->motors[motor_id - 1];
+					logPrintln("id=%d integral_limit=%lu", motor_id, (unsigned long)m->integral_limit);
+					osMutexRelease(Motor_MutexHandle);
+				}
+				return;
+			}
+
+			uint32_t ilimit_val = (uint32_t)strtoul(argv[3], &endptr, 10);
+			if (*endptr != '\0') { logPrintln("invalid value: %s", argv[3]); return; }
+
+			long save_val = strtol(argv[4], &endptr, 10);
+			if(*endptr != '\0') { logPrintln("invalid save value: %s", argv[4]); return; }
+			bool save = (save_val != 0);
+
+			cmd.motor_id = motor_id;
+			cmd.op_type = OP_PARAM_WRITE;
+			cmd.type.write.type = PARAM_INTEGRAL_LIMIT;
+			cmd.type.write.p.integral_limit.value = ilimit_val;
+			cmd.type.write.p.integral_limit.save = save;
+			if (Motor_Send_Cmd(&cmd))
+				logPrintln("Motor %d integral_limit set: value=%lu save=%d", motor_id, (unsigned long)ilimit_val, save);
+			else
+				logPrintln("Failed to send command");
+		} else {
+			logPrintln("Usage: tool ilimit [id]                - show motor integral_limit");
+			logPrintln("       tool ilimit [id] [value] [save] - set motor integral_limit");
+			return;
+		}
+	}
+#endif
+#if MOTOR_TRIGGER_RESTART
+	else if (strcmp(argv[1], "rstrt") == 0) {
+		if (argc != 3) { logPrintln("Usage: tool rstrt [id]"); return; }
+		long val = strtol(argv[2], &endptr, 10);
+		if(*endptr != '\0') {
+			logPrintln("invalid id value: %s", argv[2]);
+			return;
+		}
+		motor_id = (uint8_t)val;
+
+		cmd.motor_id = motor_id;
+		cmd.op_type = OP_TRIGGER;
+		cmd.type.trigger.type = TRIG_RESTART;
+		if (Motor_Send_Cmd(&cmd))
+			logPrintln("Motor %d restart success", motor_id);
+		else
+			logPrintln("Failed to send command");
+	}
+#endif /* MOTOR_TRIGGER_RESTART */
 	else {
 		logPrintln("Invalid command: %s", argv[1]);
 		Tool_Help();
