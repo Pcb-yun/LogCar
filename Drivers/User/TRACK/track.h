@@ -31,7 +31,6 @@ typedef enum {
 typedef enum {
     TRACK_STATUS_IDLE = 1,
     TRACK_STATUS_BUSY = 0,
-    TRACK_STATUS_ERROR = -1,
 } TrackI2CStatus_t;
 
 /**

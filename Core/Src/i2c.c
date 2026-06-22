@@ -152,6 +152,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *i2cHandle)
 {
     if (i2cHandle == TRACK_I2C_HANDLE) {
         track_i2c_status = TRACK_STATUS_IDLE;                     // 标记成功
+        return;
     }
 }
 
@@ -161,7 +162,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *i2cHandle)
 void HAL_I2C_MemErrorCallback(I2C_HandleTypeDef *i2cHandle)
 {
     if (i2cHandle == TRACK_I2C_HANDLE) {
-        track_i2c_status = TRACK_STATUS_ERROR;                    // 标记失败
+        track_i2c_status = TRACK_STATUS_IDLE;                     // 标记成功
     }
 }
 /* USER CODE END 1 */
