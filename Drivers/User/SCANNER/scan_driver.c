@@ -9,7 +9,6 @@
 #include "usart.h"
 #include <string.h>
 
-/* ========== 全局变量定义 ========== */
 StreamBufferHandle_t Scan_Rx_Stream = NULL;
 static bool is_init = false;
 
@@ -18,8 +17,6 @@ Scan_Pending_t  pending;
 
 static bool scan_output_enabled = true;
 static bool pending_output      = false;
-
-/* ========== 内部函数 ========== */
 
 /**
  * @brief 从缓冲区提取可打印 ASCII 字符（过滤控制字符）
@@ -65,7 +62,6 @@ static void parse_and_store(void)
     uint8_t  barcode[SCAN_BARCODE_MAX_LEN + 1] = {0};
     uint16_t barcode_len = 0;
 
-    /* ---- 协议帧 ---- */
     if (rx.len >= 4 && rx.buf[0] == 0x02 && rx.buf[1] == 0x00) {
         uint8_t data_len = rx.buf[2];
         if (data_len > 0 && (uint16_t)(3 + data_len) <= rx.len) {
@@ -73,7 +69,6 @@ static void parse_and_store(void)
         }
     }
 
-    /* ---- 纯文本 / 协议帧解析失败兜底 ---- */
     if (barcode_len == 0) {
         barcode_len = extract_printable(rx.buf, rx.len, barcode);
     }
@@ -116,7 +111,6 @@ static void process_byte(uint8_t byte, uint32_t now)
 {
     rx.last_time = now;
 
-    /* 行终止符：帧结束 */
     if (byte == 0x0D || byte == 0x0A) {
         if (rx.len > 0) {
             parse_and_store();
@@ -124,18 +118,14 @@ static void process_byte(uint8_t byte, uint32_t now)
         return;  // 丢弃孤立的 CR/LF
     }
 
-    /* 正常存储 */
     if (rx.len < SCAN_FRAME_MAX_SIZE - 1) {
         rx.buf[rx.len++] = byte;
     } else {
-        /* 缓冲区满：先解析当前内容，再开始新帧 */
         parse_and_store();
         rx.buf[0] = byte;
         rx.len    = 1;
     }
 }
-
-/* ========== 公开 API ========== */
 
 /**
  * @brief 初始化扫描器驱动层
@@ -205,17 +195,13 @@ void Scan_Get_Task(void *argument)
             }
         }
 
-        /* 帧超时兜底：不完整帧也触发解析 */
         if (rx.len > 0 && (HAL_GetTick() - rx.last_time) >= FRAME_TIMEOUT_MS) {
             parse_and_store();
         }
 
-        /* 分组窗口超时 → 输出暂存条码 */
         flush_pending(HAL_GetTick());
     }
 }
-
-/* ========== Shell 命令 ========== */
 
 /**
  * @brief 扫描器控制命令
