@@ -35,8 +35,8 @@ bool Track_Init(void) {
     }
     memset(g_track, 0, sizeof(TrackData_t));
 
-    g_track->mode = TRACK_DIGITAL;
-    g_track->time = 100;
+    g_track->mode = TRACK_STOP;
+    g_track->time = 5;
     is_init = true;
 
     return is_init;
@@ -236,7 +236,7 @@ static void Track_Key(void) {
  */
 static int16_t I2C_ReadDigital(void) {
     int16_t value = 0;
-    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x30, I2C_MEMADD_SIZE_8BIT, (uint8_t*)&value, 1, 100) != HAL_OK) {
+    if (HAL_I2C_Mem_Read(TRACK_I2C_HANDLE, TRACK_I2C_ADDR << 1, 0x30, I2C_MEMADD_SIZE_8BIT, (uint8_t*)&value, 1, 30) != HAL_OK) {
         return -1;
     }
     return value;

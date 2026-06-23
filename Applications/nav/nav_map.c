@@ -58,7 +58,7 @@ bool Map_AddPoint(TargetPoint_t *point) {
         return false;
     }
 
-    // 找到插入位置（找到第一个id >= 要插入的id的位置）
+    // 找到插入位置
     uint8_t insert_index = g_map_info->point_count;
     for (uint8_t i = 0; i < g_map_info->point_count; i++) {
         if (g_points[i].id >= point->id) {
@@ -67,13 +67,11 @@ bool Map_AddPoint(TargetPoint_t *point) {
         }
     }
 
-    // 从后往前移动元素并id+1
     for (uint8_t i = g_map_info->point_count; i > insert_index; i--) {
         memcpy(&g_points[i], &g_points[i - 1], sizeof(TargetPoint_t));
         g_points[i].id++;
     }
 
-    // 插入新点
     memcpy(&g_points[insert_index], point, sizeof(TargetPoint_t));
     g_map_info->point_count++;
 
@@ -88,7 +86,6 @@ bool Map_AddPoint(TargetPoint_t *point) {
 bool Map_RemovePoint(uint8_t id) {
     for (uint8_t i = 0; i < g_map_info->point_count; i++) {
         if (g_points[i].id == id) {
-            // 移动后续元素
             for (uint8_t j = i; j < g_map_info->point_count - 1; j++) {
                 memcpy(&g_points[j], &g_points[j + 1], sizeof(TargetPoint_t));
                 g_points[j].id = j;
@@ -124,7 +121,6 @@ bool Map_UpdatePoint(uint8_t id, TargetPoint_t *point) {
         return false;
     }
 
-    // 保持ID不变
     point->id = id;
     memcpy(&g_points[id], point, sizeof(TargetPoint_t));
 

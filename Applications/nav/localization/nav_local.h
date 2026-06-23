@@ -12,12 +12,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "stdbool.h"
-#include "nav_common.h"
-#include "chassis.h"
+#include "nav_math.h"
 
-#define MAX_SENSOR_SOURCES 4    // 最大传感器数据来源数量
+/**
+ * @brief 位姿时间戳结构体
+ */
+typedef struct {
+    Pose2D_t pose;       // 位姿数据
+    uint32_t timestamp;  // 时间戳
+} PoseTimestamp_t;
 
-bool Loc_Get(Pose_t *pose);
+bool Loc_Get(PoseTimestamp_t *pose);
 
 
 

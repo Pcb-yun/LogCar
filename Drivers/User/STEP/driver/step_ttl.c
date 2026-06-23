@@ -454,7 +454,7 @@ void Motor_Receive(uint8_t *data, uint8_t len) {
 #if MOTOR_BROADCAST_READ_ID
         case CMD_BROADCAST_READ_ID: motor->is_online = true; break;
 #endif /* MOTOR_BROADCAST_READ_ID */
-	    default: logWarning("Received motor response, but command unknown: id: %d, cmd: 0x%02X", motor_id, cmd_code); break;
+	    // default: logWarning("Received motor response, but command unknown: id: %d, cmd: 0x%02X", motor_id, cmd_code); break;
 	}
 }
 

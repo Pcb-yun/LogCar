@@ -135,10 +135,10 @@ const osThreadAttr_t Loc_Update_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
-/* Definitions for Nav_Track */
-osThreadId_t Nav_TrackHandle;
-const osThreadAttr_t Nav_Track_attributes = {
-  .name = "Nav_Track",
+/* Definitions for Nav */
+osThreadId_t NavHandle;
+const osThreadAttr_t Nav_attributes = {
+  .name = "Nav",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityRealtime3,
 };
@@ -221,7 +221,7 @@ extern void Servo_Ctrl_Task(void *argument);
 extern void Servo_Tx_Task(void *argument);
 extern void Battery_Get_Task(void *argument);
 extern void Loc_Update_Task(void *argument);
-extern void Nav_Track_Task(void *argument);
+extern void Nav_Task(void *argument);
 extern void mission_run(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -422,8 +422,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of Loc_Update */
   Loc_UpdateHandle = osThreadNew(Loc_Update_Task, NULL, &Loc_Update_attributes);
 
-  /* creation of Nav_Track */
-  Nav_TrackHandle = osThreadNew(Nav_Track_Task, NULL, &Nav_Track_attributes);
+  /* creation of Nav */
+  NavHandle = osThreadNew(Nav_Task, NULL, &Nav_attributes);
 
   /* creation of Mission */
   MissionHandle = osThreadNew(mission_run, NULL, &Mission_attributes);
@@ -511,8 +511,8 @@ void Sys_Init_Task(void *argument)
   else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Navigation Module");
-  extern bool Nav_Track_Init(void);
-  if (!Nav_Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  extern bool Nav_Core_Init(void);
+  if (!Nav_Core_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
 

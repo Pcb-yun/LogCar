@@ -113,7 +113,6 @@ static void Car_Key(void) {
 					prev_key = key;
 				}
 			}
-
 		}
 
 		if (osKernelGetTickCount() - last_time > 100) {

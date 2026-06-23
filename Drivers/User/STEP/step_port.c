@@ -37,7 +37,7 @@ bool Motor_Init(void) {
     MX_USART6_UART_Init();
 
 	memset(g_motor_status, 0, sizeof(MotorStatusShared_t));
-	g_motor_status->update_time = 30;
+	g_motor_status->update_time = 5;
 
 	for (uint8_t i = 0; i < 4; i++) {
 #if USE_HEARTBEAT
@@ -69,7 +69,7 @@ bool Motor_Init(void) {
  */
 bool Motor_Send_Cmd(MotorCmd_t *cmd) {
     if (!is_init) return false;
-    osStatus_t status = osMessageQueuePut(MotorCmdsHandle, cmd, 0, 100);
+    osStatus_t status = osMessageQueuePut(MotorCmdsHandle, cmd, 0, 50);
     return (status == osOK);
 }
 
@@ -279,13 +279,13 @@ static void Motor_pos_Shell(int argc, char *argv[]) {
 
 #if CURRENT_FIRMWARE == FIRMWARE_X
 	if (argc != 8) {
-		logPrintln("Usage: pos [id] [dir] [vel] [acc] [target/angle] [mode] [dec]\r\n"
+		logPrintln("Usage: pos [id] [dir] [vel] [acc] [angle] [mode] [dec]\r\n"
 				"mode: 0-relative to last target, 1-absolute, 2-relative to current");
 		return;
 	}
 #elif CURRENT_FIRMWARE == FIRMWARE_EMM
 if (argc != 7) {
-    logPrintln("Usage: pos [id] [dir] [vel] [acc] [target/angle] [mode]\r\n"
+    logPrintln("Usage: pos [id] [dir] [vel] [acc] [target] [mode]\r\n"
             "mode: 0-relative to last target, 1-absolute, 2-relative to current");
     return;
 }
@@ -338,7 +338,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 	if (argc < 2) { Tool_Help(); return; }
 	MotorCmd_t cmd;
 	uint8_t motor_id;
+#if MOTOR_POS_WINDOW_WRITE || MOTOR_PID_WRITE || MOTOR_INTEGRAL_LIMIT_WRITE
 	bool save = false;
+#endif
 	char *endptr;
 
 	if (strcmp(argv[1], "cmd") == 0) {

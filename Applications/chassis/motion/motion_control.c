@@ -27,8 +27,6 @@ typedef struct {
 } MotionControl_t;
 
 static MotionControl_t *g_motion = NULL;
-static WheelEncoderData_t *g_last_enc = NULL;
-static Pose_t *g_enc_pose = NULL;
 static bool is_init = false;
 extern osMutexId_t Motor_MutexHandle;
 
@@ -59,101 +57,14 @@ bool MotionControl_Init(void) {
     if (g_motion == NULL) {
         return false;
     }
+    memset(g_motion, 0, sizeof(MotionControl_t));
 
-    g_enc_pose = pvPortMalloc(sizeof(Pose_t));
-    if (g_enc_pose == NULL) {
-        vPortFree(g_motion);
-        return false;
-    }
-
-    g_last_enc = pvPortMalloc(sizeof(WheelEncoderData_t));
-    if (g_last_enc == NULL) {
-        vPortFree(g_motion);
-        vPortFree(g_enc_pose);
-        return false;
-    }
-
-    memset(g_enc_pose, 0, sizeof(Pose_t));
-    memset(g_last_enc, 0, sizeof(WheelEncoderData_t));
-
-    // 初始化编码器初始值
-    extern MotorStatusShared_t *g_motor_status;
-    MotorStatus_t *motor;
-
-    if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
-        for (int i = 0; i < 4; i++) {
-            motor = &g_motor_status->motors[i];
-            switch(motor->motor_id) {
-                case MOTOR_FRONT_LEFT: g_last_enc->front_left = motor->pos; break;
-                case MOTOR_FRONT_RIGHT: g_last_enc->front_right = motor->pos; break;
-                case MOTOR_BACK_LEFT: g_last_enc->rear_left = motor->pos; break;
-                case MOTOR_BACK_RIGHT: g_last_enc->rear_right = motor->pos; break;
-            }
-        }
-        osMutexRelease(Motor_MutexHandle);
-    }
-    g_last_enc->timestamp = osKernelGetTickCount();
-
-    g_motion->linear_speed = 80.0f;
-    g_motion->yaw_speed = 50.0f;
-    g_motion->car_acc = acc_car_to_motor(30.0f);
-    g_motion->car_dec = acc_car_to_motor(30.0f);
+    g_motion->linear_speed = 70.0f;
+    g_motion->yaw_speed = 90.0f;
+    g_motion->car_acc = acc_car_to_motor(0.0f);
+    g_motion->car_dec = acc_car_to_motor(0.0f);
 
     is_init = true;
-    return true;
-}
-
-/**
- * @brief 里程计更新
- * @param pose 输出参数，用于存储更新后的定位数据
- * @return 更新结果
- */
-bool MotionControl_OdomUpdate(Pose_t *pose) {
-    extern MotorStatusShared_t *g_motor_status;
-    MotorStatus_t *motor;
-    WheelEncoderData_t enc;
-
-    if (!is_init) return false;
-    if (osMutexAcquire(Motor_MutexHandle, osWaitForever) == osOK) {
-        for (int i = 0; i < 4; i++) {
-            motor = &g_motor_status->motors[i];
-            switch(motor->motor_id) {
-                case MOTOR_FRONT_LEFT: enc.front_left = motor->pos; break;
-                case MOTOR_FRONT_RIGHT: enc.front_right = motor->pos; break;
-                case MOTOR_BACK_LEFT: enc.rear_left = motor->pos; break;
-                case MOTOR_BACK_RIGHT: enc.rear_right = motor->pos; break;
-            }
-        }
-        enc.timestamp = osKernelGetTickCount();
-        osMutexRelease(Motor_MutexHandle);
-    }
-
-    // 计算脉冲增量
-    WheelEncoderData_t enc_delta = {
-        .front_left  = (int32_t)(enc.front_left - g_last_enc->front_left),
-        .front_right = (int32_t)(enc.front_right - g_last_enc->front_right),
-        .rear_left   = (int32_t)(enc.rear_left - g_last_enc->rear_left),
-        .rear_right  = (int32_t)(enc.rear_right - g_last_enc->rear_right),
-        .timestamp   = enc.timestamp
-    };
-
-    // 正运动学解算 - 得到车体坐标系下的位姿增量
-    PoseDelta_t delta;
-    Kinematics_Forward(&enc_delta, &delta);
-
-    // 将车体坐标系增量旋转到世界坐标系并累加
-    float cos_yaw = cosf(g_enc_pose->yaw * DEG_TO_RAD);
-    float sin_yaw = sinf(g_enc_pose->yaw * DEG_TO_RAD);
-    g_enc_pose->x += delta.dx * cos_yaw - delta.dy * sin_yaw;
-    g_enc_pose->y += delta.dx * sin_yaw + delta.dy * cos_yaw;
-    g_enc_pose->yaw = normalize_angle(g_enc_pose->yaw + delta.dyaw);
-    g_enc_pose->timestamp = enc.timestamp;
-
-    // 更新上一次的编码器值
-    memcpy(g_last_enc, &enc, sizeof(WheelEncoderData_t));
-
-    // 更新导航定位
-    *pose = *g_enc_pose;
     return true;
 }
 
@@ -163,6 +74,7 @@ bool MotionControl_OdomUpdate(Pose_t *pose) {
  * @param wheels 四个轮子的角位移 (rad)
  */
 static void send_wheel_velocity_commands(Wheel_t *wheels) {
+    if (!is_init) return;
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
     cmd.type.ctrl.type = CTRL_VELOCITY;
@@ -217,6 +129,7 @@ void MotionControl_SetVelocity(float x, float y, float yaw) {
  * @param wheels 四个轮子的角位移 (rad)
  */
 static void send_wheel_position_commands(Wheel_t *wheels) {
+    if (!is_init) return;
     float wheel_rpm = g_motion->linear_speed * 60.0f / (2.0f * M_PI * WHEEL_RADIUS);
 
     MotorCmd_t cmd;
@@ -287,6 +200,7 @@ void MotionControl_SetPosition(float x_offset, float y_offset, float yaw_offset)
  * @param dec 减速度 (cm/s²)
  */
 void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float acc, float dec) {
+    if (!is_init) return;
     g_motion->linear_speed = linear_speed;
     g_motion->yaw_speed = yaw_speed;
     g_motion->car_acc = acc_car_to_motor(acc);
@@ -301,18 +215,11 @@ void MotionControl_SetMotionParams(float linear_speed, float yaw_speed, float ac
  * @param dec 减速度 (cm/s²)
  */
 void MotionControl_GetMotionParams(float *linear_speed, float *yaw_speed, float *acc, float *dec) {
+    if (!is_init) return;
     *linear_speed = g_motion->linear_speed;
     *yaw_speed = g_motion->yaw_speed;
     *acc = acc_motor_to_car(g_motion->car_acc);
     *dec = acc_motor_to_car(g_motion->car_dec);
-}
-
-/**
- * @brief 设置当前位姿
- * @param pose 位姿指针
- */
-void MotionControl_SetPose(Pose_t *pose) {
-    *g_enc_pose = *pose;
 }
 
 #if MOTOR_CMD_STOP
@@ -320,19 +227,11 @@ void MotionControl_SetPose(Pose_t *pose) {
  * @brief 停止运动
  */
 void MotionControl_Stop(void) {
-    uint8_t motor_ids[] = {MOTOR_FRONT_LEFT, MOTOR_FRONT_RIGHT, MOTOR_BACK_LEFT, MOTOR_BACK_RIGHT};
     MotorCmd_t cmd;
     cmd.op_type = OP_CONTROL;
     cmd.type.ctrl.type = CTRL_STOP;
-    cmd.type.ctrl.p.stop.sync = true;
-
-    for (uint8_t i = 0; i < 4; i++) {
-        cmd.motor_id = motor_ids[i];
-        Motor_Send_Cmd(&cmd);
-    }
-
+    cmd.type.ctrl.p.stop.sync = false;
     cmd.motor_id = 0;
-    cmd.type.ctrl.type = CTRL_SYNC;
     Motor_Send_Cmd(&cmd);
 }
 #endif /* MOTOR_CMD_STOP */

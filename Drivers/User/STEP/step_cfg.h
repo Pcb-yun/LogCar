@@ -33,7 +33,7 @@
 #define MOTOR_READ_PHASE_PARAMS             0   // 读取相电阻和相电感
 
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_X42S || CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
-#define MOTOR_BROADCAST_READ_ID             1   // 广播读取ID地址
+#define MOTOR_BROADCAST_READ_ID             0   // 广播读取ID地址
 #define MOTOR_READ_OPTION_PARAMS            0   // 读取选项参数状态
 #if MOTOR_READ_OPTION_PARAMS
 #define MOTOR_DRIVER_MOTOR_TYPE             0   // 电机类型
@@ -60,7 +60,7 @@
 #define MOTOR_STATUS_TEMPERATURE            0   // 读取驱动温度
 #define MOTOR_STATUS_FLAGS_COMBINED         0   // 读取回零+电机状态标志
 #if !MOTOR_STATUS_FLAGS_COMBINED
-#define MOTOR_STATUS_MOTOR_FLAGS            1   // 读取电机状态标志
+#define MOTOR_STATUS_MOTOR_FLAGS            0   // 读取电机状态标志
 #define MOTOR_STATUS_HOME_FLAGS             0   // 读取回零状态标志
 #endif
 #endif /* CURRENT_MOTOR_MODEL */
@@ -78,7 +78,7 @@
 #define MOTOR_STATUS_ENCODER_VALUE          0   // 读取线性化编码器值
 #define MOTOR_STATUS_TARGET_POS             0   // 读取电机目标位置
 #define MOTOR_STATUS_SPEED                  0   // 读取电机实时转速
-#define MOTOR_STATUS_REAL_POS               1   // 读取电机实时位置
+#define MOTOR_STATUS_REAL_POS               0   // 读取电机实时位置
 #define MOTOR_STATUS_POS_ERROR              0   // 读取电机位置误差
 #define MOTOR_STATUS_INPUT_PULSES           0   // 读取输入脉冲数
 #define MOTOR_STATUS_SET_POS                0   // 读取电机实时设定目标位置
@@ -123,7 +123,7 @@
 #endif /* CURRENT_FIRMWARE */
 #endif /* MOTOR_DRIVER_READ_BATCH */
 
-#define MOTOR_DRIVER_POS_WINDOW             1   // 位置到达窗口
+#define MOTOR_DRIVER_POS_WINDOW             0   // 位置到达窗口
 #define MOTOR_DRIVER_HOME                   0   // 读取回零参数
 #if MOTOR_DRIVER_HOME
 #define MOTOR_DRIVER_HOME_WRITE             0   // 修改回零参数
@@ -139,13 +139,13 @@
 
 
 /******************** 控制参数读写 *********************/
-#define MOTOR_PID_READ                      1   // 读取PID参数
+#define MOTOR_PID_READ                      0   // 读取PID参数
 #if MOTOR_PID_READ
 #define MOTOR_PID_WRITE                     1   // 修改PID参数
 #endif
 
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_X42S || CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
-#define MOTOR_INTEGRAL_LIMIT_READ           1   // 积分限幅/刚性系数
+#define MOTOR_INTEGRAL_LIMIT_READ           0   // 积分限幅/刚性系数
 #if MOTOR_INTEGRAL_LIMIT_READ
 #define MOTOR_INTEGRAL_LIMIT_WRITE          1   // 修改积分限幅/刚性系数
 #endif
@@ -160,12 +160,14 @@
 #define MOTOR_COLLISION_ANGLE_WRITE         0   // 修改碰撞回零返回角度
 #endif
 
-#define MOTOR_HEARTBEAT_READ                1   // 读取心跳保护时间
+#define MOTOR_HEARTBEAT_READ                0   // 读取心跳保护时间
 #define MOTOR_HEARTBEAT_WRITE               0   // 修改心跳保护时间
 
 #if USE_HEARTBEAT
 #undef MOTOR_HEARTBEAT_WRITE
 #define MOTOR_HEARTBEAT_WRITE             true  // 确保函数启用
+#undef MOTOR_READ_OPTION_PARAMS
+#define MOTOR_READ_OPTION_PARAMS          true  // 确保最小参数读取
 #endif
 #endif /* CURRENT_MOTOR_MODEL */
 
@@ -197,7 +199,7 @@
 /******************** 触发动作命令 *********************/
 #define MOTOR_TRIGGER_ENCODER_CALIB         1   // 触发编码器校准
 #define MOTOR_TRIGGER_RESET_POS             1   // 当前位置角度清零
-#define MOTOR_TRIGGER_CLEAR_PROTECT         1   // 解除堵转/过热/过流保护
+#define MOTOR_TRIGGER_CLEAR_PROTECT         0   // 解除堵转/过热/过流保护
 #define MOTOR_TRIGGER_FACTORY_RESET         0   // 恢复出厂设置
 #define MOTOR_HOME_SET_ZERO                 0   // 设置单圈回零零点位置
 #define MOTOR_HOME_TRIGGER                  0   // 触发回零
@@ -224,7 +226,7 @@
 
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_X42S || CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 #define MOTOR_SET_LOCK_PARAMS               0   // 修改锁定参数修改等级
-#define MOTOR_POS_WINDOW_WRITE              1   // 修改位置到达窗口
+#define MOTOR_POS_WINDOW_WRITE              0   // 修改位置到达窗口
 #define MOTOR_DMX512_WRITE                  0   // 修改DMX512协议参数
 #define MOTOR_PERIODIC_RETURN               0   // 定时返回信息
 #endif

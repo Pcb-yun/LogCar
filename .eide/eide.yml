@@ -127,10 +127,10 @@ virtualFolder:
       files:
         - path: Applications/nav/localization/nav_local.c
         - path: Applications/nav/tools/nav_tools.c
-        - path: Applications/nav/trajectory_tracking/nav_tracker.c
         - path: Applications/nav/utils/nav_math.c
-        - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_core.c
         - path: Applications/nav/nav_map_data.c
+        - path: Applications/nav/nav_map.c
       folders: []
     - name: battery
       files:
@@ -202,7 +202,6 @@ targets:
         - Applications/LogCar_mission
         - Applications/nav
         - Applications/nav/localization
-        - Applications/nav/trajectory_tracking
         - Applications/nav/utils
         - Drivers/User/ADC
         - Drivers/User/MISC

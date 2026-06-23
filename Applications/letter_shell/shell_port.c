@@ -89,7 +89,7 @@ void Shell_Task(void *argument) {
    for(;;) {
       // 优先将数据发送给需要使用串口的应用程序
       if(osEventFlagsGet(System_StatusHandle) & APP_NEED_USART) {
-         osDelay(200);
+         osDelay(30);
          continue;
       }
       if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 50) == osOK) {

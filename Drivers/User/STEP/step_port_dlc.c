@@ -16,6 +16,7 @@
  * @param motor_id 电机ID
  */
 void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
+	bool keep_alive = false;
     cmd->motor_id = motor_id;
     cmd->op_type = OP_PARAM_READ;
 
@@ -25,71 +26,88 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 #if MOTOR_STATUS_READ_BATCH
     cmd->type.read.p.sys = S_BATCH;
 	Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #else
 #if MOTOR_STATUS_BUS_VOLTAGE
     cmd->type.read.p.sys = S_VBUS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_PHASE_CURRENT
     cmd->type.read.p.sys = S_CPHA;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_ENCODER_VALUE
     cmd->type.read.p.sys = S_ENCL;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_TARGET_POS
     cmd->type.read.p.sys = S_TPOS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_SPEED
     cmd->type.read.p.sys = S_VEL;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_REAL_POS
     cmd->type.read.p.sys = S_CPOS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_POS_ERROR
     cmd->type.read.p.sys = S_PERR;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_MOTOR_FLAGS
     cmd->type.read.p.sys = S_FLAG;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_HOME_FLAGS
     cmd->type.read.p.sys = S_OFLAG;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_BUS_CURRENT
     cmd->type.read.p.sys = S_CBUS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_TEMPERATURE
     cmd->type.read.p.sys = S_TEMP;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_FLAGS_COMBINED
     cmd->type.read.p.sys = S_OAF;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #endif /* MOTOR_STATUS_READ_BATCH */
 #if MOTOR_STATUS_INPUT_PULSES
     cmd->type.read.p.sys = S_CLKI;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_SET_POS
     cmd->type.read.p.sys = S_SPOS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_PIN_STATUS
     cmd->type.read.p.sys = S_PIN;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_STATUS_BATTERY_VOLTAGE
     cmd->type.read.p.sys = S_VBAT;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 }
 
@@ -99,13 +117,17 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 #if MOTOR_DRIVER_READ_BATCH
     cmd->type.read.p.drv = D_BATCH;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
+
 #elif MOTOR_DRIVER_POS_WINDOW
     cmd->type.read.p.drv = D_POS_WINDOW;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_DRIVER_HOME
     cmd->type.read.p.drv = D_HOME;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 }
 
@@ -115,22 +137,27 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 #if MOTOR_PID_READ
     cmd->type.read.p.ctrl = C_PID;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_INTEGRAL_LIMIT_READ
     cmd->type.read.p.ctrl = C_INTEGRAL_LIMIT;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_PROTECT_THRESHOLD_READ
     cmd->type.read.p.ctrl = C_PROTECT_THRESHOLD;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_COLLISION_ANGLE_READ
     cmd->type.read.p.ctrl = C_COLLISION_ANGLE;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_HEARTBEAT_READ
     cmd->type.read.p.ctrl = C_HEARTBEAT;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 }
 
@@ -140,27 +167,31 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 #if MOTOR_DRIVER_DMX512
     cmd->type.read.p.info = I_DMX512;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_READ_VERSION
     cmd->type.read.p.info = I_VERSION;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_READ_PHASE_PARAMS
     cmd->type.read.p.info = I_PHASE_PARAMS;
     Motor_Send_Cmd(cmd);
+	keep_alive = true;
 #endif
 #if MOTOR_READ_OPTION_PARAMS
+	if (!keep_alive) {
+
+	}
+
     cmd->type.read.p.info = I_OPTION;
-    Motor_Send_Cmd(cmd);
-#endif
-#if MOTOR_BROADCAST_READ_ID
-    cmd->type.read.p.info = I_ID;
     Motor_Send_Cmd(cmd);
 #endif
 }
 }
 
 #if USE_VIEW
+#if MOTOR_STATUS_REAL_POS && MOTOR_STATUS_TARGET_POS && MOTOR_STATUS_POS_ERROR && MOTOR_STATUS_SET_POS && MOTOR_STATUS_INPUT_PULSES
 /* 辅助函数：格式化整数显示 */
 static const char* fmt_int(int32_t v) {
 	static char buf[4][8];
@@ -175,6 +206,7 @@ static const char* fmt_int(int32_t v) {
 	}
 	return buf[idx];
 }
+#endif
 
 #if MOTOR_DRIVER_HOME
 static const char* home_mode_str(uint8_t mode) {

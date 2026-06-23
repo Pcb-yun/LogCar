@@ -14,6 +14,7 @@ extern "C" {
 #include "stdint.h"
 #include "stdbool.h"
 #include "nav_common.h"
+#include "nav_math.h"
 
 /**
  * @brief 目标点类型
@@ -47,15 +48,6 @@ typedef struct {
 } MotionParams_t;
 
 /**
- * @brief 目标点位姿
- */
-typedef struct {
-    float x;                     // X坐标 (cm)
-    float y;                     // Y坐标 (cm)
-    float yaw;                   // 期望航向角 (deg)
-} TargetPose_t;
-
-/**
  * @brief 到达检测参数
  */
 typedef struct {
@@ -69,13 +61,13 @@ typedef struct {
  * @brief 目标点完整结构
  */
 typedef struct {
-    uint8_t id;                  // 目标点ID
-    char name[16];               // 目标点名称
-    TargetPointType_t type;      // 目标点类型
-    TargetPose_t pose;           // 目标位姿
-    MotionParams_t motion;       // 运动参数
-    ArriveParams_t arrive;       // 到达检测参数
-    bool enable;                 // 是否启用
+    uint8_t id;                 // 目标点ID
+    char name[16];              // 目标点名称
+    TargetPointType_t type;     // 目标点类型
+    Pose2D_t pose;              // 目标位姿
+    MotionParams_t motion;      // 运动参数
+    ArriveParams_t arrive;      // 到达检测参数
+    bool enable;                // 是否启用
 } TargetPoint_t;
 
 /**

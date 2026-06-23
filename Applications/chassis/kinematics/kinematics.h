@@ -11,20 +11,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "chassis.h"
-
-/**
- * @brief 轮子编码器数据
- */
-typedef struct {
-    int32_t front_left;       // 前左轮编码器值
-    int32_t front_right;      // 前右轮编码器值
-    int32_t rear_left;        // 后左轮编码器值
-    int32_t rear_right;       // 后右轮编码器值
-    uint32_t timestamp;       // 时间戳
-} WheelEncoderData_t;
 
 /**
  * @brief 位姿增量
@@ -35,8 +22,6 @@ typedef struct {
     float dyaw;               // 航向角增量 (deg)
 } PoseDelta_t;
 
-
-void Kinematics_Forward(WheelEncoderData_t *encoder_delta, PoseDelta_t *pose_delta);
 void Kinematics_Inverse(float vx, float vy, float w, Wheel_t *wheels);
 
 #ifdef __cplusplus
