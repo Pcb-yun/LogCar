@@ -36,7 +36,7 @@ bool Track_Init(void) {
     memset(g_track, 0, sizeof(TrackData_t));
 
     g_track->mode = TRACK_STOP;
-    g_track->time = 5;
+    g_track->time = 20;
     is_init = true;
 
     return is_init;

@@ -90,18 +90,24 @@ static void NavTools_Pose_View(void) {
     char ch;
     extern Shell shell;
 
-    logPrintln("\033[?25l\r");
+    logPrintln("\033[?25l\r"
+        "Current Pose:\r\n"
+        "  x:    0.00 cm\r\n"
+        "  y:    0.00 cm\r\n"
+        "  yaw:  0.00 deg\r\n"
+        "  tick: 0");
+
     while (1) {
         if (!Loc_Get(&pose)) {
             logWarning("Failed to get pose");
             break;
         }
 
-        logPrintln("Current Pose:\r\n"
-                   "  x:    %.2f cm\r\n"
-                   "  y:    %.2f cm\r\n"
-                   "  yaw:  %.2f deg\r\n"
-                   "  tick: %lu\033[5A\033[2K\r",
+        logPrintln("\033[5A\033[2K\rCurrent Pose:\r\n"
+                   "\033[2K\r  x:    %.2f cm\r\n"
+                   "\033[2K\r  y:    %.2f cm\r\n"
+                   "\033[2K\r  yaw:  %.2f deg\r\n"
+                   "\033[2K\r  tick: %lu",
             pose.pose.x, pose.pose.y, pose.pose.yaw, pose.timestamp);
 
         if (shell.read(&ch, 1) == 1) {

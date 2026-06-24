@@ -158,7 +158,8 @@ static bool check_arrival(Pose2D_t current, TargetPoint_t *target) {
 
     if (target->arrive.check_mode == ARRIVE_CHECK_YAW ||
         target->arrive.check_mode == ARRIVE_CHECK_BOTH) {
-        float yaw_diff = fabsf(normalize_angle(target->pose.yaw - current.yaw));
+        float target_yaw_norm = normalize_angle(target->pose.yaw);
+        float yaw_diff = fabsf(normalize_angle(target_yaw_norm - current.yaw));
         yaw_ok = (yaw_diff <= target->arrive.yaw_threshold);
     } else {
         yaw_ok = true;
@@ -271,7 +272,6 @@ void Nav_Task(void *argument) {
 
         uint32_t current_tick = osKernelGetTickCount();
 
-        if (current_tick - last_control_tick < NAV_CTRL_INTERVAL_MS) continue;
         float dt = (current_tick - last_control_tick) / 1000.0f;
         last_control_tick = current_tick;
 
@@ -313,8 +313,15 @@ void Nav_Task(void *argument) {
                 float target_vx_world = 0.0f;
                 float target_vy_world = 0.0f;
                 if (distance > 0.5f) {
-                    target_vx_world = dx / distance * max_speed;
-                    target_vy_world = dy / distance * max_speed;
+                    // 提前减速：扩大减速区域
+                    float speed_factor = 1.0f;
+                    float decel_start = NAV_ALIGN_DIST + 30.0f;
+                    if (distance < decel_start) {
+                        speed_factor = (distance - 0.5f) / (decel_start - 0.5f);
+                        if (speed_factor < 0.05f) speed_factor = 0.05f;
+                    }
+                    target_vx_world = dx / distance * max_speed * speed_factor;
+                    target_vy_world = dy / distance * max_speed * speed_factor;
                 }
 
                 float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
@@ -341,10 +348,15 @@ void Nav_Task(void *argument) {
 
                 float target_yaw_deg = atan2f(dy, dx) * RAD_TO_DEG;
                 float yaw_error = normalize_angle(target_yaw_deg - current_pose.yaw);
-                yaw_speed = yaw_error * NAV_APPROACH_YAW_KP;
-                yaw_speed = clamp(yaw_speed,
-                                 -NAV_APPROACH_YAW_MAX,
-                                  NAV_APPROACH_YAW_MAX);
+
+                if (fabsf(yaw_error) > 1.5f) {
+                    yaw_speed = yaw_error * NAV_APPROACH_YAW_KP;
+                    yaw_speed = clamp(yaw_speed,
+                                     -NAV_APPROACH_YAW_MAX,
+                                      NAV_APPROACH_YAW_MAX);
+                } else {
+                    yaw_speed = 0.0f;
+                }
 
             } else {
                 float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
@@ -353,36 +365,49 @@ void Nav_Task(void *argument) {
                 float body_dx = dx * cos_yaw + dy * sin_yaw;
                 float body_dy = -dx * sin_yaw + dy * cos_yaw;
 
-                if (fabsf(body_dx) < NAV_ALIGN_XY_DEADBAND) body_dx = 0.0f;
-                if (fabsf(body_dy) < NAV_ALIGN_XY_DEADBAND) body_dy = 0.0f;
+                float dist_factor = distance / NAV_ALIGN_DIST;
+                float stage2_max_speed = max_speed * dist_factor;
+                if (stage2_max_speed < NAV_MIN_SPEED) stage2_max_speed = NAV_MIN_SPEED;
 
-                float target_vx = body_dx * NAV_ALIGN_XY_KP;
-                float target_vy = body_dy * NAV_ALIGN_XY_KP;
+                float target_yaw_norm = normalize_angle(target->pose.yaw);
+                float yaw_error = normalize_angle(target_yaw_norm - current_pose.yaw);
 
-                target_vx = clamp(target_vx, -max_speed, max_speed);
-                target_vy = clamp(target_vy, -max_speed, max_speed);
+                bool dist_ok = (distance <= target->arrive.distance_threshold);
+                bool yaw_ok = (fabsf(yaw_error) <= target->arrive.yaw_threshold);
 
-                float max_accel_change = acceleration * dt_sec;
-                float max_decel_change = deceleration * dt_sec;
-                float dvx = target_vx - g_nav_core->last_vx;
-                float dvy = target_vy - g_nav_core->last_vy;
+                if (!dist_ok && yaw_ok) {
+                    if (fabsf(body_dx) < NAV_ALIGN_XY_DEADBAND) body_dx = 0.0f;
+                    if (fabsf(body_dy) < NAV_ALIGN_XY_DEADBAND) body_dy = 0.0f;
 
-                if (dvx > 0) { if (dvx > max_accel_change) dvx = max_accel_change; }
-                else { if (dvx < -max_decel_change) dvx = -max_decel_change; }
-                if (dvy > 0) { if (dvy > max_accel_change) dvy = max_accel_change; }
-                else { if (dvy < -max_decel_change) dvy = -max_decel_change; }
+                    out_vx = body_dx * NAV_ALIGN_XY_KP;
+                    out_vy = body_dy * NAV_ALIGN_XY_KP;
+                    out_vx = clamp(out_vx, -stage2_max_speed, stage2_max_speed);
+                    out_vy = clamp(out_vy, -stage2_max_speed, stage2_max_speed);
+                    yaw_speed = 0.0f;
+                } else if (dist_ok && !yaw_ok) {
+                    out_vx = 0.0f;
+                    out_vy = 0.0f;
 
-                g_nav_core->last_vx += dvx;
-                g_nav_core->last_vy += dvy;
+                    yaw_speed = pid_update(&g_nav_core->yaw_pid, yaw_error, dt_sec);
+                    yaw_speed = clamp(yaw_speed, -NAV_ALIGN_YAW_MAX, NAV_ALIGN_YAW_MAX);
+                    if (fabsf(yaw_speed) > 0.0f && fabsf(yaw_speed) < NAV_ALIGN_YAW_MIN) {
+                        yaw_speed = (yaw_speed > 0) ? NAV_ALIGN_YAW_MIN : -NAV_ALIGN_YAW_MIN;
+                    }
+                } else {
+                    if (fabsf(body_dx) < NAV_ALIGN_XY_DEADBAND) body_dx = 0.0f;
+                    if (fabsf(body_dy) < NAV_ALIGN_XY_DEADBAND) body_dy = 0.0f;
 
-                out_vx = clamp(g_nav_core->last_vx, -max_speed, max_speed);
-                out_vy = clamp(g_nav_core->last_vy, -max_speed, max_speed);
+                    out_vx = body_dx * NAV_ALIGN_XY_KP;
+                    out_vy = body_dy * NAV_ALIGN_XY_KP;
+                    out_vx = clamp(out_vx, -stage2_max_speed, stage2_max_speed);
+                    out_vy = clamp(out_vy, -stage2_max_speed, stage2_max_speed);
 
-                float yaw_error = normalize_angle(target->pose.yaw - current_pose.yaw);
-                yaw_speed = pid_update(&g_nav_core->yaw_pid, yaw_error, dt_sec);
-                yaw_speed = clamp(yaw_speed,
-                                 -target->motion.target_angular_speed,
-                                  target->motion.target_angular_speed);
+                    yaw_speed = pid_update(&g_nav_core->yaw_pid, yaw_error, dt_sec);
+                    yaw_speed = clamp(yaw_speed, -NAV_ALIGN_YAW_MAX, NAV_ALIGN_YAW_MAX);
+                    if (fabsf(yaw_speed) > 0.0f && fabsf(yaw_speed) < NAV_ALIGN_YAW_MIN) {
+                        yaw_speed = (yaw_speed > 0) ? NAV_ALIGN_YAW_MIN : -NAV_ALIGN_YAW_MIN;
+                    }
+                }
             }
 
             MotionControl_SetVelocity(out_vx, out_vy, yaw_speed);

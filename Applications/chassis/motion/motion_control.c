@@ -59,10 +59,10 @@ bool MotionControl_Init(void) {
     }
     memset(g_motion, 0, sizeof(MotionControl_t));
 
-    g_motion->linear_speed = 70.0f;
-    g_motion->yaw_speed = 90.0f;
-    g_motion->car_acc = acc_car_to_motor(0.0f);
-    g_motion->car_dec = acc_car_to_motor(0.0f);
+    g_motion->linear_speed = 80.0f;
+    g_motion->yaw_speed = 140.0f;
+    g_motion->car_acc = acc_car_to_motor(70.0f);
+    g_motion->car_dec = acc_car_to_motor(100.0f);
 
     is_init = true;
     return true;

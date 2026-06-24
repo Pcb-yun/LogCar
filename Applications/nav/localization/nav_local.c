@@ -54,10 +54,10 @@ bool Loc_Init(void) {
             vPortFree(g_pose);
             return false;
         }
+        memset(sensor_sources[i], 0, sizeof(WeightedPose_t));
     }
 
     memset(g_pose, 0, sizeof(PoseTimestamp_t));
-    memset(sensor_sources, 0, sizeof(WeightedPose_t) * NAV_MAX_SENSOR);
 
     is_init = true;
     return true;

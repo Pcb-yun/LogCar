@@ -180,12 +180,15 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 	keep_alive = true;
 #endif
 #if MOTOR_READ_OPTION_PARAMS
+#if MOTOR_DRIVER_MOTOR_TYPE || MOTOR_DIRECTION || MOTOR_FIRMWARE_TYPE || MOTOR_LOCK_PARAMS || MOTOR_DRIVER_CONTROL_MODE || MOTOR_DRIVER_LOCK_KEY || MOTOR_DRIVER_SCALE_10X
+	cmd->type.read.p.info = I_OPTION;
+	Motor_Send_Cmd(cmd);
+#elif USE_HEARTBEAT
 	if (!keep_alive) {
-
+		cmd->type.read.p.info = I_OPTION;
+		Motor_Send_Cmd(cmd);
 	}
-
-    cmd->type.read.p.info = I_OPTION;
-    Motor_Send_Cmd(cmd);
+#endif
 #endif
 }
 }

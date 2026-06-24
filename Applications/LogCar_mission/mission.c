@@ -47,11 +47,13 @@ void mission_run(void *argument) {
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
 
     for(;;) {
+        osDelay(1);
         if (!mission_running) {
             continue;
         }
 
         while (1) {
+            if (!mission_running) break;
             for (uint8_t i = 0; i < Map_GetDataPointCount(); i++) {
                 TargetPoint_t *target = Map_GetPoint(i);
                 if (!target->enable) continue;

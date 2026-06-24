@@ -53,7 +53,7 @@ NavMapInfo_t *Map_GetInfo(void) {
  * @param point 目标点指针
  * @return 添加状态
  */
-bool Map_AddPoint(TargetPoint_t *point) {
+bool Map_AddPoint(const TargetPoint_t *point) {
     if (g_map_info->point_count >= g_map_info->max_points) {
         return false;
     }
@@ -133,7 +133,7 @@ bool Map_UpdatePoint(uint8_t id, TargetPoint_t *point) {
  * @param count 目标点数量
  * @return 加载状态
  */
-bool Map_LoadPoints(TargetPoint_t *points, uint8_t count) {
+bool Map_LoadPoints(const TargetPoint_t *points, uint8_t count) {
     for (uint8_t i = 0; i < count; i++) {
         if (!Map_AddPoint(&points[i])) {
             return false;

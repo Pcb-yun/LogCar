@@ -102,8 +102,8 @@ static void Car_Key(void) {
 				case 's': case 'S': x_comp = -linear_speed;  break;	// 后退
 				case 'a': case 'A': y_comp = linear_speed;   break;	// 左移
 				case 'd': case 'D': y_comp = -linear_speed;  break;	// 右移
-				case 'q': case 'Q': yaw_comp = yaw_speed; break;	// 逆时针旋转
-				case 'e': case 'E': yaw_comp = -yaw_speed; break;	// 顺时针旋转
+				case 'q': case 'Q': yaw_comp = -yaw_speed; break;	// 逆时针旋转
+				case 'e': case 'E': yaw_comp = yaw_speed; break;	// 顺时针旋转
 				default: valid_key = false; break;
 				}
 

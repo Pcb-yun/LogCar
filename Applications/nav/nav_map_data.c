@@ -9,7 +9,7 @@
 /**
  * @brief 定义所有目标点数据
  */
-static TargetPoint_t g_map_points[] = {
+static const TargetPoint_t g_map_points[] = {
     // 起点/原点
     {
         .id = 0,
@@ -21,17 +21,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -45,17 +44,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -45.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -69,17 +67,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -90.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -93,17 +90,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -135.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -117,17 +113,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -141,17 +136,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -225.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -165,17 +159,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -270.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -189,17 +182,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -315.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -213,17 +205,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -237,17 +228,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -261,17 +251,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -285,17 +274,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -309,17 +297,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -333,17 +320,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -357,17 +343,16 @@ static TargetPoint_t g_map_points[] = {
             .yaw = 180.0f
         },
         .motion = {
-            .target_speed = 80.0f,
-            .target_angular_speed = 50.0f,
-            .acceleration = 150.0f,
-            .deceleration = 70.0f,
-            .angular_acceleration = 40.0f
+            .target_speed = 60.0f,
+            .target_angular_speed = 110.0f,
+            .acceleration = 60.0f,
+            .deceleration = 100.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 0.5f,
+            .distance_threshold = 1.0f,
             .yaw_threshold = 1.5f,
-            .timeout_ms = 10000
+            .timeout_ms = 15000
         },
         .enable = true
     },
@@ -377,7 +362,7 @@ static TargetPoint_t g_map_points[] = {
 /**
  * @brief 获取预定义目标点数组
  */
-TargetPoint_t *Map_GetDataPoints(void) {
+const TargetPoint_t *Map_GetDataPoints(void) {
     return g_map_points;
 }
 

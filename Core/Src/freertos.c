@@ -510,7 +510,7 @@ void Sys_Init_Task(void *argument)
   if (!Map_Init(32)) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
-  SHOW_DMESG(dmesg_wait, "Initialize Navigation Module");
+  SHOW_DMESG(dmesg_wait, "Initialize Nav Module");
   extern bool Nav_Core_Init(void);
   if (!Nav_Core_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
