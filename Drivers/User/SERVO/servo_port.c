@@ -7,6 +7,7 @@
 #include "servo_port.h"
 #include "usart.h"
 #include "log.h"
+#include "stream_buffer.h"
 #include "shell.h"
 #include "shell_cmd_group.h"
 #include "freeRTOS.h"
@@ -66,9 +67,7 @@ static void Servo_Angle_Shell(int argc, char *argv[]) {
  * @brief 舵机轮式运动控制接口（非阻塞式API）
  * @param servo_id 舵机ID (1-254)
  * @param angle 目标角度，范围-180°-180°（单圈绝对位置）
- * @param velocity 目标速度，单位m/s（0-100）
- * @param t_acc 加速度时间，单位ms（0-65535）
- * @param t_dec 减速度时间，单位ms（0-65535）
+ * @param interval 运动时间，单位ms（0-65535）
  * @param power 输出功率，单位mW（0-1000）
  * @note 通过消息队列发送命令
  */
@@ -97,9 +96,12 @@ static void Servo_Mturn_Shell(int argc, char *argv[]){
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
         return;
     }
-    Servo_MTURN(id, (float)atof(argv[2]),
-                   (uint32_t)atoi(argv[3]),
-                   1000);
+
+    float angle = (float)atof(argv[2]);
+    uint32_t interval = (uint32_t)atoi(argv[3]);
+    uint16_t power = (uint16_t)atoi(argv[4]);  // 修复：使用用户输入的power值
+    
+    Servo_MTURN(id, angle, interval, power);
 }
 
 /**
@@ -652,14 +654,4 @@ void Servo_Ctrl_Task(void *argument) {
             Servo_ExecuteCommand(&cmd);
         }
     }
-}
-
-/**
- * @brief 舵机模块初始化
- * @note 初始化串口，设置波特率为115200
- */
-void Servo_Init(void) {
-    MX_USART3_UART_Init();
-    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
-    osEventFlagsClear(System_StatusHandle, UART3_RX_IDLE);
 }

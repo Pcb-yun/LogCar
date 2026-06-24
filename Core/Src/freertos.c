@@ -33,7 +33,9 @@
 #include "usart.h"
 #include "step_port.h"
 #include "ops.h"
+#include "servo_driver.h"
 #include "servo_port.h"
+#include "nav_common.h"
 #include "scan_driver.h"
 
 /* USER CODE END Includes */
@@ -69,56 +71,84 @@ osThreadId_t ShellHandle;
 const osThreadAttr_t Shell_attributes = {
   .name = "Shell",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal1,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Track_Get */
 osThreadId_t Track_GetHandle;
 const osThreadAttr_t Track_Get_attributes = {
   .name = "Track_Get",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityHigh1,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for Motor_Get_Sta */
 osThreadId_t Motor_Get_StaHandle;
 const osThreadAttr_t Motor_Get_Sta_attributes = {
   .name = "Motor_Get_Sta",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh3,
 };
 /* Definitions for Motor_Ctrl */
 osThreadId_t Motor_CtrlHandle;
 const osThreadAttr_t Motor_Ctrl_attributes = {
   .name = "Motor_Ctrl",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityHigh4,
 };
 /* Definitions for Motor_Update */
 osThreadId_t Motor_UpdateHandle;
 const osThreadAttr_t Motor_Update_attributes = {
   .name = "Motor_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime,
+  .priority = (osPriority_t) osPriorityAboveNormal6,
 };
 /* Definitions for OPS_Update */
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityRealtime3,
+  .priority = (osPriority_t) osPriorityHigh5,
 };
 /* Definitions for Servo_Ctrl */
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityAboveNormal3,
 };
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
   .name = "Servo_Tx",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal4,
+};
+/* Definitions for Battery_Get */
+osThreadId_t Battery_GetHandle;
+const osThreadAttr_t Battery_Get_attributes = {
+  .name = "Battery_Get",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow3,
+};
+/* Definitions for Loc_Update */
+osThreadId_t Loc_UpdateHandle;
+const osThreadAttr_t Loc_Update_attributes = {
+  .name = "Loc_Update",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime3,
+};
+/* Definitions for Nav_Track */
+osThreadId_t Nav_TrackHandle;
+const osThreadAttr_t Nav_Track_attributes = {
+  .name = "Nav_Track",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime3,
+};
+/* Definitions for Mission */
+osThreadId_t MissionHandle;
+const osThreadAttr_t Mission_attributes = {
+  .name = "Mission",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal7,
+  .priority = (osPriority_t) osPriorityRealtime1,
 };
 /* Definitions for Scan_Get */
 osThreadId_t Scan_GetHandle;
@@ -131,16 +161,6 @@ const osThreadAttr_t Scan_Get_attributes = {
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
   .name = "Usart1_Rx_Data"
-};
-/* Definitions for Usart2_Rx_Data */
-osMessageQueueId_t Usart2_Rx_DataHandle;
-const osMessageQueueAttr_t Usart2_Rx_Data_attributes = {
-  .name = "Usart2_Rx_Data"
-};
-/* Definitions for Track_Data */
-osMessageQueueId_t Track_DataHandle;
-const osMessageQueueAttr_t Track_Data_attributes = {
-  .name = "Track_Data"
 };
 /* Definitions for MotorCmds */
 osMessageQueueId_t MotorCmdsHandle;
@@ -157,11 +177,6 @@ osMessageQueueId_t Uart4_Rx_DataHandle;
 const osMessageQueueAttr_t Uart4_Rx_Data_attributes = {
   .name = "Uart4_Rx_Data"
 };
-/* Definitions for OPS_Data */
-osMessageQueueId_t OPS_DataHandle;
-const osMessageQueueAttr_t OPS_Data_attributes = {
-  .name = "OPS_Data"
-};
 /* Definitions for Servo_Cmd */
 osMessageQueueId_t Servo_CmdHandle;
 const osMessageQueueAttr_t Servo_Cmd_attributes = {
@@ -172,10 +187,25 @@ osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
   .name = "Servo_Tx_Data"
 };
-/* Definitions for Servo_Rx_Data */
-osMessageQueueId_t Servo_Rx_DataHandle;
-const osMessageQueueAttr_t Servo_Rx_Data_attributes = {
-  .name = "Servo_Rx_Data"
+/* Definitions for Pose_Mutex */
+osMutexId_t Pose_MutexHandle;
+const osMutexAttr_t Pose_Mutex_attributes = {
+  .name = "Pose_Mutex"
+};
+/* Definitions for Track_Mutex */
+osMutexId_t Track_MutexHandle;
+const osMutexAttr_t Track_Mutex_attributes = {
+  .name = "Track_Mutex"
+};
+/* Definitions for Motor_Mutex */
+osMutexId_t Motor_MutexHandle;
+const osMutexAttr_t Motor_Mutex_attributes = {
+  .name = "Motor_Mutex"
+};
+/* Definitions for OPS_Mutex */
+osMutexId_t OPS_MutexHandle;
+const osMutexAttr_t OPS_Mutex_attributes = {
+  .name = "OPS_Mutex"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -197,6 +227,10 @@ extern void Motor_Update_Task(void *argument);
 extern void OPS_Update_Task(void *argument);
 extern void Servo_Ctrl_Task(void *argument);
 extern void Servo_Tx_Task(void *argument);
+extern void Battery_Get_Task(void *argument);
+extern void Loc_Update_Task(void *argument);
+extern void Nav_Track_Task(void *argument);
+extern void mission_run(void *argument);
 extern void Scan_Get_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -294,7 +328,6 @@ void vApplicationMallocFailedHook(void)
    if(xCurrentTask != NULL) {
      const char *pcTaskName = pcTaskGetName(xCurrentTask);
      my_printf("Current task: %s\r\n", pcTaskName);
-     my_printf("Task handle: 0x%p\r\n", xCurrentTask);
    }
 
    // 打印空闲堆信息
@@ -316,6 +349,18 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of Pose_Mutex */
+  Pose_MutexHandle = osMutexNew(&Pose_Mutex_attributes);
+
+  /* creation of Track_Mutex */
+  Track_MutexHandle = osMutexNew(&Track_Mutex_attributes);
+
+  /* creation of Motor_Mutex */
+  Motor_MutexHandle = osMutexNew(&Motor_Mutex_attributes);
+
+  /* creation of OPS_Mutex */
+  OPS_MutexHandle = osMutexNew(&OPS_Mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -333,32 +378,20 @@ void MX_FREERTOS_Init(void) {
   /* creation of Usart1_Rx_Data */
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
-  /* creation of Usart2_Rx_Data */
-  Usart2_Rx_DataHandle = osMessageQueueNew (64, sizeof(uint8_t), &Usart2_Rx_Data_attributes);
-
-  /* creation of Track_Data */
-  Track_DataHandle = osMessageQueueNew (1, sizeof(TrackData_t), &Track_Data_attributes);
-
   /* creation of MotorCmds */
-  MotorCmdsHandle = osMessageQueueNew (8, sizeof(MotorCmd_t), &MotorCmds_attributes);
+  MotorCmdsHandle = osMessageQueueNew (4, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
   /* creation of Usart6_Rx_Data */
-  Usart6_Rx_DataHandle = osMessageQueueNew (5, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
+  Usart6_Rx_DataHandle = osMessageQueueNew (4, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
 
   /* creation of Uart4_Rx_Data */
-  Uart4_Rx_DataHandle = osMessageQueueNew (3, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
-
-  /* creation of OPS_Data */
-  OPS_DataHandle = osMessageQueueNew (1, sizeof(OPSData_t), &OPS_Data_attributes);
+  Uart4_Rx_DataHandle = osMessageQueueNew (2, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
 
   /* creation of Servo_Cmd */
-  Servo_CmdHandle = osMessageQueueNew (5, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
+  Servo_CmdHandle = osMessageQueueNew (4, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
 
   /* creation of Servo_Tx_Data */
-  Servo_Tx_DataHandle = osMessageQueueNew (10, sizeof(Package_t), &Servo_Tx_Data_attributes);
-
-  /* creation of Servo_Rx_Data */
-  Servo_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Servo_Rx_Data_attributes);
+  Servo_Tx_DataHandle = osMessageQueueNew (4, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -392,6 +425,18 @@ void MX_FREERTOS_Init(void) {
   /* creation of Servo_Tx */
   Servo_TxHandle = osThreadNew(Servo_Tx_Task, NULL, &Servo_Tx_attributes);
 
+  /* creation of Battery_Get */
+  Battery_GetHandle = osThreadNew(Battery_Get_Task, NULL, &Battery_Get_attributes);
+
+  /* creation of Loc_Update */
+  Loc_UpdateHandle = osThreadNew(Loc_Update_Task, NULL, &Loc_Update_attributes);
+
+  /* creation of Nav_Track */
+  Nav_TrackHandle = osThreadNew(Nav_Track_Task, NULL, &Nav_Track_attributes);
+
+  /* creation of Mission */
+  MissionHandle = osThreadNew(mission_run, NULL, &Mission_attributes);
+
   /* creation of Scan_Get */
   Scan_GetHandle = osThreadNew(Scan_Get_Task, NULL, &Scan_Get_attributes);
 
@@ -399,7 +444,6 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* Create the event(s) */
   /* creation of System_Status */
   System_StatusHandle = osEventFlagsNew(&System_Status_attributes);
 
@@ -426,6 +470,8 @@ void Sys_Init_Task(void *argument)
   extern void MX_IWDG_Init(void);
   MX_IWDG_Init();
   SHOW_DMESG(dmesg_ok, NULL);
+#else
+  my_printf("[info] Debug Mode, Watch Dog Disabled.\r\n");
 #endif
 
   SHOW_DMESG(dmesg_wait, "Initialize Shell");
@@ -444,13 +490,17 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Tracking Module");
-  Track_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  if (!Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
-  extern void OPS_Init(void);
-  OPS_Init();
-  SHOW_DMESG(dmesg_ok, NULL);
+  if (!OPS_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Battery Module");
+  extern bool Battery_Init(void);
+  if (!Battery_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Scan Module");
   if (!Scan_Init()) {
@@ -463,11 +513,28 @@ void Sys_Init_Task(void *argument)
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else {
     SHOW_DMESG(dmesg_ok, NULL);
-    SHOW_DMESG(dmesg_wait, "Initialize Motion Control Module");
-    extern void MotionControl_Init(void);
-    MotionControl_Init();
-    SHOW_DMESG(dmesg_ok, NULL);
+    SHOW_DMESG(dmesg_wait, "Initialize Chassis Module");
+    extern bool Chassis_Init(void);
+    if (!Chassis_Init()) SHOW_DMESG(dmesg_fail, NULL);
+    else SHOW_DMESG(dmesg_ok, NULL);
   }
+
+  SHOW_DMESG(dmesg_wait, "Initialize Localization Module");
+  extern bool Loc_Init(void);
+  if (!Loc_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Map Module");
+  extern bool Map_Init(uint8_t max_point_num);
+  if (!Map_Init(32)) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Navigation Module");
+  extern bool Nav_Track_Init(void);
+  if (!Nav_Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+
 
   extern Shell shell;
   Shell_New_Convo(&shell);

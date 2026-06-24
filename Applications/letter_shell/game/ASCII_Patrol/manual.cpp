@@ -1,0 +1,119 @@
+/**
+ * @file manual.cpp
+ * @brief ASCII Patrol 游戏手册
+ *
+ * 实现游戏手册和说明书的显示
+ */
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+
+#include "memory.h"
+#include "manual.h"
+
+/**
+ * @brief 析构函数
+ */
+MANUAL::~MANUAL()
+{
+	for (int i=0; i<man.frames; i++)
+	{
+		// delete individual objects, not array!
+		delete paper[i];
+	}
+}
+
+MANUAL::MANUAL(const ASSET* a, char transp) :
+	SCREEN(43,17,transp),
+	man(a)
+{
+	for (int i=0; i<man.frames; i++)
+	{
+		paper[i] = new SCREEN(43,17,transp);
+		ClearPaper(i);
+	}
+
+	sheets = man.frames - 1;
+	half_w = man.width/2;
+
+	page=-1;
+	SetPage(0,0);
+}
+
+void MANUAL::ClearPaper(int i)
+{
+	paper[i]->Clear();
+	man.SetFrame(i);
+
+	// we shift it 1 cell down
+	// to make space for flipping page over manual
+	man.Paint(paper[i],0,1,0,0,-1,-1,0,false);
+}
+
+void MANUAL::SetPage(int i, int f)
+{
+	if (page!=i)
+	{
+		page = i;
+
+		Clear();
+
+		// left
+		for (int i=1; i<=page; i++)
+			paper[i]->BlendPage(this,0,0,0,0,half_w,-1);
+
+		//right
+		for (int i=sheets; i>page; i--)
+			paper[i]->BlendPage(this,man.width-half_w,0,man.width-half_w,0,half_w,-1);
+	}
+
+	anim = f;
+}
+
+
+void MANUAL::Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw, int sh, bool blend)
+{
+	// TODO: clip to sx,sy,sw,sh !!!
+	// let's ignore sx,sy,sw,sh for a moment
+
+
+	// underlay stack of pages
+	SCREEN::Paint(scr,dx,dy,0,0,-1,-1,true);
+
+	// overlay with anim page
+	if (anim<=0)
+	{
+		paper[page]->BlendPage(scr,dx,dy,0,0,-1,-1);
+	}
+	else
+	if (anim>=22)
+	{
+		paper[page+1]->BlendPage(scr,dx,dy,0,0,-1,-1);
+	}
+	else
+	{
+		// right below
+
+		// todo: if this is page0, blend bit more from the left to include binding
+		int bind = page==0 ? 3:1;
+		paper[page]->BlendPage(scr,dx+man.width-half_w-bind,dy,man.width-half_w-bind,0,half_w-anim+bind,-1);
+
+		// draw edge, TODO: clip!
+		int bend = man.width-anim;
+		int y=2;
+		scr->buf[dx+bend+(dy+y)*(scr->w+1)] = ')';
+
+		for (y=3; y<man.height-1; y++)
+		{
+			scr->buf[dx+bend+(dy+y)*(scr->w+1)] = '|';
+		}
+
+		scr->buf[dx+bend+(dy+y)*(scr->w+1)] = ')';
+
+		// finaly blend upper side of flipping page
+		paper[page+1]->BlendPage(scr,dx+bend-anim +1,dy,0,0,anim-1,-1);
+	}
+}
+
+#endif /* GAME_ENABLE_AP */

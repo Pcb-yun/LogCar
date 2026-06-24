@@ -18,8 +18,10 @@ extern "C" {
     "commands:\r\n" \
     "  mem      Show memory status\r\n" \
     "  task     Show task status\r\n" \
-    "  time     Show system time status"
-
+    "  time     Show system time status\r\n" \
+    "  queue    Show queue status\r\n" \
+    "  mutex    Show mutex status\r\n" \
+    "  event    Show event flags status"
 
 
 #ifdef __cplusplus

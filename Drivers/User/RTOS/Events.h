@@ -20,8 +20,10 @@ extern osEventFlagsId_t System_StatusHandle;
 #define UART1_TX_IDLE (1UL << 2)        // UART1发送空闲
 #define UART2_RX_CPLT (1UL << 3)        // UART2接收完成
 #define UART6_TX_IDLE (1UL << 4)        // UART6发送空闲
-#define UART3_TX_IDLE (1UL << 4)        // UART3发送空闲
-#define UART3_RX_IDLE (1UL << 5)        // UART3接收空闲
+#define UART3_TX_IDLE (1UL << 5)        // UART3发送空闲
+#define UART3_RX_IDLE (1UL << 6)        // UART3接收空闲
+#define ADC1_CONVCPLT (1UL << 7)        // ADC1转换完成
+#define MISSION_RUN (1UL << 8)        // 开始任务
 
 
 #ifdef __cplusplus

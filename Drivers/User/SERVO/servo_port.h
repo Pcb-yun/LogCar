@@ -117,7 +117,6 @@ typedef struct {
 extern osMessageQueueId_t Servo_DataHandle;
 extern osMessageQueueId_t Servo_CmdHandle;
 
-void Servo_Init(void);
 void Servo_Ctrl_Task(void *argument);
 
 bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
@@ -128,10 +127,18 @@ void Servo_STOP_ALL(void);
 bool Servo_PING(uint8_t id);
 #endif
 #if SERVO_ADVANCED_MODE
-bool Servo_ANGLE_BY_VELOCITY(uint8_t id, float velocity, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_ANGLE_BY_INTERVAL(uint8_t id, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_MTURN_BY_VELOCITY(uint8_t id, float velocity, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_MTURN_BY_INTERVAL(uint8_t id, uint16_t interval_ms, uint16_t power_mW);
+bool Servo_AngleByInterval(uint8_t servo_id, float angle, 
+                                            uint16_t interval, uint16_t t_acc,
+                                            uint16_t t_dec, uint16_t power);
+bool Servo_AngleByVelocity(uint8_t servo_id, float angle, 
+                                            float velocity, uint16_t t_acc,
+                                            uint16_t t_dec, uint16_t power);
+bool Servo_MTurnByVelocity(uint8_t servo_id, float angle,
+                                                 float velocity, uint16_t t_acc,
+                                                 uint16_t t_dec, uint16_t power);
+bool Servo_MTurnByInterval(uint8_t servo_id, float angle,
+                                                 uint32_t interval, uint16_t t_acc,
+                                                 uint16_t t_dec, uint16_t power);
 #endif
 
 #ifdef __cplusplus

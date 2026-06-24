@@ -8,7 +8,6 @@
 #define __OPS_CFG_H__
 
 
-
 #define OPS_USE_POS     1       // 使用位置信息
 #define OPS_USE_YAW     1       // 使用航向信息
 #define OPS_USE_PITCH   0       // 使用俯仰信息

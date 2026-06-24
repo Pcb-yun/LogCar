@@ -60,11 +60,15 @@ extern "C" {
 #define CMD_SET_TIMER_REPORT      0x11  // 设置定时返回
 #define END_CODE                  0x6B  // 结束码
 
-/**
- * @brief 发送指令功能码宏定义
- */
+/* 触发动作命令 */
+#define CMD_TRIGGER_ENCODER_CALIB   0x06  // 触发编码器校准
+#define CMD_RESTART_MOTOR           0x08  // 重启电机
+#define CMD_RESET_CURPOS_TO_ZERO     0x0A  // 重置当前位置为零
+#define CMD_CLEAR_PROTECTION        0x0E  // 解除堵转/过热/过流保护
+#define CMD_RESTORE_FACTORY         0x0F  // 恢复出厂设置
+
 /* 运动控制命令 */
-#define CMD_MOTOR_ENABLE          0xF3  // 电机使能控制
+#define CMD_MOTOR_ENABLE            0xF3  // 电机使能控制
 #define CMD_TORQUE_MODE          0xF5  // 力矩模式控制（X固件）
 #define CMD_TORQUE_MODE_LIMIT    0xC5  // 力矩模式限速控制（X固件）
 #define CMD_VELOCITY_MODE_LIMIT  0xC6  // 速度模式限电流控制（X固件）
@@ -83,6 +87,7 @@ extern "C" {
 #define CMD_SET_HOME_ZERO        0x93  // 设置单圈回零的零点位置
 #define CMD_TRIGGER_HOME         0x9A  // 触发回零
 #define CMD_HOME_INTERRUPT       0x9C  // 强制中断并退出回零操作
+#define CMD_SET_HOME_PARAMS      0x4C  // 修改回零参数
 
 /* 多电机命令 */
 #define CMD_MULTI_MOTOR          0xAA  // 多电机命令
@@ -106,9 +111,7 @@ extern "C" {
 #define CMD_SET_DRIVER_CONFIG    0x48  // 修改驱动配置参数（一次性）
 
 /* 系统命令 */
-#define CMD_RESTORE_FACTORY      0x00  // 恢复出厂设置
 #define CMD_BROADCAST_READ_ID    0x15  // 广播读取ID地址
-#define CMD_RESET_CURPOS_TO_ZERO 0x0A  // 重置当前位置为零
 
 
 #ifdef __cplusplus

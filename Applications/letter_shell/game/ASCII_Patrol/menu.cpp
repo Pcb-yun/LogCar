@@ -1,0 +1,3433 @@
+/**
+ * @file menu.cpp
+ * @brief ASCII Patrol 游戏菜单系统
+ *
+ * 实现游戏菜单、界面交互和配置管理
+ * @version 1.0.0
+ * @date 2026-06-08
+ *
+ * @copyright (c) 2026
+ */
+
+
+ #include "game_en.h"
+ #if GAME_ENABLE_AP
+
+
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
+
+#include "game_ap.h"
+#include "spec.h"
+#include "menu.h"
+#include "conf.h"
+
+#include "twister.h"
+
+struct MENU_ASSET : ASSET
+{
+	void Init(const ASSET* a)
+	{
+		mono = a->mono;
+
+		const char** anim = mono;
+
+		if (!anim || !anim[0])
+		{
+			w = 0;
+			h = 0;
+			frames = 0;
+		}
+		else
+		{
+			const char* brk = strchr(anim[0],'\n');
+			if (brk)
+				w = (int)(brk-anim[0]);
+			else
+				w = (int)strlen(anim[0]);
+
+			h=1;
+			brk = strchr(anim[0],'\n');
+			for (int i=0; brk; i++)
+			{
+				brk = strchr(brk+1,'\n');
+				h++;
+			}
+
+			frames=0;
+			for (int i=0; anim[i]; i++)
+				frames++;
+
+		}
+	}
+
+	MENU_ASSET(const ASSET* a)
+	{
+		Init(a);
+		l=r=t=b=0;
+	}
+
+	MENU_ASSET(const ASSET* a, int left, int right, int top, int bottom)
+	{
+		Init(a);
+
+		l=left;
+		r=right;
+		t=top;
+		b=bottom;
+	}
+
+	int w,h,frames;
+	int l,r,t,b;
+};
+
+static int menu_write(CON_OUTPUT* s, int dw, int dh, int sx, int sy, int sw, int sh)
+{
+	if (sw<0)
+		sw=s->w;
+	if (sh<0)
+		sh=s->h;
+
+	if (sx<0)
+	{
+		sw+=sx;
+		sx=0;
+	}
+	if (sy<0)
+	{
+		sh+=sy;
+		sy=0;
+	}
+
+	if (sx+sw>s->w)
+	{
+		sw = s->w-sx;
+	}
+	if (sy+sh>s->h)
+	{
+		sh = s->h-sy;
+	}
+
+	vsync_wait();
+
+	return screen_write(s, dw,dh,sx,sy,sw,sh);
+}
+
+static void menu_print(CON_OUTPUT* s, int dx, int dy, const char* str, int sw, const int* clip = 0)
+{
+	int sx=0;
+	int sy=0;
+	int sh=1;
+
+	if (clip)
+	{
+		if (dx<clip[0])
+		{
+			sx+=clip[0]-dx;
+			sw-=clip[0]-dx;
+			dx=clip[0];
+		}
+		if (dy<clip[1])
+		{
+			sy+=clip[1]-dy;
+			sh-=clip[1]-dy;
+			dy=clip[1];
+		}
+		if (dx+sw>clip[0]+clip[2])
+		{
+			sw=clip[0]+clip[2]-dx;
+		}
+		if (dy+sh>clip[1]+clip[3])
+		{
+			sh=clip[1]+clip[3]-dy;
+		}
+	}
+
+	if (dx<0)
+	{
+		sx-=dx;
+		sw+=dx;
+		dx=0;
+	}
+	if (dy<0)
+	{
+		sy-=dy;
+		sh+=dy;
+		dy=0;
+	}
+
+	if (sx<0)
+	{
+		dx-=sx;
+		sw+=sx;
+		sx=0;
+	}
+	if (sy<0)
+	{
+		dy-=sy;
+		sh+=sy;
+		sy=0;
+	}
+
+	if (dx+sw>s->w)
+	{
+		sw = s->w - dx;
+	}
+	if (dy+sh>s->h)
+	{
+		sh = s->h - dy;
+	}
+
+	if (sw<=0 || sh<=0)
+		return;
+
+	memcpy( s->buf + (s->w+1)*dy + dx, str+sx, sw);
+}
+
+static void menu_fill(CON_OUTPUT* s, int dx, int dy, char glyph, int sw, int sh, const int* clip = 0)
+{
+	if (clip)
+	{
+		if (dx<clip[0])
+		{
+			sw-=clip[0]-dx;
+			dx=clip[0];
+		}
+		if (dy<clip[1])
+		{
+			sh-=clip[1]-dy;
+			dy=clip[1];
+		}
+		if (dx+sw>clip[0]+clip[2])
+		{
+			sw=clip[0]+clip[2]-dx;
+		}
+		if (dy+sh>clip[1]+clip[3])
+		{
+			sh=clip[1]+clip[3]-dy;
+		}
+	}
+
+	if (dx<0)
+	{
+		sw+=dx;
+		dx=0;
+	}
+	if (dy<0)
+	{
+		sh+=dy;
+		dy=0;
+	}
+
+	if (dx+sw>s->w)
+	{
+		sw = s->w - dx;
+	}
+	if (dy+sh>s->h)
+	{
+		sh = s->h - dy;
+	}
+
+	if (sw<=0 || sh<=0)
+		return;
+
+	for (int y=0; y<sh; y++)
+		memset( s->buf + (s->w+1)*(dy+y) + dx, glyph, sw);
+}
+
+static void menu_blit(CON_OUTPUT* s, int dx, int dy, const MENU_ASSET* a, int sx, int sy, int sw, int sh, int fr, const int* clip = 0)
+{
+	if (!a->frames)
+		return;
+
+	fr %= a->frames;
+
+	const char* glyph = a->mono[fr];
+
+	if (clip)
+	{
+		if (dx<clip[0])
+		{
+			sx+=clip[0]-dx;
+			sw-=clip[0]-dx;
+			dx=clip[0];
+		}
+		if (dy<clip[1])
+		{
+			sy+=clip[1]-dy;
+			sh-=clip[1]-dy;
+			dy=clip[1];
+		}
+		if (dx+sw>clip[0]+clip[2])
+		{
+			sw=clip[0]+clip[2]-dx;
+		}
+		if (dy+sh>clip[1]+clip[3])
+		{
+			sh=clip[1]+clip[3]-dy;
+		}
+	}
+
+	if (dx<0)
+	{
+		sx-=dx;
+		sw+=dx;
+		dx=0;
+	}
+	if (dy<0)
+	{
+		sy-=dy;
+		sh+=dy;
+		dy=0;
+	}
+
+	if (sx<0)
+	{
+		dx-=sx;
+		sw+=sx;
+		sx=0;
+	}
+	if (sy<0)
+	{
+		dy-=sy;
+		sh+=sy;
+		sy=0;
+	}
+
+	if (dx+sw>s->w)
+	{
+		sw = s->w - dx;
+	}
+	if (dy+sh>s->h)
+	{
+		sh = s->h - dy;
+	}
+
+	if (sx+sw>a->w)
+	{
+		sw = a->w-sx;
+	}
+	if (sy+sh>a->h)
+	{
+		sh = a->h-sy;
+	}
+
+	if (sw<=0 || sh<=0)
+		return;
+
+	for (int y=0; y<sh; y++)
+		memcpy( s->buf + (s->w+1)*(dy+y) + dx, glyph + (a->w+1)*(sy+y) + sx, sw);
+}
+
+
+static void menu_stretch(CON_OUTPUT* s, int dx, int dy, int dw, int dh, const MENU_ASSET* a, int fr, const int* clip = 0)
+{
+	int l = dx + a->l;
+	int r = dx + dw - a->r;
+	int t = dy + a->t;
+	int b = dy + dh - a->b;
+
+	if (l>r)
+	{
+		int avr = (l+r+1)/2;
+		l = avr-dx;
+		r = dx+dw-avr;
+	}
+	else
+	{
+		l=a->l;
+		r=a->r;
+	}
+
+	if (t>b)
+	{
+		int avr = (t+b+1)/2;
+		t = avr-dy;
+		b = dy+dh-avr;
+	}
+	else
+	{
+		t=a->t;
+		b=a->b;
+	}
+
+	// corners
+	menu_blit(s, dx,dy, a, 0,0, l,t, fr, clip);
+	menu_blit(s, dx+dw-r,dy, a, a->w-r,0, r,t, fr, clip);
+	menu_blit(s, dx,dy+dh-b, a, 0,a->h-b, l,b, fr, clip);
+	menu_blit(s, dx+dw-r,dy+dh-b, a, a->w-r,a->h-b, r,b, fr, clip);
+
+	// v-edges
+	for (int y = t; y<dh-b; y++)
+	{
+		menu_blit(s, dx,dy+y, a, 0,t, l,1, fr, clip);
+		menu_blit(s, dx+dw-r,dy+y, a, a->w-r,t, r,1, fr, clip);
+	}
+
+	// h-edges
+	for (int x = l; x<dw-r; x++)
+	{
+		menu_blit(s, dx+x,dy, a, l,0, 1,t, fr, clip);
+		menu_blit(s, dx+x,dy+dh-b, a, r,a->h-b, 1,b, fr, clip);
+	}
+
+	// interior
+	char glyph = a->mono[fr][ (a->w+1)*t+l ];
+	menu_fill(s,dx+l,dy+t,glyph,dw-l-r,dh-t-b, clip);
+}
+
+
+static MENU_ASSET window(&menu_wnd,5,5,2,3);
+static MENU_ASSET module(&menu_mod,1,1,4,4);
+
+struct MODULE
+{
+	int x,y;     // current rounded
+
+	float fx,fy; // current floating
+	int dx,dy;   // destination (by update layout)
+
+	int w,h;
+	int col;
+
+	bool dbl; // 2 cols module
+
+	int state; // 0 inactive, 1 hover, 2 focus
+	const char* title;
+
+	int (*proc)(MODULE* m, int msg, void* p1, void* p2);
+
+	MODULE* left;
+	MODULE* right;
+	MODULE* upper;
+	MODULE* lower;
+
+	// only if dbl is set!
+	MODULE* upper2;
+	MODULE* lower2;
+};
+
+struct WINDOW
+{
+	unsigned long time;
+
+	int scroll;
+	int smooth;
+	float fsmooth;
+
+	int height;
+	int modules;
+	MODULE* module;
+
+	MODULE* focus;
+	int state; // 0: hovering , 1: focused
+	int focus_col;
+
+	int center_x;
+	int columns;
+	const int* layout;
+
+	int layout_w;
+	int layout_h;
+	const int* layout_2;
+	const int* layout_3;
+	const int* layout_4;
+
+	bool prompt_active;
+};
+
+static WINDOW menu_window;
+
+static MENU_ASSET backdrop(&menu_bkg);
+
+static struct
+{
+	int org_scroll; // must be >=0, otherwise it is inactive
+	int org_x;
+	int org_y;
+	int cur_x;
+	int cur_y;
+	int id;
+	bool dirty; // scroll (don't click on touch end)
+	bool redirect;
+} touch_scroll = {-1,0,0,0,0,-1,false,false};
+
+static void UpdateLayout(CON_OUTPUT* s, bool force=false)
+{
+	WINDOW* mw = &menu_window;
+
+	if (s->w==mw->layout_w && s->h==mw->layout_h && !force)
+		return;
+
+	// calc columns
+	int cw = s->w - window.l - window.r - 3;
+
+	int mod_width  = 31;
+	int mod_space  = 2;
+	int mod_left_mrg = 1;
+	int mod_right_mrg = 1;
+
+	// left , mod_left_mrg , (mods-1) x (mod,space) , mod, mod_right_mrg , scroll | right
+	int mod_cols = (cw + mod_space - mod_left_mrg - mod_right_mrg) / (mod_width + mod_space);
+
+	if (mw->modules < mod_cols)
+	{
+		int cols=0;
+		for (int i=0; i<mw->modules; i++)
+		{
+			if (mw->module[i].dbl)
+				cols+=2;
+			else
+				cols++;
+		}
+
+		mod_cols = MIN(mod_cols, cols);
+	}
+
+	// calc height (currently we don't reorder modules)
+	int height[4]={0,0,0,0}; // total heights of each module column
+	MODULE* bottom[2][4]={{0,0,0,0},{0,0,0,0}}; // last module added to given column
+
+	const int* layout=0;
+	switch (mod_cols)
+	{
+		case 2: layout = mw->layout_2; break;
+		case 3: if (mw->layout_3) layout = mw->layout_3; else { mod_cols=2; layout = mw->layout_2; } break;
+		case 4: if (mw->layout_4) layout = mw->layout_4; else if (mw->layout_3) { mod_cols=3; layout = mw->layout_3; } else { mod_cols=2; layout = mw->layout_2; } break;
+	}
+
+	int center_x = window.l + mod_left_mrg + (cw - ((mod_left_mrg + mod_right_mrg + mod_cols * mod_width + (mod_cols-1) * mod_space)|1) +1 ) / 2;
+
+	if (mw->center_x<0)
+		mw->center_x = center_x;
+
+	mw->columns = mod_cols;
+	mw->layout = layout;
+
+	if (!mw->focus)
+	{
+		mw->focus = mw->module + layout[0];
+		mw->focus->state = 1;
+		mw->state = 0; // hover over first layout item
+	}
+
+	int col=0;
+	int row=0;
+	for (int j=0; j<mw->modules; j++)
+	{
+		int i = layout[j];
+
+		mw->module[i].col = col;
+		mw->module[i].dx = center_x + col * (mod_width + mod_space);
+
+		mw->module[i].left = 0;
+		mw->module[i].right = 0;
+		mw->module[i].lower = 0;
+		mw->module[i].lower2 = 0;
+		mw->module[i].upper = 0;
+		mw->module[i].upper2 = 0;
+
+		if (mw->module+i == mw->focus)
+			mw->focus_col = col;
+
+		if (mw->module[i].dbl)
+		{
+			assert(col<mod_cols-1);
+
+			mw->module[i].w = mod_width * 2 + mod_space;
+			mw->module[i].dy = MAX(height[col],height[col+1]);
+
+			height[col] = mw->module[i].dy + mw->module[i].h      +1; // extra spacing
+			height[col+1] = mw->module[i].dy + mw->module[i].h    +1;
+
+			mw->module[i].upper = bottom[0][col];
+			mw->module[i].upper2 = bottom[0][col+1];
+
+			if (row)
+			{
+				if (bottom[0][col]==bottom[0][col+1])
+				{
+					// |*-*|
+					// |*-*|
+					bottom[0][col]->lower = mw->module+i;
+					bottom[0][col+1]->lower2 = mw->module+i;
+				}
+				else
+				if (col>0 && col<mod_cols-2 &&
+					bottom[0][col-1]==bottom[0][col] &&
+					bottom[0][col+1]==bottom[0][col+2])
+				{
+					// |*-*|*-*|
+					//   |*-*|
+					bottom[0][col]->lower2 = mw->module+i;
+					bottom[0][col+1]->lower = mw->module+i;
+				}
+				else
+				if (col>0 &&
+					bottom[0][col-1]==bottom[0][col])
+				{
+					// |*-*|*|
+					//   |*-*|
+					bottom[0][col]->lower2 = mw->module+i;
+					bottom[0][col+1]->lower = mw->module+i;
+				}
+				else
+				if (col<mod_cols-2 &&
+					bottom[0][col+1]==bottom[0][col+2])
+				{
+					// |*|*-*|
+					// |*-*|
+					bottom[0][col]->lower = mw->module+i;
+					bottom[0][col+1]->lower = mw->module+i;
+				}
+				else
+				{
+					// |*|*|
+					// |*-*|
+					bottom[0][col]->lower = mw->module+i;
+					bottom[0][col+1]->lower = mw->module+i;
+				}
+			}
+
+			bottom[1][col] = mw->module+i;
+			bottom[1][col+1] = mw->module+i;
+
+			col+=2;
+			if (col==mod_cols)
+			{
+				col=0;
+				row++;
+
+				bottom[0][0] = bottom[1][0];
+				bottom[0][1] = bottom[1][1];
+				bottom[0][2] = bottom[1][2];
+				bottom[0][3] = bottom[1][3];
+			}
+		}
+		else
+		{
+			mw->module[i].w = mod_width;
+			mw->module[i].dy = height[col];
+
+			height[col] = mw->module[i].dy + mw->module[i].h      +1; // extra spacing
+
+			mw->module[i].upper = bottom[0][col];
+
+			if (row)
+			{
+				if (col>0 &&
+					bottom[0][col-1]==bottom[0][col])
+				{
+					// |*-*|
+					//   |*|
+					bottom[0][col]->lower2 = mw->module+i;
+				}
+				else
+				if (col<mod_cols-1 &&
+					bottom[0][col]==bottom[0][col+1])
+				{
+					// |*-*|
+					// |*|
+					bottom[0][col]->lower = mw->module+i;
+				}
+				else
+				{
+					// |*|
+					// |*|
+					bottom[0][col]->lower = mw->module+i;
+				}
+			}
+
+			bottom[1][col] = mw->module+i;
+
+			col++;
+			if (col==mod_cols)
+			{
+				col=0;
+				row++;
+
+				bottom[0][0] = bottom[1][0];
+				bottom[0][1] = bottom[1][1];
+				bottom[0][2] = bottom[1][2];
+				bottom[0][3] = bottom[1][3];
+			}
+		}
+	}
+
+	int max_height = 0;
+	for (int i=0; i<mod_cols; i++)
+		if (max_height<height[i])
+			max_height=height[i];
+
+	mw->height = max_height -1 -1; // -1 as underscores on top of layout don't count! and another -1 for extra space removal
+
+	int center_y = ( s->h-window.t-window.b-1 - max_height +1 )/2;
+	if (center_y<0)
+		center_y=window.t;
+	else
+		center_y+=window.t;
+
+	// change it to ensure focus/hover visibility
+	int client_h = s->h - window.t - window.b;
+	if (mw->scroll>mw->height-client_h+1)
+		mw->scroll=mw->height-client_h+1;
+	if (mw->scroll<0)
+		mw->scroll=0;
+
+	for (int i=0; i<mw->modules; i++)
+	{
+		mw->module[i].dy += center_y;
+		if (mw->module[i].y<0)
+		{
+			mw->module[i].y = mw->module[i].dy;
+			mw->module[i].fx = (float)mw->module[i].dy;
+		}
+
+		if (mw->module[i].x<0)
+		{
+			mw->module[i].x = mw->module[i].dx;
+			mw->module[i].fx = (float)mw->module[i].dx;
+		}
+		else
+		{
+			/*
+			mw->module[i].x += center_x - mw->center_x;
+			mw->module[i].fx += (float)(center_x - mw->center_x);
+			*/
+		}
+	}
+
+	mw->center_x = center_x;
+
+	// determine cols and rows
+	// assign x,y
+	// stretch to cutify layout if possible
+
+	mw->layout_w = s->w;
+	mw->layout_h = s->h;
+
+	mw->smooth = mw->scroll;
+
+	// build horizontal graph for hovering
+	for (int j=0; j<mw->modules; j++)
+	{
+		// calc center
+
+		int left = -1;
+		int right = -1;
+
+		int left_err = 0;
+		int right_err = 0;
+
+		int yj = mw->module[j].dy + mw->module[j].h/2;
+
+		for (int i=0; i<mw->modules; i++)
+		{
+			if (mw->module[j].col == mw->module[i].col)
+				continue;
+
+			if (!mw->module[i].dbl && mw->module[i].col == mw->module[j].col-1 ||
+				mw->module[i].dbl && mw->module[i].col == mw->module[j].col-2)
+			{
+				// j->left = i
+				int err = ABS(mw->module[i].dy + mw->module[i].h/2 - yj);
+				if (left<0 || err<left_err)
+				{
+					left = i;
+					left_err = err;
+				}
+			}
+			else
+			if (!mw->module[j].dbl && mw->module[i].col == mw->module[j].col+1 ||
+				mw->module[j].dbl && mw->module[i].col == mw->module[j].col+2)
+			{
+				// j->right = i
+				int err = ABS(mw->module[i].dy + mw->module[i].h/2 - yj);
+				if (right<0 || err<right_err)
+				{
+					right = i;
+					right_err = err;
+				}
+			}
+		}
+
+		if (left>=0)
+			mw->module[j].left = mw->module + left;
+		if (right>=0)
+			mw->module[j].right = mw->module + right;
+	}
+
+	// smooth scroll to hovered mod
+	if (mw->focus->dy - window.t - mw->scroll < 0)
+		mw->scroll = mw->focus->dy - window.t;
+	if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+		mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+}
+
+enum MODULE_MSG
+{
+	MM_INIT,  // return height if ok
+	MM_LOAD,  // overwrite menu data with conf
+	MM_INPUT, // p1 contains single CON_INPUT
+	MM_PAINT, // p1 contains CON_OUTPUT, p2 contains clip rect to apply, use menu_window.scroll
+
+	MM_FOCUS,
+	// p1 is flag indicating if focus is being gained or lost,
+	// if focus is being lost, p2 MUST be filled with Y coordinate of focused element in the module
+	// if focus is being gained p2 contains Y coordinate of previously focused element in module the focus is comming from
+};
+
+
+
+void PaintScroll(CON_OUTPUT* s, int x, int dy, int h, int pos, int size, int state, const int* clip);
+
+int ProfileProc(MODULE* m, int msg, void* p1, void* p2);
+int CampaignProc(MODULE* m, int msg, void* p1, void* p2);
+
+int PromptProc(int msg, void* p1, void* p2)
+{
+	(void)p1;
+	(void)p2;
+
+	static int len = 0;
+	static char str[256] = "";
+
+	switch (msg)
+	{
+		case MM_FOCUS:
+		{
+			const char* s = (const char*)p1;
+			len = strlen(s);
+			strcpy(str, s);
+			break;
+		}
+
+		case MM_PAINT:
+		{
+			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int x = 10;
+			int y = s->h - 2;
+
+			const char* prompt = "Player Name: ";
+			for (int i = 0; prompt[i]; i++)
+				s->buf[(s->w+1)*y + x + i] = prompt[i];
+
+			for (int i = 0; i < len && i < 16; i++)
+				s->buf[(s->w+1)*y + x + 12 + i] = str[i];
+
+			if ((menu_window.time & 0xFF) < 0x7F)
+				s->buf[(s->w+1)*y + x + 12 + len] = '_';
+
+			break;
+		}
+
+		case MM_INPUT:
+		{
+			CON_INPUT* ci = (CON_INPUT*)p1;
+			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
+			{
+				char ch = ci->Event.KeyEvent.uChar.AsciiChar;
+				if (ch == 27) return -1;
+				if (ch == 13)
+				{
+					strcpy(conf_player.name, str);
+					ProfileProc(0, MM_LOAD, 0, 0);
+					return 1;
+				}
+				if (ch == 8 && len > 0) len--;
+				else if (ch >= 32 && ch < 127 && len < 16)
+					str[len++] = ch;
+				str[len] = 0;
+			}
+			break;
+		}
+	}
+	return 0;
+}
+
+int ControlProc(MODULE* m, int msg, void* p1, void* p2)
+{
+
+	static MENU_ASSET sld(&menu_sld,0,0,0,0);
+	static MENU_ASSET swt(&menu_swt,0,0,0,0);
+	static MENU_ASSET tag(&menu_tag,0,0,0,0);
+
+	struct ControlData
+	{
+		int hover;
+		int touch_id;
+		int touch_x;
+		int touch_y;
+
+		static void PaintSwt(CON_OUTPUT* s, int x, int y, int w, int fr, int val, int* clip)
+		{
+			if (w<5)
+				w=5;
+			int fill = w-4;
+
+			if (!val)
+			{
+				menu_blit(s,x,y,&swt,0,0,1,2,fr,clip);
+				menu_blit(s,x+1,y,&swt,swt.w/2-1,0,2,2,fr,clip);
+				for (int f=x+3; f<x+3+fill; f++)
+					menu_blit(s,f,y,&swt,swt.w-2,0,1,2,fr,clip);
+				menu_blit(s,x+w-1,y,&swt,swt.w-1,0,1,2,fr,clip);
+			}
+			else
+			{
+				menu_blit(s,x,y,&swt,0,0,1,2,fr,clip);
+				for (int f=x+1; f<x+1+fill; f++)
+					menu_blit(s,f,y,&swt,1,0,1,2,fr,clip);
+				menu_blit(s,x+w-3,y,&swt,swt.w/2-1,0,2,2,fr,clip);
+				menu_blit(s,x+w-1,y,&swt,swt.w-1,0,1,2,fr,clip);
+			}
+		}
+
+		static void PaintSld(CON_OUTPUT* s, int x, int y, int w, int fr, int val, int* clip)
+		{
+			if (w<5)
+				w=5;
+
+			menu_blit(s,x,y,&sld,0,0,1,2,fr,clip);
+			for (int f=x+1; f<x+1+val; f++)
+				menu_blit(s,f,y,&sld,1,0,1,2,fr,clip);
+			menu_blit(s,x+1+val,y,&sld,sld.w/2-1,0,2,2,fr,clip);
+			for (int f=x+3+val; f<x+w-1; f++)
+				menu_blit(s,f,y,&sld,sld.w-2,0,1,2,fr,clip);
+			menu_blit(s,x+w-1,y,&sld,sld.w-1,0,1,2,fr,clip);
+		}
+	};
+
+	static ControlData data;
+
+	switch (msg)
+	{
+		case MM_LOAD:
+		{
+			break;
+		}
+
+		case MM_INIT:
+		{
+			data.hover = 0;
+			data.touch_id = -1;
+			return 12;
+		}
+
+		case MM_FOCUS:
+		{
+			data.touch_id = -1;
+			break;
+		}
+
+		case MM_PAINT:
+		{
+			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int* clip = (int*)p2;
+
+			int x = m->x + (module.l+2);
+			int y = m->y + (module.t+1) - menu_window.smooth;
+
+			int hover = data.hover;
+			y++;
+			x+=5;
+
+			if (m->state==2 && hover==0)
+				menu_print(s, x-5, y,  ">", 1, clip);
+			menu_print(s,x,y,"EXIT TO OS", 10, clip);
+			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
+			y+=2;
+
+			if (m->state==2 && hover==1)
+				menu_print(s, x-5, y,  ">", 1, clip);
+			menu_print(s,x,y,"RESET CAMPAIGN PROGRESS", 23, clip);
+			menu_blit(s,x-3,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
+			y+=2;
+
+			break;
+		}
+
+		case MM_INPUT:
+		{
+			CON_INPUT* ci = (CON_INPUT*)p1;
+
+			if ((ci->EventType == CON_INPUT_TCH_MOVE || ci->EventType == CON_INPUT_TCH_END) &&
+				data.touch_id == ci->Event.TouchEvent.id)
+			{
+				if (ci->EventType == CON_INPUT_TCH_END)
+				{
+					data.touch_id = -1;
+
+					int delta = ci->Event.TouchEvent.x - data.touch_x;
+					int dy = ci->Event.TouchEvent.y - m->y + menu_window.smooth - data.touch_y;
+
+					if (delta <= +1 && delta >= -1 && dy <= +1 && dy >= -1 && data.touch_x - m->x < 40)
+					{
+						switch (data.touch_y)
+						{
+							case 5: case 6:
+								app_exit();
+								return 1;
+
+							case 7: case 8:
+								conf_campaign.course=0;
+								conf_campaign.level=-1;
+								conf_campaign.passed=0;
+								CampaignProc(0,MM_LOAD,0,0);
+
+								break;
+						}
+					}
+				}
+
+				return 1;
+			}
+
+			if (ci->EventType == CON_INPUT_TCH_BEGIN && data.touch_id < 0)
+			{
+				int y = ci->Event.TouchEvent.y - m->y + menu_window.smooth;
+
+				switch (y)
+				{
+					case 5: case 6:
+						data.hover = 0;
+						data.touch_x = ci->Event.TouchEvent.x;
+						data.touch_y = y;
+						data.touch_id = ci->Event.TouchEvent.id;
+						break;
+					case 7: case 8:
+						data.hover = 1;
+						data.touch_x = ci->Event.TouchEvent.x;
+						data.touch_y = y;
+						data.touch_id = ci->Event.TouchEvent.id;
+						break;
+				}
+			}
+
+			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
+			{
+				switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
+				{
+					case KBD_UP:
+					{
+						if (data.hover>0)
+						{
+							data.hover--;
+							return 1;
+						}
+						break;
+					}
+					case KBD_DN:
+					{
+						if (data.hover<1)
+						{
+							data.hover++;
+							return 1;
+						}
+						break;
+					}
+
+					case 13:
+					{
+						switch (data.hover)
+						{
+							case 0:
+							{
+								app_exit();
+								return 1;
+							}
+
+							case 1:
+							{
+								conf_campaign.course=0;
+								conf_campaign.level=-1;
+								conf_campaign.passed=0;
+								CampaignProc(0,MM_LOAD,0,0);
+
+								return 1;
+							}
+						}
+
+						break;
+					}
+				}
+			}
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int ProfileProc(MODULE* m, int msg, void* p1, void* p2)
+{
+	struct ProfileData
+	{
+		int hover;			  // 0:name, 1:rnd_avatar, 2,3,4,5:dna(0-3)
+
+		char name[16];		  // maxlen = 15
+		int edit_pos;		  // -1:no_edit, otherwise cursor pos
+		char edit_buf[16];    // edit temp
+
+		// current (destination dna)
+		unsigned long avatar; // 4x8bits (4,1,1,2) cells verticaly
+
+		int prev[4]; // dna positions at the start of anim
+		unsigned long anim[4]; // time base for dna animation
+
+		int shift_time; // avatar shift base time
+		int shift_from; // avatar shift from
+		int shift_to; // avatar shift from
+
+		int get_shift(int mod_state, unsigned long t)
+		{
+			if (shift_from==shift_to)
+				return shift_to;
+
+			int dt = t - shift_time;
+			int pos = shift_from + (shift_to-shift_from)*dt/128;
+			if (pos<0)
+				pos=0;
+			if (pos>6)
+				pos=6;
+
+			if (shift_to == pos)
+				shift_from = pos;
+
+			return pos;
+		}
+
+		int get_anim(int x, unsigned long t, int w, int n)
+		{
+			// t = time to evaluate anim at
+			// x = channel(0..3)
+			// w = dna.w
+			// n = dna.frames
+
+			int len = w*n;
+			int dest = w*(( avatar >> (8*x) ) & 0xFF);
+			int from = prev[x];
+
+			if (dest==from)
+				return dest;
+
+			int fr = (t - anim[x])/16;
+
+			if (fr<=0)
+				return from;
+
+			// find shorter dir
+			int dist1 = dest-from; // forward
+			int dist2 = from-dest;
+
+			if (dist1<0)
+				dist1 += len;
+			if (dist2<0)
+				dist2 += len;
+
+			int dir,dist;
+			if (dist1<dist2)
+			{
+				dir = 1;
+				dist = dist1;
+			}
+			else
+			{
+				dir = -1;
+				dist = dist2;
+			}
+
+			// assume anim must fit in 20fr
+			if (fr>=20)
+				return dest;
+
+			int ret = from + (dir*dist*fr+10)/20;
+			if (ret<0)
+				ret += len;
+			if (ret>=len)
+				ret -= len;
+
+			return ret;
+
+			/*
+			if (fr>=dist)
+				return dest;
+
+
+			int ret = from + dir*fr;
+			if (ret<0)
+				ret += len;
+			if (ret>=len)
+				ret -= len;
+
+			return ret;
+			*/
+		}
+	};
+
+	static MENU_ASSET dna(&avatar,0,0,0,0);
+	static MENU_ASSET frame(&menu_frm,1,1,1,1);
+
+	static ProfileData data;
+
+	switch (msg)
+	{
+		case MM_LOAD:
+		{
+			strcpy_s(data.name,16,conf_player.name);
+			data.avatar = conf_player.avatar;
+			break;
+		}
+
+		case MM_INIT:
+		{
+			strcpy_s(data.name,16,conf_player.name);
+			data.avatar = conf_player.avatar;
+
+			data.prev[0] = ((data.avatar>>0) & 0xFF)*dna.w;
+			data.prev[1] = ((data.avatar>>8) & 0xFF)*dna.w;
+			data.prev[2] = ((data.avatar>>16) & 0xFF)*dna.w;
+			data.prev[3] = ((data.avatar>>24) & 0xFF)*dna.w;
+
+			data.hover = 0;
+			data.edit_pos = -1;
+
+			data.shift_from = 0;
+			data.shift_to = 0;
+
+			return 20;//19;
+		}
+
+		case MM_FOCUS:
+		{
+			int f = *(int*)p1;
+			data.shift_from = data.get_shift(m->state,menu_window.time);
+			data.shift_time = menu_window.time;
+			data.shift_to = f==2 ? 6:0;
+			break;
+		}
+
+		case MM_PAINT:
+		{
+			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int* clip = (int*)p2;
+
+			int x = m->x + (module.l+2);
+			int y = m->y + (module.t+1) - menu_window.smooth;
+
+			if (m->state==2 && data.hover==0)
+				menu_print(s, x, y,  ">", 1, clip);
+
+			menu_print(s, x+2, y, "Name:", 5, clip);
+
+			char* name = data.name;
+			if (data.edit_pos>=0)
+				name = data.edit_buf;
+
+			menu_print(s, x+8, y, name, strlen(name), clip);
+
+			if (data.edit_pos>=0)
+			{
+				if ((menu_window.time & 0xFF) < 0x7F)
+				{
+					char* c = s->buf + (s->w+1)*y + x+8 + data.edit_pos;
+					*c = '_';
+				}
+			}
+
+			y+=2;
+
+			menu_print(s, x+2, y, "Avatar:", 7, clip);
+
+			y++;
+
+			///////////
+
+			int ofs[4] = {0,4,5,6};
+			int siz[4] = {4,1,1,2};
+			static const char* nam[4]=
+			{
+				"Hair",
+				"Eyes",
+				"Nose",
+				"Chin"
+			};
+
+			int row = y+2;
+
+			if (m->state==2 && data.hover==1)
+				menu_print(s, x, row, ">", 1, clip);
+
+			menu_print(s, x+2, row, "Full", 4, clip);
+
+			row+=2;
+
+			for (int i=0; i<4; i++)
+			{
+				if (m->state==2 && data.hover==i+2)
+					menu_print(s, x+2 -(2), row+i, ">", 1, clip);
+
+				menu_print(s, x+2  -(2)+2, row+i, nam[i], strlen(nam[i]), clip);
+			}
+
+			///////////
+
+			int shift = data.get_shift(m->state,menu_window.time);
+
+			menu_blit(s,x+shift-2 +(3),y,&frame,0,0,frame.w,frame.h,m->state==2,clip);
+
+			y++;
+
+			for (int i=0; i<4; i++)
+			{
+				int a = data.get_anim(i, menu_window.time, dna.w, dna.frames);
+
+				int r = a%dna.w;
+				int q = a/dna.w;
+				if (r == 0)
+				{
+					// paint single frame
+					menu_blit(s,x+shift +(3),y+ofs[i],&dna,0,ofs[i],dna.w,siz[i],q,clip);
+				}
+				else
+				{
+					int q2 = q+1;
+					if (q2==dna.frames)
+						q2=0;
+
+					menu_blit(s,x+shift +(3),y+ofs[i],&dna,r,ofs[i],dna.w-r,siz[i],q,clip);
+					menu_blit(s,x+shift+dna.w-r +(3),y+ofs[i],&dna,0,ofs[i],r,siz[i],q2,clip);
+				}
+			}
+
+			return 1;
+		}
+
+		case MM_INPUT:
+		{
+			CON_INPUT* ci = (CON_INPUT*)p1;
+
+			if (ci->EventType == CON_INPUT_TCH_BEGIN)
+			{
+				if (ci->Event.TouchEvent.y + menu_window.smooth >= m->y + 4 &&
+					ci->Event.TouchEvent.y + menu_window.smooth <= m->y + 6)
+				{
+					data.hover = 0;
+					PromptProc(MM_FOCUS,conf_player.name,0);
+					menu_window.prompt_active = true;
+					break;
+				}
+				else
+				if (ci->Event.TouchEvent.y + menu_window.smooth >= m->y + 9 &&
+					ci->Event.TouchEvent.y + menu_window.smooth <= m->y + 11)
+				{
+					data.hover = 1;
+
+					// full rnd
+					for (int c=0; c<4; c++)
+					{
+						// calc current interpolation for hover ch, store in prev
+						data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+						data.anim[c] = menu_window.time; // start new timer
+					}
+
+					data.avatar = 0;
+
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+					data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+
+					conf_player.avatar=data.avatar;
+
+
+					return 1;
+				}
+				else
+				{
+					int c = -1;
+
+					if (ci->Event.TouchEvent.y + menu_window.smooth == m->y + 12)
+						c=0;
+					if (ci->Event.TouchEvent.y + menu_window.smooth == m->y + 13)
+						c=1;
+					if (ci->Event.TouchEvent.y + menu_window.smooth == m->y + 14)
+						c=2;
+					if (ci->Event.TouchEvent.y + menu_window.smooth == m->y + 15 ||
+						ci->Event.TouchEvent.y + menu_window.smooth == m->y + 16)
+						c=3;
+
+					if (c>=0)
+					{
+						data.hover = c+2;
+
+						int b = 8*c;
+
+						// calc current interpolation for hover ch, store in prev
+						data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+						data.anim[c] = menu_window.time; // start new timer
+
+						// update persistent destination
+						int i = ( data.avatar >> b ) & 0xFF;
+						i--;
+						if (i==-1)
+							i=dna.frames-1;
+						data.avatar &= ~(0xFF << b);
+						data.avatar |= i << b;
+
+						conf_player.avatar=data.avatar;
+
+
+						return 1;
+					}
+				}
+			}
+
+			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
+			{
+				if (data.edit_pos>=0)
+				{
+					if (ci->Event.KeyEvent.uChar.AsciiChar>=32 && ci->Event.KeyEvent.uChar.AsciiChar<127)
+					{
+						if (data.edit_pos<15)
+						{
+							char p = data.edit_buf[data.edit_pos];
+							data.edit_buf[data.edit_pos] = ci->Event.KeyEvent.uChar.AsciiChar;
+
+							for (int i=data.edit_pos+1; true; i++)
+							{
+								if (i==15)
+								{
+									if (data.edit_pos<15)
+										data.edit_pos++;
+									data.edit_buf[i]=0;
+									break;
+								}
+
+								char c = data.edit_buf[i];
+								data.edit_buf[i]=p;
+								if (!p)
+								{
+									data.edit_pos++;
+									break;
+								}
+								p = c;
+							}
+						}
+					}
+					else
+					if (ci->Event.KeyEvent.uChar.AsciiChar>0 && ci->Event.KeyEvent.uChar.AsciiChar<32)
+					{
+						switch (ci->Event.KeyEvent.uChar.AsciiChar)
+						{
+							case KBD_LT:
+								if (data.edit_pos>0)
+								{
+									data.edit_pos--;
+									return 1;
+								}
+								break;
+							case KBD_RT:
+								if (data.edit_buf[data.edit_pos])
+								{
+									data.edit_pos++;
+									return 1;
+								}
+								break;
+
+							case 27:
+								data.edit_pos = -1;
+								return 1;
+
+							case 13:
+							case KBD_UP:
+							case KBD_DN:
+								strcpy_s(data.name,16,data.edit_buf);
+								data.edit_pos = -1;
+
+								strcpy_s(conf_player.name,16,data.edit_buf);
+
+
+								return 0;
+
+							case KBD_PUP:
+							case KBD_HOM:
+								data.edit_pos = 0;
+								return 1;
+
+							case KBD_PDN:
+							case KBD_END:
+								data.edit_pos = strlen(data.edit_buf);
+								return 1;
+
+							case KBD_DEL:
+							{
+								if (data.edit_buf[data.edit_pos])
+								{
+									for (int i=data.edit_pos; true; i++)
+									{
+										char c = data.edit_buf[i+1];
+										data.edit_buf[i] = c;
+										if (!c)
+											break;
+									}
+								}
+								break;
+							}
+
+							case 8:
+							{
+								if (data.edit_pos>0)
+								{
+									for (int i=data.edit_pos; true; i++)
+									{
+										char c = data.edit_buf[i];
+										data.edit_buf[i-1] = c;
+										if (!c)
+											break;
+									}
+
+									data.edit_pos--;
+								}
+								break;
+							}
+						}
+					}
+
+					return 1;
+				}
+
+				switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
+				{
+					case KBD_LT:
+					{
+						if (data.hover>1)
+						{
+							int c = data.hover-2;
+							int b = 8*c;
+
+							// calc current interpolation for hover ch, store in prev
+							data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+							data.anim[c] = menu_window.time; // start new timer
+
+							// update persistent destination
+							int i = ( data.avatar >> b ) & 0xFF;
+							i--;
+							if (i==-1)
+								i=dna.frames-1;
+							data.avatar &= ~(0xFF << b);
+							data.avatar |= i << b;
+
+							conf_player.avatar=data.avatar;
+
+
+							return 1;
+						}
+						else
+						if (data.hover==1)
+						{
+							for (int c=0; c<4; c++)
+							{
+								int b = 8*c;
+
+								// calc current interpolation for hover ch, store in prev
+								data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+								data.anim[c] = menu_window.time; // start new timer
+
+								// update persistent destination
+								int i = ( data.avatar >> b ) & 0xFF;
+								i--;
+								if (i==-1)
+									i=dna.frames-1;
+								data.avatar &= ~(0xFF << b);
+								data.avatar |= i << b;
+
+								conf_player.avatar=data.avatar;
+
+							}
+
+							return 1;
+						}
+
+						break;
+					}
+
+					case KBD_RT:
+					{
+						if (data.hover>1)
+						{
+							int c = data.hover-2;
+							int b = 8*c;
+
+							// calc current interpolation for hover ch, store in prev
+							data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+							data.anim[c] = menu_window.time; // start new timer
+
+							int i = ( data.avatar >> b ) & 0xFF;
+							i++;
+							if (i==dna.frames)
+								i=0;
+							data.avatar &= ~(0xFF << b);
+							data.avatar |= i << b;
+
+							conf_player.avatar=data.avatar;
+
+
+							return 1;
+						}
+						else
+						if (data.hover==1)
+						{
+							for (int c=0; c<4; c++)
+							{
+								int b = 8*c;
+
+								// calc current interpolation for hover ch, store in prev
+								data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+								data.anim[c] = menu_window.time; // start new timer
+
+								int i = ( data.avatar >> b ) & 0xFF;
+								i++;
+								if (i==dna.frames)
+									i=0;
+								data.avatar &= ~(0xFF << b);
+								data.avatar |= i << b;
+
+								conf_player.avatar=data.avatar;
+
+
+							}
+
+							return 1;
+						}
+
+						break;
+					}
+
+					case KBD_UP:
+					{
+						if (data.hover>0)
+						{
+							data.hover--;
+							return 1;
+						}
+
+						break;
+					}
+
+					case KBD_DN:
+					{
+						if (data.hover<5)
+						{
+							data.hover++;
+							return 1;
+						}
+
+						break;
+					}
+
+					case 13:
+					{
+						if (data.hover==0)
+						{
+							data.edit_pos = strlen(data.name);
+							strcpy_s(data.edit_buf,16,data.name);
+							return 1;
+						}
+
+						if (data.hover==1)
+						{
+							for (int c=0; c<4; c++)
+							{
+								// calc current interpolation for hover ch, store in prev
+								data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+								data.anim[c] = menu_window.time; // start new timer
+							}
+
+							data.avatar = 0;
+
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+							data.avatar = (data.avatar<<8) | ( twister_rand()%dna.frames );
+
+							conf_player.avatar=data.avatar;
+
+
+							return 1;
+						}
+						else
+						{
+							int c = data.hover-2;
+							int b = 8*c;
+
+							// calc current interpolation for hover ch, store in prev
+							data.prev[c] = data.get_anim(c, menu_window.time, dna.w, dna.frames);
+							data.anim[c] = menu_window.time; // start new timer
+
+							int i = twister_rand()%dna.frames;
+							data.avatar &= ~(0xFF << b);
+							data.avatar |= i << b;
+
+							conf_player.avatar=data.avatar;
+
+
+							return 1;
+						}
+					}
+				}
+			}
+
+		}
+	}
+
+	return 0;
+}
+
+static int SGN(int x)
+{
+	return x==0 ? 0 : x>0 ? 1 : -1;
+}
+
+// defined in temp
+void ClearOnHold();
+bool GameOnHold(int* course=0, int* level=0, int* sublevel=0, int* percent=0, int* score=0, int* lives=0);
+
+int CampaignProc(MODULE* m, int msg, void* p1, void* p2)
+{
+	static int map_coords[5][10]=
+	{
+		//{30,41, 0,0, 0,0, 0,0, 0,0}, // tut
+		{30,41, 1,34, 23,31, 55,30, 26,20},
+		{1,10, 12,5, 45,13, 68,9, 48,2},
+		{0,0, 0,0, 0,0, 0,0, 0,0},
+		{0,0, 0,0, 0,0, 0,0, 0,0},
+		{0,0, 0,0, 0,0, 0,0, 0,0},
+	};
+
+
+
+	static const int track_dx[8]={0,1,1,1,0,-1,-1,-1};
+	static const int track_dy[8]={-1,-1,0,1,1,1,0,-1};
+
+	struct Track
+	{
+		int x,y;
+		const char* path;
+	};
+
+	static Track track[5][5]=
+	{
+	/*
+	   7 0 1
+	   6   2
+	   5 4 3
+	*/
+
+		/*
+		{
+			// tut
+			59,50,
+			"",
+		},
+		*/
+		{
+			{
+				59,50,
+				"322222222077" "A" "660076665566667" "B" "655433" "C" "466666666670" "D" "11077666676666" "E"
+			},
+			{
+				32,44,
+				"46666666656666667" "F" "65666666670" "G" "11222322222222222077" "H" "666666676660" "I" "11222122222222" "J" ,
+			},
+			{
+				24,34,
+				"22332222122" "K" "34566665" "L" "4322222122112" "M" "2322222122" "N" "2211122" "O" ,
+			},
+			{
+				60,35,
+				"22122234566666665422" "P" "22332222222" "Q" "32222222222222221110" "R" "7777766766666" "S" "66766666766666" "T" ,
+			},
+			{
+				62,30,
+				"456666666601077766" "U" "54455666676" "V" "6556666667" "W" "6600011" "X" "22223222222" "Y" "22070107766" "Z" ,
+			},
+		},
+		{
+			{
+				38,20,
+				"4666007766" "A" "6654456666676" "B" "65566666660076" "C" "6010776670" "D" "11222232222" "E"
+			},
+			{
+				15,11,
+				"445433222221200112" "F" "232221076667766660112222" "G" "222322222322" "H" "222334556" "I" "66554322322221" "J"
+			},
+			{
+				47,15,
+				"22223345666655422" "K" "2233222222220766012" "L" "2221122" "M" "23345422212" "N" "211070123222" "O"
+			},
+			{
+				81,17,
+				"432223322212" "P" "221070112" "Q" "222076666656566" "R" "66701222076" "S" "6666554466" "T"
+			},
+			{
+				80,13,
+				"66700766655666" "U" "666665666666770" "V" "1001222322221" "W" "22332221" "X" "207012222" "Y" "23344466" "Z"
+			}
+		},
+		{
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+		},
+		{
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+		},
+		{
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+			{0,0,0},
+		}
+
+	};
+
+	struct CampaignData
+	{
+		struct Segment
+		{
+			int from;
+			int len;
+		};
+
+		struct Level
+		{
+			Segment seg;
+			int sublevels;
+			Segment sublevel[6];
+		};
+
+		struct Course
+		{
+			Segment seg;
+			int levels;
+			Level level[5];
+		};
+
+		struct Map
+		{
+			int courses;
+			int max_levels;
+			Course course[5];
+			int path_xy[654*2]; // currently: 654*2 , MAX: 5*5*128 x2
+			int len;
+		};
+
+		Map map;
+
+		int hold_focus;
+
+		int course;
+		int level;
+		int path;
+		//int levels; //<-switch to LEVELS[]
+
+		int anim_y;
+		unsigned long anim_bt;
+
+		unsigned long map_bt;
+		int from_x;
+		int from_y;
+
+		int head;
+		unsigned long head_t;
+
+		int car_to;
+		//int car_pos;
+
+
+		void GetXY(int* cur_x, int* cur_y)
+		{
+			int lev = level<0 ? 0 : level;
+			int dt = menu_window.time - map_bt;
+
+			int to_x = map_coords[course][2*lev+0];
+			int to_y = map_coords[course][2*lev+1];
+
+			*cur_x = to_x;
+			*cur_y = to_y;
+
+			if (to_x>from_x)
+			{
+				*cur_x = from_x + dt*SGN(to_x - from_x)/16;
+				if (*cur_x>to_x)
+				{
+					*cur_x=to_x;
+					from_x=to_x;
+				}
+			}
+			else
+			if (to_x<from_x)
+			{
+				*cur_x = from_x + dt*SGN(to_x - from_x)/16;
+				if (*cur_x<to_x)
+				{
+					*cur_x=to_x;
+					from_x=to_x;
+				}
+			}
+
+			if (to_y>from_y)
+			{
+				*cur_y = from_y + dt*SGN(to_y - from_y)/64;
+				if (*cur_y>to_y)
+				{
+					*cur_y=to_y;
+					from_y=to_y;
+				}
+			}
+			else
+			if (to_y<from_y)
+			{
+				*cur_y = from_y + dt*SGN(to_y - from_y)/64;
+				if (*cur_y<to_y)
+				{
+					*cur_y=to_y;
+					from_y=to_y;
+				}
+			}
+		}
+	};
+
+	static MENU_ASSET campagin_map(&map,0,0,0,0);
+	static MENU_ASSET frame(&menu_map,2,2,2,1);
+
+	static MENU_ASSET car(&menu_car,0,0,0,0);
+	static MENU_ASSET tag(&menu_tag,0,0,0,0);
+
+
+	static CampaignData data;
+
+	switch (msg)
+	{
+		case MM_LOAD:
+		{
+			data.hold_focus = 0;
+
+			data.course = conf_campaign.course;
+			data.level = conf_campaign.level;
+			data.path = 0;
+
+			data.car_to = data.map.course[data.course].level[data.level].seg.from;
+
+			data.from_x = map_coords[data.course][2*data.level+0];
+			data.from_y = map_coords[data.course][2*data.level+1];
+
+			break;
+		}
+
+		case MM_INIT:
+		{
+			data.hold_focus = 0;
+
+			data.course = conf_campaign.course;
+			data.level = conf_campaign.level;
+			data.path = 0;
+
+			data.anim_y = 0;
+
+			int lev = data.level<0 ? 0 : data.level;
+			data.from_x = map_coords[data.course][2*lev];
+			data.from_y = map_coords[data.course][2*lev+1];
+
+			data.head_t=menu_window.time;
+			data.head=0;
+
+			data.map.courses=0;
+			data.map.len=0;
+			data.map.max_levels=0;
+
+			if (!campaign[0].level)
+			{
+				data.course=-1;
+				break; // fail creation
+			}
+
+			// generate map data
+			int pos = 0;
+			for (int i=0; campaign[i].level; i++)
+			{
+				data.map.course[i].levels=0;
+				data.map.course[i].seg.from = data.map.len;
+				data.map.course[i].seg.len  = 0;
+
+				for (int j=0; campaign[i].level[j].height; j++)
+				{
+					data.map.course[i].level[j].seg.from = data.map.len;
+					data.map.course[i].level[j].seg.len = 0;
+					data.map.course[i].level[j].sublevels = 0;
+
+					const char* path = track[i][j].path;
+
+					if (path)
+					{
+						int x = track[i][j].x;
+						int y = track[i][j].y;
+
+						int sub = 0;
+
+						data.map.course[i].level[j].seg.from = pos;
+
+						int sub_from = pos;
+
+						while (*path)
+						{
+							if (*path<'0' || *path>'7') // chkpnt marker
+							{
+								data.map.course[i].level[j].sublevel[sub].from = sub_from;
+								data.map.course[i].level[j].sublevel[sub].len = pos - sub_from;
+								sub_from = pos;
+								sub++;
+								path++;
+								continue;
+							}
+
+							x+=track_dx[*path-'0'];
+							y+=track_dy[*path-'0'];
+
+							data.map.path_xy[2*pos+0] = x;
+							data.map.path_xy[2*pos+1] = y;
+
+							path++;
+
+							data.map.course[i].level[j].sublevel[sub].len++;
+							pos++;
+						}
+
+						data.map.course[i].level[j].sublevels = sub;
+						data.map.course[i].level[j].seg.len = pos - data.map.course[i].level[j].seg.from;
+						data.map.course[i].levels++;
+					}
+				}
+
+
+				if (data.map.max_levels<data.map.course[i].levels)
+					data.map.max_levels=data.map.course[i].levels;
+
+				data.map.course[i].seg.len = pos - data.map.course[i].seg.from;
+				data.map.courses++;
+			}
+
+			data.map.len = pos;
+
+			data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+			return 20; //(module.t+1) + 2*data.courses-1 + data.max_levels + (module.b);
+		}
+
+		case MM_FOCUS:
+		{
+			break;
+		}
+
+		case MM_PAINT:
+		{
+			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int* clip = (int*)p2;
+
+			if (data.course<0)
+				break;
+
+			int x = m->x + (module.l+2);
+			int y = m->y + (module.t+1) - menu_window.smooth;
+
+
+			int hold_course;
+			int hold_level;
+			int hold_sublevel;
+			int hold_percent;
+			int hold_score;
+			int hold_lives;
+
+			bool hold = GameOnHold(&hold_course,&hold_level,&hold_sublevel,&hold_percent,&hold_score,&hold_lives);
+
+			// so in case of hold we should NOT use GetXY interpolation
+			// instead: simply get hold_level destination area
+
+			// paint map frame
+			menu_stretch(s,x+16,y-1,43,15,&frame,m->state==2,clip);
+
+			// paint map
+			int cur_x,cur_y;
+			if (hold)
+			{
+				cur_x = map_coords[hold_course][2*hold_level+0];
+				cur_y = map_coords[hold_course][2*hold_level+1];
+			}
+			else
+				data.GetXY(&cur_x,&cur_y);
+
+			int extra = m->state<2 ? 1:0;
+			menu_blit(s, x+16+frame.l,y-1+frame.t-1, &campagin_map, 	cur_x,cur_y, 43-frame.l-frame.r,15-frame.t-frame.b+1 +extra, 0, clip);
+
+			int clip_x1 = x+16+frame.l;
+			int clip_y1 = y-1+frame.t-1;
+			int clip_x2 = clip_x1 + (43-frame.l-frame.r) - 1;
+			int clip_y2 = clip_y1 + (15-frame.t-frame.b+1 +extra) - 1;
+
+			if (clip)
+			{
+				clip_x1 = clip_x1 < clip[0] ? clip[0] : clip_x1;
+				clip_y1 = clip_y1 < clip[1] ? clip[1] : clip_y1;
+				clip_x2 = clip_x2 > clip[0]+clip[2]-1 ? clip[0]+clip[2]-1 : clip_x2;
+				clip_y2 = clip_y2 > clip[1]+clip[3]-1 ? clip[1]+clip[3]-1 : clip_y2;
+			}
+
+
+			int lev = hold ? hold_level : (data.level<0 ? 0 : data.level);
+			int crs = hold ? hold_course : data.course;
+
+			if (m->state==2)
+			{
+				if (track[crs][lev].path)
+				{
+					int seg = 20;
+
+					int from = MAX(0,data.head-seg);
+					int to = MIN(data.head,data.map.course[crs].level[lev].seg.len);
+					for (int pos = from; pos<to; pos++)
+					{
+						int hi = 2*(pos + data.map.course[crs].level[lev].seg.from);
+
+						int hi_x = data.map.path_xy[hi+0] + x+16+frame.l  -cur_x;
+						int hi_y = data.map.path_xy[hi+1] + y-1+frame.t-1 -cur_y;
+
+						if (hi_x>=x+16+frame.l && hi_x<x+16+frame.l+43-frame.l-frame.r &&
+							hi_y>=y-1+frame.t-1 && hi_y<y-1+frame.t-1+15-frame.t-frame.b+1)
+						{
+							if (hi_x>=clip[0] && hi_x<clip[0]+clip[2] &&
+								hi_y>=clip[1] && hi_y<clip[1]+clip[3])
+							{
+								s->buf[hi_x + hi_y*(s->w+1)] = '.';
+							}
+						}
+					}
+				}
+
+				if (data.head<120)
+					data.head+=(menu_window.time-data.head_t)/8;
+				else
+				{
+					data.head=0;
+				}
+			}
+
+			if (1) // paint car regardless of m->state
+			{
+				int car_f = 0;
+
+				int pos = data.car_to;
+
+				if (hold)
+				{
+					if (hold_sublevel<0)
+						hold_sublevel = data.map.course[hold_course].level[hold_level].sublevels-1;
+
+					pos = data.map.course[hold_course].level[hold_level].sublevel[hold_sublevel].from;
+					pos += hold_percent * data.map.course[hold_course].level[hold_level].sublevel[hold_sublevel].len / 100;
+
+					if (pos>=data.map.len)
+						pos = data.map.len-1;
+				}
+
+				int pos1 = MAX(0,pos-1);
+				int pos2 = MIN(data.map.len-1,pos+1);
+
+				if (data.map.path_xy[2*pos2+0]<data.map.path_xy[2*pos1+0])
+					car_f = 1;
+
+				int car_x = data.map.path_xy[2*pos+0] + x+16+frame.l  -cur_x -car.w/2;
+				int car_y = data.map.path_xy[2*pos+1] + y-1+frame.t-1 -cur_y -car.h/2;
+
+				int to_x = map_coords[crs][2*lev+0];
+				int to_y = map_coords[crs][2*lev+1];
+
+				if (car_x+cur_x-to_x < x+16+frame.l)
+					car_x = x+16+frame.l - cur_x + to_x;
+				if (car_x+cur_x-to_x >= x+16+frame.l + 39-6)
+					car_x = x+16+frame.l + 39-6 - cur_x + to_x;
+				if (car_y+cur_y-to_y < y-1+frame.t-1)
+					car_y = y-1+frame.t-1 - cur_y + to_y;
+				if (car_y+cur_y-to_y >= y-1+frame.t-1 + 13-3)
+					car_y = y-1+frame.t-1 + 13-3 - cur_y + to_y;
+
+				int clip2[4] = { x+16+frame.l, y-1+frame.t-1, 39, 13 };
+
+				if (clip2[0]<clip[0])
+				{
+					clip2[2]-=clip[0]-clip2[0];
+					clip2[0]=clip[0];
+				}
+				if (clip2[0]+clip2[2]>clip[0]+clip[2])
+					clip2[2]=clip[0]+clip[2]-clip2[0];
+
+				if (clip2[1]<clip[1])
+				{
+					clip2[3]-=clip[1]-clip2[1];
+					clip2[1]=clip[1];
+				}
+				if (clip2[1]+clip2[3]>clip[1]+clip[3])
+					clip2[3]=clip[1]+clip[3]-clip2[1];
+
+				menu_blit(s,car_x,car_y,&car,0,0,6,3,car_f,clip2);
+
+				if ( m->state==2 && (menu_window.time & 0xFF) < 0x7F && // blink
+					 car_y-1 >= clip_y1 && car_y-1 <= clip_y2) // fits in clip
+				{
+					int id = hold ? data.hold_focus + 1 : 0;
+					char label[3][7]= { ">PLAY<", "RESUME", "CLEAR!" };
+					char* buf = s->buf + (s->w+1)*(car_y-1) + car_x;
+					for (int a=0; a<6; a++)
+					{
+						if (a+car_x >= clip_x1 && a+car_x <= clip_x2)
+						{
+							buf[a] = label[id][a];
+						}
+					}
+				}
+			}
+
+			data.head_t = menu_window.time;
+
+			if (hold)
+			{
+				// GAME ON HOLD INFO + resume/reset UI
+				char tmp[16];
+				int len;
+
+				menu_print(s, x, y, "Game Paused !", 13, clip);
+				y+=2;
+
+				menu_print(s, x, y, "Chapter:", 8, clip);
+				y++;
+				menu_print(s, x+0, y, campaign[hold_course].name, strlen(campaign[hold_course].name), clip);
+				y+=2;
+
+				len = sprintf_s(tmp,16,"[%c-%c]", campaign[hold_course].level[hold_level].name, campaign[hold_course].level[hold_level].name2);
+				menu_print(s, x, y, "Level: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
+				y++;
+
+				len = sprintf_s(tmp,16,"%d", hold_score);
+				menu_print(s, x, y, "Score: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
+				y++;
+
+				len = sprintf_s(tmp,16,"%d", hold_lives);
+				menu_print(s, x, y, "Lives: ", 7, clip);
+				menu_print(s, x+7, y, tmp, len, clip);
+				y+=3;
+
+				if (m->state==2 && data.hold_focus==0)
+					menu_print(s, x, y,  ">", 1, clip);
+				menu_blit(s,x+2,y-1,&tag,0,0,2,2,m->state==2?2:3,clip);
+				menu_print(s, x+5, y, "RESUME", 6, clip);
+				y+=2;
+
+				if (m->state==2 && data.hold_focus==1)
+					menu_print(s, x, y,  ">", 1, clip);
+				menu_blit(s,x+2,y-1,&tag,0,0,2,2,m->state==2?0:1,clip);
+				menu_print(s, x+5, y, "CLEAR", 5, clip);
+				y+=2;
+			}
+			else
+			{
+				// CAMPAIGN COURSES TREE
+
+				if (data.anim_y<0)
+				{
+					int dt = (menu_window.time-data.anim_bt)/32;
+					data.anim_y += dt;
+					if (data.anim_y>0)
+						data.anim_y=0;
+					data.anim_bt += 32*dt;
+				}
+				else
+				if (data.anim_y>0)
+				{
+					int dt = (menu_window.time-data.anim_bt)/32;
+					data.anim_y -= dt;
+					if (data.anim_y<0)
+						data.anim_y=0;
+					data.anim_bt += 32*dt;
+				}
+
+
+				static char clear[16]="               ";
+
+				for (int i=0; i<data.map.courses; i++)
+				{
+					if (i==data.course && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+						y+=data.anim_y;
+
+					// paint space 1 line above
+					menu_print(s, x, y-1, clear, 15, clip);
+
+					if (campaign[i].flags & 0x1)
+					{
+						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[ ] ":"[ ] ") : "[ ] ", 4, clip);
+					}
+					else
+						menu_print(s, x, y, i==data.course ? (data.level<0 ? "[>] ":"[-] ") : "[+] ", 4, clip);
+
+					const char* name = campaign[i].name;
+					int nlen = strlen(name);
+					menu_print(s, x+4, y, name, nlen, clip);
+					if (nlen<11)
+						menu_print(s, x+4+nlen, y, clear, 11-nlen, clip);
+
+					y++;
+
+					if (i==data.course || i==data.course-1 && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+					{
+						for (int j=0; j<data.map.course[data.course].levels; j++)
+						{
+							if (y<m->y+m->h-module.b - menu_window.smooth)
+							{
+								char name[32];
+								int len = sprintf_s(name,32, i==data.course && j==data.level ? "> (%c-%c)" : "   %c-%c ", campaign[i].level[j].name, campaign[i].level[j].name2);
+								menu_print(s, x+4, y, name, len, clip);
+							}
+							y++;
+						}
+
+						if (i!=data.course)
+							y-=data.map.course[data.course].levels;
+						else
+							y+=data.map.max_levels-data.map.course[data.course].levels;
+					}
+
+					if (i==data.course && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+						y-=data.anim_y;
+
+					y++;
+				}
+			}
+
+			return 1;
+		}
+
+		case MM_INPUT:
+		{
+			CON_INPUT* ci = (CON_INPUT*)p1;
+
+			bool hold = GameOnHold();
+
+			if (ci->EventType == CON_INPUT_TCH_END)
+			{
+				int sx = m->x + (module.l+2);
+				int sy = m->y + (module.t+1) - menu_window.smooth;
+
+				if (ci->Event.TouchEvent.y - sy >= 0)
+				{
+					if (hold)
+					{
+						if (ci->Event.TouchEvent.x - sx > 16)
+						{
+							// apply current focus
+
+							if (data.hold_focus==0)
+							{
+								// resume
+								return -3;
+							}
+							else
+							if (data.hold_focus==1)
+							{
+								// reset
+								ClearOnHold();
+								return 1;
+							}
+						}
+						else
+						{
+							// change current focus
+							data.hold_focus = !data.hold_focus;
+						}
+					}
+					else
+					{
+						if (ci->Event.TouchEvent.x - sx > 16)
+						{
+
+							int j = data.level;
+							if (j<0)
+
+								j=0;
+
+							// ensure level is not a dummy
+							if (campaign[data.course].level[j].height[0])
+							{
+								// set hold focus to resume
+								data.hold_focus = 0;
+								return -3;
+							}
+						}
+						else
+						{
+							int y = 0; //m->y + (module.t+1) - menu_window.smooth;
+							// run like painting check for y
+							for (int i=0; i<data.map.courses; i++)
+							{
+								if (i==data.course && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+									y+=data.anim_y;
+
+								if (campaign[i].flags & 0x1)
+								{
+									// disabled?
+								}
+								else
+								{
+									if ( i!=data.course )
+									{
+										// check click on collapsed course i
+										if (y == ci->Event.TouchEvent.y - sy)
+										{
+											if (i<data.course)
+												data.anim_y = - data.map.course[data.course].levels;
+											else
+											if (i>data.course)
+												data.anim_y = data.map.course[data.course+1].levels;
+
+											data.GetXY(&data.from_x,&data.from_y);
+											data.map_bt = menu_window.time;
+											data.anim_bt = menu_window.time;
+
+											data.course = i;
+											data.level = -1;
+
+											conf_campaign.course = data.course;
+											conf_campaign.level  = data.level;
+
+											int lev = data.level<0 ? 0 : data.level;
+											data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+
+											return 0;
+										}
+									}
+								}
+
+								y++;
+
+								if (i==data.course || i==data.course-1 && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+								{
+									for (int j=0; j<data.map.course[data.course].levels; j++)
+									{
+										if (y<m->y+m->h-module.b - menu_window.smooth)
+										{
+											// check click on course i, unfocused level j
+											if (data.level != j && y == ci->Event.TouchEvent.y - sy)
+											{
+												if (i<data.course)
+													data.anim_y = - data.map.course[data.course].levels;
+												else
+												if (i>data.course)
+													data.anim_y = data.map.course[data.course+1].levels;
+
+												data.GetXY(&data.from_x,&data.from_y);
+												data.map_bt = menu_window.time;
+												data.anim_bt = menu_window.time;
+
+												data.course = i;
+												data.level = j;
+
+												conf_campaign.course = data.course;
+												conf_campaign.level  = data.level;
+
+												int lev = data.level<0 ? 0 : data.level;
+												data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+
+												return 0;
+											}
+										}
+										y++;
+									}
+
+									if (i!=data.course)
+										y-=data.map.course[data.course].levels;
+									else
+										y+=data.map.max_levels-data.map.course[data.course].levels;
+								}
+
+								if (i==data.course && data.anim_y>0 || i==data.course+1 && data.anim_y<0)
+									y-=data.anim_y;
+
+								y++;
+							}
+						}
+
+						return 0;
+					}
+				}
+
+				break;
+			}
+
+			if (ci->EventType == CON_INPUT_KBD && ci->Event.KeyEvent.bKeyDown)
+			{
+				switch (ConfMapInput(ci->Event.KeyEvent.uChar.AsciiChar))
+				{
+					// prev level/course, open & close courses if changed
+					case KBD_UP:
+					if (hold)
+					{
+						if (data.hold_focus>0)
+						{
+							data.hold_focus--;
+							return 1;
+						}
+					}
+					else
+					{
+						data.GetXY(&data.from_x,&data.from_y);
+						data.map_bt = menu_window.time;
+
+						if (data.level>=0)
+						{
+							data.level--;
+							conf_campaign.course = data.course;
+							conf_campaign.level  = data.level;
+
+							int lev = data.level<0 ? 0 : data.level;
+							data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+
+
+							return 1;
+						}
+						else
+						if (data.course>0)
+						{
+							data.course--;
+
+							data.anim_y = -data.map.course[data.course].levels;
+							data.anim_bt = menu_window.time;
+
+							data.level = data.map.course[data.course].levels-1;
+
+							conf_campaign.course = data.course;
+							conf_campaign.level  = data.level;
+
+							int lev = data.level<0 ? 0 : data.level;
+							data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+
+
+							return 1;
+						}
+					}
+					break;
+
+					// next level/course, open & close courses if changed
+					case KBD_DN:
+					if (hold)
+					{
+						if (data.hold_focus<1)
+						{
+							data.hold_focus++;
+							return 1;
+						}
+					}
+					else
+					{
+						if (conf_campaign.passed==data.course)
+						{
+							// only first level can be selected
+							if (data.level==0)
+								break;
+						}
+
+						data.GetXY(&data.from_x,&data.from_y);
+						data.map_bt = menu_window.time;
+
+						if (data.level<data.map.course[data.course].levels-1)
+						{
+							data.level++;
+							conf_campaign.course = data.course;
+							conf_campaign.level  = data.level;
+
+							data.car_to = data.map.course[data.course].level[data.level].seg.from;
+
+
+
+							return 1;
+						}
+						else
+						if (data.course<data.map.courses-1 && (campaign[data.course+1].flags & 0x1)==0)
+						{
+							data.course++;
+
+							data.anim_y = data.map.course[data.course].levels;
+							data.anim_bt = menu_window.time;
+
+							data.level=-1;
+
+							conf_campaign.course = data.course;
+							conf_campaign.level  = data.level;
+
+							int lev = data.level<0 ? 0 : data.level;
+							data.car_to = data.map.course[data.course].level[lev].seg.from;
+
+
+
+							return 1;
+						}
+					}
+
+					break;
+
+					// PLAY!!!!!!
+					case 13:
+					if (hold)
+					{
+						if (data.hold_focus==0)
+						{
+							// resume
+							return -3;
+						}
+						else
+						if (data.hold_focus==1)
+						{
+							// reset
+							ClearOnHold();
+							return 1;
+						}
+					}
+					else
+					{
+						int j = data.level;
+						if (j<0)
+							j=0;
+
+						// ensure level is not a dummy
+						if (campaign[data.course].level[j].height[0])
+						{
+							// set hold focus to resume
+							data.hold_focus = 0;
+							return -3;
+						}
+
+						return 0;
+					}
+					break;
+
+				}
+			}
+
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int KeyboardProc(MODULE* m, int msg, void* p1, void* p2)
+{
+	static const char* label[6] = {
+		"A - Left (brake)",
+		"D - Right (accel.)",
+		"W - Up (jump)",
+		"S - Down (crouch)",
+		"L - Enter (fire)",
+		"Q - Quit"
+	};
+
+	switch (msg)
+	{
+		case MM_INIT:
+			return 20;
+
+		case MM_PAINT:
+		{
+			CON_OUTPUT* s = (CON_OUTPUT*)p1;
+			int* clip = (int*)p2;
+
+			int x = m->x + (module.l + 2);
+			int y = m->y + (module.t + 1) - menu_window.smooth + 1;
+
+			for (int i = 0; i < 6; i++)
+			{
+				menu_print(s, x + 2 - 2, y + 2 * i, label[i], strlen(label[i]), clip);
+			}
+			break;
+		}
+	}
+
+	return 0;
+}
+
+void LoadMenu()
+{
+	WINDOW* mw = &menu_window;
+	// overwrite menu data with conf
+	for (int i=0; i<mw->modules; i++)
+	{
+		// init module, calc size
+		if (mw->module[i].proc)
+			mw->module[i].proc(mw->module+i,MM_LOAD,0,0);
+	}
+}
+
+void InitMenu()
+{
+	WINDOW* mw = &menu_window;
+	memset(mw,0,sizeof(WINDOW));
+
+	mw->time = get_time();
+
+	mw->modules = 4;
+	mw->module = new MODULE[mw->modules];
+	memset(mw->module,0,sizeof(MODULE)*mw->modules);
+
+	mw->module[0].title = "Player Profile";
+	mw->module[0].h = 20; // <- will be automaticaly calculated!
+	mw->module[0].proc = ProfileProc;
+	mw->module[0].dbl=false;
+
+	mw->module[1].title = "Play Campaign";
+	mw->module[1].h = 20; // <- will be automaticaly calculated!
+	mw->module[1].proc = CampaignProc;
+	mw->module[1].dbl=true;
+
+	mw->module[2].title = "Keyboard";
+	mw->module[2].h = 14;
+	mw->module[2].proc = KeyboardProc;
+	mw->module[2].dbl=false;
+
+	mw->module[3].title = "Control Panel";
+	mw->module[3].h = 20; // <- will be automaticaly calculated!
+	mw->module[3].proc = ControlProc;
+	mw->module[3].dbl=true;
+
+	// now construct order of modules for each of 3 layouts (2,3,4 columns)
+
+	static const int layout_2[]=
+	{
+		0,2,
+		 1,
+		 3
+	};
+
+	static const int layout_3[]=
+	{
+		0,1,
+		3,2
+	};
+
+	static const int layout_4[]=
+	{
+		0,1,2,
+		 3
+	};
+
+	mw->layout = 0;
+	mw->layout_2 = layout_2;
+	mw->layout_3 = layout_3;
+	mw->layout_4 = layout_4;
+
+	mw->scroll = 0;
+	mw->smooth = 0;
+	mw->columns = 0;
+
+	for (int i=0; i<mw->modules; i++)
+	{
+		// init module, calc size
+		if (mw->module[i].proc)
+		{
+			mw->module[i].h = mw->module[i].proc(mw->module+i,MM_INIT,0,0);
+			mw->module[i].x = -1;
+			mw->module[i].y = -1;
+		}
+	}
+
+	mw->state = 0; // hovering, (should we initialy focus to quick guide module?)
+	mw->focus = 0;
+}
+
+
+void FreeMenu()
+{
+	WINDOW* mw = &menu_window;
+
+	if (mw->module)
+		delete [] mw->module;
+	mw->modules=0;
+	mw->module=0;
+
+	mw->layout_w = 0;
+	mw->layout_h = 0;
+
+	mw->layout_2=0;
+	mw->layout_3=0;
+	mw->layout_4=0;
+}
+
+static void PaintWindow(CON_OUTPUT* s, int pos, int size)
+{
+	menu_stretch(s,0,0,s->w,s->h,&window,0);
+
+	// menu_blit(s,window.l+1,window.t,&backdrop,(backdrop.w - (s->w-window.l-window.r-2))/2,pos/3,s->w-window.l-window.r-2,s->h-window.t-window.b,0);
+
+	if (pos<0)
+		return;
+
+	int client = s->h-window.t-window.b-1;
+	if (client>=size || client<3)
+		return;
+
+	int th_size = client*client / size;
+	//if (th_size>client-2)
+	//	th_size = client-2;
+	if (th_size<=0)
+		th_size=1;
+
+	if (pos>size-client)
+		pos = size-client;
+
+	int th_pos = (2 * pos * (client-th_size) + (size-client)) / (2*(size-client));
+	if (th_pos==0 && pos!=0)
+		th_pos=1;
+	if (th_pos==client-th_size && pos!=size-client)
+		th_pos=client-th_size-1;
+
+	for (int y=window.t; y<window.t+th_pos; y++)
+		menu_blit(s,s->w-window.r-3,y,&window,window.w-window.r-3,window.t,3,1,0);
+
+	menu_blit(s,s->w-window.r-3,window.t+th_pos,&window,window.w-window.r-3,window.t+1,3,1,0);
+
+	for (int y=window.t+th_pos+1; y<window.t+th_pos+th_size; y++)
+		menu_blit(s,s->w-window.r-3,y,&window,window.w-window.r-3,window.t+3,3,1,0);
+
+	menu_blit(s,s->w-window.r-3,window.t+th_pos+th_size,&window,window.w-window.r-3,window.t+4,3,1,0);
+
+	for (int y=window.t+th_pos+th_size+1; y<s->h-window.b; y++)
+		menu_blit(s,s->w-window.r-3,y,&window,window.w-window.r-3,window.h-window.b-1,3,1,0);
+}
+
+static void PostPaint(CON_OUTPUT* s)
+{
+	int y = window.t;
+	int l = window.l;
+	int r = s->w-window.r-3;
+	for (int x=l; x<r; x++)
+	{
+		// should we allow '.' as well?
+		if (s->buf[(s->w+1)*y+x] != '_' && s->buf[(s->w+1)*y+x] != '.')
+			s->buf[(s->w+1)*y+x] = ' ';
+	}
+}
+
+void PaintModule(CON_OUTPUT* s, int x, int y, int w, int h, const char* title, int state, const int* clip = 0)
+{
+	menu_stretch(s,x,y,w,h,&module,state,clip);
+
+	const char* glyph = module.mono[state];
+
+	char titbuf[64];
+	int len = strlen(title);
+	if (len>w-12)
+		len=w-12;
+	else
+	if ( (len&1) != (w&1) && len<64)
+	{
+		const char* spc = strchr(title,' ');
+		if (spc)
+		{
+			int sp = spc-title+1;
+			memcpy(titbuf,title,sp);
+			memcpy(titbuf+sp,spc,len-(spc-title));
+			title=titbuf;
+			len++;
+		}
+	}
+
+	int cx = (w-len)/2;
+
+	menu_print(s,x+cx,y+2,title, len, clip);
+
+	menu_fill(s,x+cx-2,y+2, glyph[(module.w+1)*2+4], 1,1, clip);
+	menu_fill(s,x+cx+len+1,y+2, glyph[(module.w+1)*2+8], 1,1, clip);
+
+	menu_fill(s,x+3,y+2, glyph[(module.w+1)*2+3], cx-5,1, clip);
+	menu_fill(s,x+cx+len+2,y+2, glyph[(module.w+1)*2+9], w-5 -cx-len,1, clip);
+
+}
+
+void PaintScroll(CON_OUTPUT* s, int x, int dy, int h, int pos, int size, int state, const int* clip)
+{
+	// (using module scroll asset)
+
+	if (size<=h)
+	{
+		// no need to draw it, right?
+		return;
+	}
+
+	int th_size = h*h / size;
+	//if (th_size>client-2)
+	//	th_size = client-2;
+	if (th_size<=0)
+		th_size=1;
+
+	if (pos>size-h)
+		pos = size-h;
+
+	int th_pos = (2 * pos * (h-th_size) + (size-h)) / (2*(size-h));
+	if (th_pos==0 && pos!=0)
+		th_pos=1;
+	if (th_pos==h-th_size && pos!=size-h)
+		th_pos=h-th_size-1;
+
+	// upper dots
+	for (int y=0; y<th_pos; y++)
+		menu_blit(s,x,y+dy,&module,module.w-module.r-3,module.t,3,1,state,clip);
+
+	// upper thumb
+	menu_blit(s,x,dy+th_pos,&module,module.w-module.r-3,module.t+1,3,1,state,clip);
+
+	// middle thumb
+	for (int y=th_pos+1; y<th_pos+th_size; y++)
+		menu_blit(s,x,y+dy,&module,module.w-module.r-3,module.t+3,3,1,state,clip);
+
+	// lower thumb
+	menu_blit(s,x,dy+th_pos+th_size,&module,module.w-module.r-3,module.t+4,3,1,state,clip);
+
+	// lower dots
+	for (int y=th_pos+th_size+1; y<=h; y++)
+		menu_blit(s,x,dy+y,&module,module.w-module.r-3,module.h-module.b-1,3,1,state,clip);
+
+}
+
+int RunMenu(CON_OUTPUT* s)
+{
+	WINDOW* mw = &menu_window;
+
+	static int w = s->w;
+	static int h = s->h;
+
+	static int fr=0;
+
+	// while (1)
+	{
+		fr++;
+
+		int dw = 0;
+		int dh = 0;
+		get_terminal_wh(&dw,&dh);
+		int nw = dw;
+		int nh = dh;
+
+
+		if (nw>160)
+			nw=160;
+		if (nw<80)
+			nw=80;
+		if (nh>50)
+			nh=50;
+		if (nh<25)
+			nh=25;
+
+		if (w!=nw || h!=nh)
+		{
+			resize_con_output(s,nw,nh, ' ');
+			w=nw;
+			h=nh;
+		}
+
+		UpdateLayout(s);
+
+		unsigned long t = get_time();
+
+		if (t>mw->time)
+		{
+			float transition = expf( (-(int)(t-mw->time))/100.0f );
+
+			if (mw->smooth != mw->scroll)
+			{
+				if (mw->smooth < mw->scroll)
+				{
+					mw->fsmooth = mw->scroll - transition*(mw->scroll-mw->fsmooth);
+					mw->smooth = (int)floorf(mw->fsmooth + 0.5f);
+					if (mw->smooth > mw->scroll)
+						mw->smooth = mw->scroll;
+				}
+				else
+				{
+					mw->fsmooth = mw->scroll - transition*(mw->scroll-mw->fsmooth);
+					mw->smooth = (int)floorf(mw->fsmooth + 0.5f);
+					if (mw->smooth < mw->scroll)
+						mw->smooth = mw->scroll;
+				}
+			}
+
+			for (int i=0; i<mw->modules; i++)
+			{
+				MODULE* m = mw->module + i;
+				if (m->x != m->dx)
+				{
+					if (m->x < m->dx)
+					{
+						m->fx = m->dx - transition*(m->dx-m->fx);
+						m->x = (int)floorf(m->fx + 0.5f);
+						if (m->x > m->dx)
+							m->x = m->dx;
+					}
+					else
+					{
+						m->fx = m->dx - transition*(m->dx-m->fx);
+						m->x = (int)floorf(m->fx + 0.5f);
+						if (m->x < m->dx)
+							m->x = m->dx;
+					}
+				}
+
+				if (m->y != m->dy)
+				{
+					if (m->y < m->dy)
+					{
+						m->fy = m->dy - transition*(m->dy-m->fy);
+						m->y = (int)floorf(m->fy + 0.5f);
+						if (m->y > m->dy)
+							m->y = m->dy;
+					}
+					else
+					{
+						m->fy = m->dy - transition*(m->dy-m->fy);
+						m->y = (int)floorf(m->fy + 0.5f);
+						if (m->y < m->dy)
+							m->y = m->dy;
+					}
+				}
+			}
+		}
+
+		mw->time = t;
+
+		// paint window
+		PaintWindow(s,mw->smooth,mw->height);
+
+		int client_w = s->w - window.l - window.r -3;
+		int client_h = s->h - window.t - window.b;
+
+		// paint modules
+		int clip[4] = { window.l, window.t, client_w, client_h };
+
+		// non hovered modules first
+		for (int i=0; i<mw->modules; i++)
+		{
+			if ( mw->module+i == mw->focus )
+				continue;
+
+			PaintModule( s, mw->module[i].x , mw->module[i].y - mw->smooth, mw->module[i].w, mw->module[i].h, mw->module[i].title, mw->module[i].state, clip);
+			if (mw->module[i].proc)
+				mw->module[i].proc( mw->module+i, MM_PAINT, (void*)s, (void*)clip );
+		}
+
+		// then hovered one
+		PaintModule( s, mw->focus->x , mw->focus->y - mw->smooth, mw->focus->w, mw->focus->h, mw->focus->title, mw->focus->state, clip);
+		if (mw->focus->proc)
+			mw->focus->proc( mw->focus, MM_PAINT, (void*)s, (void*)clip );
+
+		PostPaint(s); // fix top client row, allows only '.' and ' ' glyphs and forces black background
+
+		if (1)
+		{
+			char buf[81];
+			int len = sprintf_s(buf,81,"ascii-patrol ver. alpha 1.7 by Gumix");
+			menu_print(s, (s->w - len)/2, s->h-1, buf, len, 0);
+		}
+
+		if (mw->prompt_active)
+		{
+			PromptProc( MM_PAINT, (void*)s, (void*)clip );
+		}
+
+		menu_write(s,dw,dh,0,0,-1,-1);
+
+		CON_INPUT ir[4];
+		int irn=0;
+
+		get_input_len(&irn);
+		while (irn)
+		{
+			read_input(ir,4,&irn);
+
+			for (int i=0; i<irn; i++)
+			{
+				int input_handled=0;
+
+				if (mw->prompt_active)
+				{
+					if ( PromptProc( MM_INPUT, (void*)(ir+i), 0 ) )
+						mw->prompt_active = false;
+					continue;
+				}
+
+				if (ir[i].EventType == CON_INPUT_TCH_BEGIN && touch_scroll.id<0)
+				{
+					touch_scroll.id = ir[i].Event.TouchEvent.id;
+
+					int tx = ir[i].Event.TouchEvent.x;
+					int ty = ir[i].Event.TouchEvent.y;
+					for (int j=0; j<mw->modules; j++)
+					{
+						MODULE* m = mw->module + j;
+						int x = m->x + 1/*+ (module.l+2)*/;
+						int y = m->y + 1 /*+ (module.t+1)*/ - menu_window.smooth;
+						int w = m->w - 2;
+						int h = m->h - 1;
+
+						if ( tx >= x && tx < x+w && ty >= y && ty < y+h)
+						{
+							if (mw->focus == m && mw->focus->state == 2)
+							{
+								// redirect
+								touch_scroll.redirect = true;
+								touch_scroll.dirty = false;
+								touch_scroll.org_scroll = -1;
+								break;
+							}
+						}
+					}
+
+					// otherwise check one more thing:
+					// if touch hits scroll 'page' indicator we will operate in oposite direction
+					// ...
+
+					if (!touch_scroll.redirect)
+					{
+						input_handled = 1;
+						touch_scroll.dirty = false;
+						touch_scroll.org_scroll = mw->smooth;
+						touch_scroll.org_x = touch_scroll.cur_x = ir[i].Event.TouchEvent.x;
+						touch_scroll.org_y = touch_scroll.cur_y = ir[i].Event.TouchEvent.y;
+					}
+				}
+
+				if (ir[i].EventType == CON_INPUT_TCH_MOVE && touch_scroll.id == ir[i].Event.TouchEvent.id)
+				{
+					if (!touch_scroll.redirect)
+					{
+						if ( ABS(touch_scroll.cur_x - ir[i].Event.TouchEvent.x) > 1 ||
+							touch_scroll.cur_y != ir[i].Event.TouchEvent.y)
+						{
+							touch_scroll.dirty = true;
+							touch_scroll.cur_x = ir[i].Event.TouchEvent.x;
+							touch_scroll.cur_y = ir[i].Event.TouchEvent.y;
+
+							if (mw->height >= client_h) // allowable scroll
+							{
+								mw->scroll = touch_scroll.org_scroll - (touch_scroll.cur_y - touch_scroll.org_y);
+								if (mw->scroll < 0)
+									mw->scroll = 0;
+								if (mw->scroll > mw->height - client_h + 1)
+									mw->scroll = mw->height - client_h + 1;
+							}
+						}
+
+						input_handled = 1;
+					}
+				}
+
+				if (ir[i].EventType == CON_INPUT_TCH_END && touch_scroll.id == ir[i].Event.TouchEvent.id)
+				{
+					touch_scroll.id = -1;
+
+					if (!touch_scroll.dirty && !touch_scroll.redirect)
+					{
+						bool defocus = true;
+
+						int tx = ir[i].Event.TouchEvent.x;
+						int ty = ir[i].Event.TouchEvent.y;
+						for (int j=0; j<mw->modules; j++)
+						{
+							MODULE* m = mw->module + j;
+							int x = m->x + 1 /*+ (module.l+2)*/;
+							int y = m->y + 1 /*+ (module.t+1)*/ - menu_window.smooth;
+							int w = m->w - 2;
+							int h = m->h - 1;
+
+							if ( tx >= x && tx < x+w && ty >= y && ty < y+h)
+							{
+								if (mw->focus != m)
+								{
+									int fl=1;
+									int ey=0;
+									if (mw->focus->proc)
+										mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+
+									// * -> none
+									if (m)
+										mw->focus->state = 0;
+									else
+									{
+										mw->state = 0;
+										mw->focus->state = 1;
+									}
+								}
+
+								if (m && m->state!=2)
+								{
+									mw->focus = m;
+
+									int fl=2;
+									int ey=0;
+									if (mw->focus->proc)
+										mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+
+									mw->state = 1;
+									mw->focus->state = 2;
+
+									defocus = false;
+
+									// ensure full visibility
+									if (mw->focus->dy - window.t - mw->scroll < 0)
+										mw->scroll = mw->focus->dy - window.t;
+									if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+										mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+								}
+
+								break;
+							}
+						}
+
+						if (defocus && mw->focus->state == 2)
+						{
+							int fl=1;
+							int ey=0;
+							if (mw->focus->proc)
+								mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+
+							mw->state = 0;
+							mw->focus->state = 1;
+						}
+					}
+
+					if (!touch_scroll.redirect)
+						input_handled = 1;
+
+					touch_scroll.dirty = false;
+					touch_scroll.org_scroll = -1;
+					touch_scroll.redirect = false;
+				}
+
+				if (!input_handled && mw->state==1) // module is focused!
+				{
+					if (mw->focus->proc)
+					{
+						input_handled = mw->focus->proc( mw->focus, MM_INPUT, (void*)(ir+i), 0 );
+
+						// temporarily to handle play campaing
+						if (input_handled == -3)
+						{
+							return -3;
+						}
+					}
+				}
+
+				if (!input_handled && ir[i].EventType == CON_INPUT_KBD)
+				{
+					if (ir[i].Event.KeyEvent.bKeyDown)
+					{
+						switch (ConfMapInput(ir[i].Event.KeyEvent.uChar.AsciiChar))
+						{
+							case 27:
+							{
+								if (mw->state==1)
+								{
+									int fl=1;
+									int ey=0;
+									if (mw->focus->proc)
+										mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+
+									// focus -> hover
+									mw->state = 0;
+									mw->focus->state = 1;
+									break;
+								}
+								else
+								{
+									// we should display some message box here,
+									// to make sure player really intented to exit
+									return -2;
+								}
+							}
+
+							case 13:
+							{
+								if (mw->state==0)
+								{
+									int fl=2;
+									int ey=0;
+									if (mw->focus->proc)
+										mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+
+									// hover -> focus
+									mw->state = 1;
+									mw->focus->state = 2;
+								}
+
+								break;
+							}
+
+							case KBD_LT: // --
+							{
+								if (mw->state || !mw->focus->left)
+									break;
+
+								int fl=0,ey;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 0;
+
+								fl = 1;
+								mw->focus = mw->focus->left;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 1;
+
+								mw->focus_col = mw->focus->col;
+
+								// smooth scroll to hovered mod
+								if (mw->focus->dy - window.t - mw->scroll < 0)
+									mw->scroll = mw->focus->dy - window.t;
+								if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+									mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+
+								break;
+							}
+
+							case KBD_RT: // ++
+							{
+								if (mw->state || !mw->focus->right)
+									break;
+
+								int fl=0,ey;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 0;
+
+								fl = 1;
+								mw->focus = mw->focus->right;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 1;
+
+								mw->focus_col = mw->focus->col;
+
+								// smooth scroll to hovered mod
+								if (mw->focus->dy - window.t - mw->scroll < 0)
+									mw->scroll = mw->focus->dy - window.t;
+								if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+									mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+
+								break;
+							}
+
+							case KBD_UP:
+							{
+								if (mw->state || !mw->focus->upper && !mw->focus->upper2)
+									break;
+
+								MODULE* upper=0;
+								if (!mw->focus->upper)
+									upper = mw->focus->upper2;
+								else
+								if (!mw->focus->upper2)
+									upper = mw->focus->upper;
+								else
+								{
+									// choose better one
+									upper = mw->focus->col == mw->focus_col ? mw->focus->upper : mw->focus->upper2;
+								}
+
+								int fl=0,ey;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 0;
+
+								fl = 1;
+								mw->focus = upper;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 1;
+
+								// smooth scroll to hovered mod
+								if (mw->focus->dy - window.t - mw->scroll < 0)
+									mw->scroll = mw->focus->dy - window.t;
+								if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+									mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+
+								break;
+							}
+							case KBD_DN:
+							{
+								if (mw->state || !mw->focus->lower && !mw->focus->lower2)
+									break;
+
+								MODULE* lower=0;
+								if (!mw->focus->lower)
+									lower = mw->focus->lower2;
+								else
+								if (!mw->focus->lower2)
+									lower = mw->focus->lower;
+								else
+								{
+									// choose better one
+									lower = mw->focus->col == mw->focus_col ? mw->focus->lower : mw->focus->lower2;
+								}
+
+								int fl=0,ey;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 0;
+
+								fl = 1;
+								mw->focus = lower;
+								if (mw->focus->proc)
+									mw->focus->proc(mw->focus,MM_FOCUS,&fl,&ey);
+								mw->focus->state = 1;
+
+								// smooth scroll to hovered mod
+								if (mw->focus->dy - window.t - mw->scroll < 0)
+									mw->scroll = mw->focus->dy - window.t;
+								if (mw->focus->dy+mw->focus->h - window.t - mw->scroll > client_h)
+									mw->scroll = mw->focus->dy+mw->focus->h - window.t - client_h;
+
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			irn=0;
+			get_input_len(&irn);
+		}
+
+	}
+
+	return 0;
+}
+
+#endif /* GAME_ENABLE_AP */

@@ -1,0 +1,399 @@
+#ifndef GAME_H
+#define GAME_H
+
+#include "game_en.h"
+#if GAME_ENABLE_AP
+
+/**
+ * @brief Sprite类型标识符
+ * @note 使用整数常量替代多字符字面量，消除编译器警告
+ */
+#define SPRITE_SCOR		0x736F6F72	// 分数sprite ('scor'的整数值)
+#define SPRITE_POOF		0x706F6F66	// 爆炸sprite ('poof'的整数值)
+#define SPRITE_BASE		0x62617365	// 基地sprite ('base'的整数值)
+#define SPRITE_H0		0x6830		// 敌人类型0 ('h0'的整数值)
+#define SPRITE_H1		0x6831		// 敌人类型1 ('h1'的整数值)
+#define SPRITE_H2		0x6832		// 敌人类型2 ('h2'的整数值)
+#define SPRITE_H3		0x6833		// 敌人类型3 ('h3'的整数值)
+#define SPRITE_B0		0x6230		// 砖块类型0 ('b0'的整数值)
+#define SPRITE_B1		0x6231		// 砖块类型1 ('b1'的整数值)
+#define SPRITE_B2		0x6232		// 砖块类型2 ('b2'的整数值)
+#define SPRITE_B3		0x6233		// 砖块类型3 ('b3'的整数值)
+#define SPRITE_B4		0x6234		// 砖块类型4 ('b4'的整数值)
+#define SPRITE_TB		0x7462		// 道具sprite ('tb'的整数值)
+#define SPRITE_CHKP		0x63686B70	// 检查点sprite ('chkp'的整数值)
+#define SPRITE_R		'r'			// 砖块类型r (单字符)
+
+#include "assets.h"
+#include "spec.h"
+
+
+void GamePreAlloc();
+
+struct DIALOG
+{
+	int who;
+	const char* text;
+};
+
+struct LEVEL
+{
+	char name;
+	char name2;
+	int time_limit;
+	int time_perfect;
+	ASSET* bkgnd;
+	const char* sprite;
+	const char* height;
+
+	const DIALOG* dialog;
+};
+
+struct COURSE
+{
+	const char* name;
+	const LEVEL* level;
+	int flags;
+};
+
+extern char ch_ground;
+
+extern char ch_bullet;
+
+extern char ch_basher;
+extern char ch_drone;
+extern char ch_ufo;
+
+extern const LEVEL beginner[];
+extern const LEVEL champion[];
+extern /*const*/ LEVEL test_area[];
+
+extern const COURSE campaign[];
+
+int InterScreenInput();
+
+struct SCREEN : CON_OUTPUT
+{
+	virtual ~SCREEN();
+	SCREEN(int _w, int _h, char transp = ' ');
+	void Clear();
+	virtual void Resize(int _w, int _h);
+	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
+	int Write(int dw, int dh, int sx, int sy, int sw=-1, int sh=-1);
+	bool ClipTo(SCREEN* scr, int& dx, int& dy, int& sx, int& sy, int& sw, int& sh);
+
+	void BlendPage(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1);
+
+	char t;
+};
+
+struct SPRITE
+{
+	int data_pos;
+	int x_offset;
+	int y_offset;
+	int width;
+	int height;
+	int frames;
+	int frame;
+	const ASSET* data;
+	SPRITE* next;
+	SPRITE* prev;
+
+	int group_id;
+
+	int cookie;
+	int cookie_data[4];
+
+	const char* score_anim[2]; // mono & shade
+	ASSET asset;
+
+	char score_text[81];
+
+	virtual ~SPRITE();
+
+	SPRITE();
+	SPRITE(const ASSET* anim);
+	SPRITE(const char* name);
+	SPRITE(int _score);
+
+	void Init();
+	void Init(const ASSET* anim);
+	void Init(const char* name);
+	void Init(int _score);
+
+	void SetFrame(int fr);
+	virtual bool HitTest(int sx, int sy);
+	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, char bgkey=0, bool blend=true);
+
+	static int AnimWidth(const ASSET* a);
+	static int AnimHeight(const ASSET* a);
+	static int AnimFrames(const ASSET* a);
+};
+
+struct FNT
+{
+	SPRITE fnt;
+	FNT(const ASSET* f);
+	void Paint(SCREEN* s, int x, int y, const char* txt);
+};
+
+struct WHEEL:SPRITE
+{
+	virtual ~WHEEL() {}
+	WHEEL():SPRITE(&wheel) {}
+};
+
+struct CANNON:SPRITE
+{
+	virtual ~CANNON() {}
+	CANNON():SPRITE(&cannon) {}
+};
+
+struct CHASSIS:SPRITE
+{
+	SPRITE b;
+	int ex;
+	virtual ~CHASSIS();
+	CHASSIS();
+	virtual void Paint(SCREEN* s, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, char underkey=0, bool blend=true);
+	void Explode(int f);
+};
+
+struct SCROLL : SCREEN
+{
+	virtual ~SCROLL();
+	SCROLL(int _w, int _h, char transp=' ');
+
+	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
+	virtual void Resize(int _w, int _h);
+	virtual void Scroll(int s);
+
+	int scroll;
+};
+
+struct BACKGROUND : SCROLL
+{
+	virtual ~BACKGROUND();
+	BACKGROUND(int _w, int _h);
+	virtual void Scroll(int s);
+};
+
+struct LANDSCAPE : SCROLL
+{
+	int len;
+	const ASSET* data;
+	virtual ~LANDSCAPE();
+	LANDSCAPE(int _w, int _h, const ASSET* _data);
+
+	virtual void Scroll(int s);
+};
+
+struct FIG:SPRITE
+{
+	virtual ~FIG();
+
+	FIG(const ASSET* font, const char* str);
+	FIG(const ASSET* font, int val, bool time);
+
+	void Update(const char* str);
+	virtual void Paint(SCREEN* scr, int _dx, int _dy, int _sx, int _sy, int _sw=-1, int _sh=-1, char bgkey=0, bool blend=true);
+
+	int pitch;
+	char* text;
+};
+
+
+struct BULLET
+{
+	int x,y;
+	int vx,vy;
+	int fr;
+	int sx;
+	int oy;
+	void* voice;
+	int cookie;
+};
+
+
+struct TERRAIN;
+
+struct Field
+{
+	Field();
+	void Rand();
+	void Animate();
+	float field(int x, int y);
+	char cb(int x, int y);
+	static char cb(int x, int y, void* p);
+
+	float thr;
+	int generator[10][5]; // 10 generators each x,y,r,vx,vy
+	TERRAIN* t;
+};
+
+struct TERRAIN : SCROLL
+{
+	int lives;
+
+	char* hitbin; // permanent deaths
+	int hitcur[256]; // 256 is max num of enemies per sublevel!
+	int hits;
+
+	Field fld;
+	int interference_size;
+	int interference_from;
+	int interference_to;
+	float interference_mul;
+
+	char base_point; // name of first chkpoint
+	int check_passed;
+	int check_scroll;
+	int check_points;
+	int* check_point;
+
+	int scr_height;
+
+	int group_id;
+	int group_len[16];
+	int group_mul[16];
+
+	int sprite_scroll;
+
+	int len;
+	char* data;
+
+	int items_len;
+	const char* items;
+
+	// ON GROUND
+	SPRITE* head; // <- inserting new sprites
+	SPRITE* tail; // <- reversed painting
+
+	// FLYING
+	SPRITE* fly_head; // <- inserting new sprites
+	SPRITE* fly_tail; // <- reversed painting
+
+	int bullets;
+	BULLET bullet[100];
+
+	virtual ~TERRAIN();
+	TERRAIN(int _w, int _h, int _scrh, const char* sprite, const char* height, char* _hitbin, char _base_point='A', char _start_point='@', int _lives=3);
+
+	virtual void Resize(int _w, int _h);
+	int GetMaxHeight(int x, int n);
+	bool HitTest(CHASSIS* ch_spr, int x, int y, int fr);
+	bool BulletTest(int fr, int x, int y, int* game_score);
+	bool CannonTest(int x, int y, int f, int fr, int* game_score=0);
+	void DismissSprites(int fr, int speed);
+	void AnimateSprites(int fr, int speed, bool expl);
+
+	virtual void Paint(SCREEN* scr, int dx, int dy, int sx, int sy, int sw=-1, int sh=-1, bool blend=false);
+	virtual void Scroll(int s);
+};
+
+struct LEVEL_MODAL : MODAL
+{
+	int x;
+
+	int write_size;
+	int write_persec;
+
+	int w;
+	int h;
+
+	BACKGROUND b;
+	LANDSCAPE  m;
+	LANDSCAPE  d;
+
+	int speed;
+
+	TERRAIN t;
+
+	CHASSIS chassis;
+	WHEEL wheel[3];
+
+	int chaisis_vert;
+
+	int key_state;
+
+	/*
+	int tch_state;
+	int tch_id[32];
+	CON_INPUT tch_quit;
+	*/
+
+	int vely;
+	int posy; // grounded
+
+	int expl;
+	int expl_x;
+	int wheel_posx[3];
+	int wheel_vert[3];
+	int wheel_vely[3];
+	int wheel_velx[3];
+
+	int fr;
+	int freeze_fr;
+
+	unsigned long start_tm;
+	unsigned long lag_tm;
+
+	int t_scroll_div;
+	int d_scroll_div;
+	int m_scroll_div;
+	int b_scroll_div;
+
+	// absolute hi-res scroll position
+	int scroll;
+
+	CANNON c;
+	bool cannon_hit;
+	int cannon_t;
+	int cannon_x;
+	int cannon_x2;
+	int cannon_y;
+	int cannon_sx;
+
+	int bullets;
+	int bullet_fr;
+	BULLET bullet[32];
+
+	// level passed anim
+	int post_split;
+	int post_scroll;
+	int post_x;
+
+	SCREEN* s;
+
+	int* score;
+	int* level_time;
+	int lives;
+	int start_lives;
+	const char* player_name;
+
+	void* jump_voice;
+
+	const char* course_name;
+
+	const LEVEL* current_level;
+
+	virtual ~LEVEL_MODAL();
+	LEVEL_MODAL(SCREEN* _s, int _lives, int _start_lives, int* _score, int* _level_time, const char* _player_name,
+				const char* _course_name, const LEVEL* _current_level, int iSubLev, char* _hitbin);
+
+	virtual int Run();
+
+	// platform input wrapper
+	void GetTerminalWH(int* _w, int* _h);
+	bool GetInputLen(int* len);
+	void ReadInput(CON_INPUT* ir, int n, int* r);
+	bool HasKeyReleases();
+};
+
+void Interference(SCREEN* s, int dist, int noise, unsigned long phase, int freq, int amp, bool sync);
+void CleanupSpriteGarbage();
+
+#endif
+
+#endif /* GAME_ENABLE_AP */

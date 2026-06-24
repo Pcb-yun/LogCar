@@ -57,20 +57,17 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define KEY0_Pin GPIO_PIN_4
-#define KEY0_GPIO_Port GPIOE
 #define LED_Red_Pin GPIO_PIN_9
 #define LED_Red_GPIO_Port GPIOF
-#define LED_Green_Pin GPIO_PIN_10
-#define LED_Green_GPIO_Port GPIOF
+#define LED_IDLE_Pin GPIO_PIN_10
+#define LED_IDLE_GPIO_Port GPIOF
 #define KEY_UP_Pin GPIO_PIN_0
 #define KEY_UP_GPIO_Port GPIOA
-#define OPS_RX_Pin GPIO_PIN_1
-#define OPS_RX_GPIO_Port GPIOA
-#define Tracking_TX_Pin GPIO_PIN_2
-#define Tracking_TX_GPIO_Port GPIOA
-#define Tracking_RX_Pin GPIO_PIN_3
-#define Tracking_RX_GPIO_Port GPIOA
+#define START_Pin GPIO_PIN_1
+#define START_GPIO_Port GPIOA
+#define START_EXTI_IRQn EXTI1_IRQn
+#define BATTERY_Pin GPIO_PIN_2
+#define BATTERY_GPIO_Port GPIOA
 #define SERVO_TX_Pin GPIO_PIN_10
 #define SERVO_TX_GPIO_Port GPIOB
 #define SERVO_RX_Pin GPIO_PIN_11
@@ -85,14 +82,20 @@ void Error_Handler(void);
 #define Terminal_RX_GPIO_Port GPIOA
 #define OPS_TX_Pin GPIO_PIN_10
 #define OPS_TX_GPIO_Port GPIOC
-#define SCAN_TX_Pin GPIO_PIN_12
-#define SCAN_TX_GPIO_Port GPIOC
-#define SCAN_RX_Pin GPIO_PIN_2
-#define SCAN_RX_GPIO_Port GPIOD
+#define OPS_RX_Pin GPIO_PIN_11
+#define OPS_RX_GPIO_Port GPIOC
+#define SCANER_TX_Pin GPIO_PIN_12
+#define SCANER_TX_GPIO_Port GPIOC
+#define SCANER_RX_Pin GPIO_PIN_2
+#define SCANER_RX_GPIO_Port GPIOD
 #define Tracking_KEY_Pin GPIO_PIN_13
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14
 #define Tracking_RST_GPIO_Port GPIOG
+#define Tracking_SCL_Pin GPIO_PIN_6
+#define Tracking_SCL_GPIO_Port GPIOB
+#define Tracking_SDA_Pin GPIO_PIN_7
+#define Tracking_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

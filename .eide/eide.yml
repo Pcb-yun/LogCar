@@ -24,7 +24,9 @@ virtualFolder:
                 - path: Core/Src/main.c
                 - path: Core/Src/gpio.c
                 - path: Core/Src/freertos.c
+                - path: Core/Src/adc.c
                 - path: Core/Src/dma.c
+                - path: Core/Src/i2c.c
                 - path: Core/Src/iwdg.c
                 - path: Core/Src/tim.c
                 - path: Core/Src/usart.c
@@ -39,6 +41,8 @@ virtualFolder:
           files:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c
@@ -52,6 +56,8 @@ virtualFolder:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_iwdg.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
           folders: []
@@ -75,6 +81,17 @@ virtualFolder:
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
             - path: Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F/port.c
           folders: []
+    - name: ansi_art
+      files:
+        - path: Applications/ANSI_Art/Art_Data.c
+        - path: Applications/ANSI_Art/Art_show.c
+      folders: []
+    - name: chassis
+      files:
+        - path: Applications/chassis/chassis.c
+        - path: Applications/chassis/kinematics/kinematics.c
+        - path: Applications/chassis/motion/motion_control.c
+      folders: []
     - name: lettershell
       files:
         - path: Applications/letter_shell/shell_port.c
@@ -84,6 +101,40 @@ virtualFolder:
         - path: Applications/letter_shell/src/shell_ext.c
         - path: Applications/letter_shell/log/log.c
         - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
+        - path: Applications/letter_shell/game/game.c
+      folders: []
+    - name: games
+      files:
+        - path: Applications/letter_shell/game/2048/2048.c
+        - path: Applications/letter_shell/game/snake/snake.c
+        - path: Applications/letter_shell/game/snake/snake_tiny.c
+        - path: Applications/letter_shell/game/ASCII_Patrol/assets.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/conf.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/game_ap.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/gameover.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/inter.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/manual.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/menu.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/spec_mcu.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/temp.cpp
+        - path: Applications/letter_shell/game/ASCII_Patrol/twister.cpp
+      folders: []
+    - name: mission
+      files:
+        - path: Applications/LogCar_mission/mission.c
+      folders: []
+    - name: nav
+      files:
+        - path: Applications/nav/localization/nav_local.c
+        - path: Applications/nav/tools/nav_tools.c
+        - path: Applications/nav/trajectory_tracking/nav_tracker.c
+        - path: Applications/nav/utils/nav_math.c
+        - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_map_data.c
+      folders: []
+    - name: battery
+      files:
+        - path: Drivers/User/ADC/battery.c
       folders: []
     - name: misc
       files:
@@ -107,7 +158,6 @@ virtualFolder:
         - path: Drivers/User/STEP/driver/step_ttl.c
         - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
-        - path: Drivers/User/STEP/motion/motion_control.c
       folders: []
     - name: track
       files:
@@ -141,17 +191,29 @@ targets:
         - Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F
         - Drivers/CMSIS/Device/ST/STM32F4xx/Include
         - Drivers/CMSIS/Include
+        - Applications/ANSI_Art
+        - Applications/chassis
+        - Applications/chassis/kinematics
+        - Applications/chassis/motion
         - Applications/letter_shell
-        - Applications/letter_shell/src
+        - Applications/letter_shell/game
+        - Applications/letter_shell/game/ASCII_Patrol
+        - Applications/letter_shell/game/snake
         - Applications/letter_shell/log
         - Applications/letter_shell/shell_enhance
+        - Applications/letter_shell/src
+        - Applications/LogCar_mission
+        - Applications/nav
+        - Applications/nav/localization
+        - Applications/nav/trajectory_tracking
+        - Applications/nav/utils
+        - Drivers/User/ADC
         - Drivers/User/MISC
         - Drivers/User/OPS
         - Drivers/User/RTOS
         - Drivers/User/SERVO
         - Drivers/User/STEP
         - Drivers/User/STEP/driver
-        - Drivers/User/STEP/motion
         - Drivers/User/TRACK
         - Drivers/User/SCANNER
         - .cmsis/include

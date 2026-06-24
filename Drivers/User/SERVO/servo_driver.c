@@ -6,7 +6,8 @@
 
 #include "servo_driver.h"
 #include "log.h"
-
+#include "stream_buffer.h"
+#include "usart.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -14,10 +15,23 @@
 
 static uint8_t Servo_CalcChecksum(Package_t *pkg);
 static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
+StreamBufferHandle_t Servo_Rx_StreamHandle = NULL;
 
-#if SERVO_ADVANCED_MODE || SERVO_DLC || SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR || SERVO_PING
+#if SERVO_ASYNC || SERVO_SYNC || SERVO_MONITOR || SERVO_SYNC_MONITOR
 ServoData servodata[SERVO_MAX_COUNT];
 #endif
+
+/**
+ * @brief 从接收流缓冲区读取一个字节
+ * @param byte 读取到的字节
+ * @param timeout_ms 超时时间(ms)
+ * @return SERVO_STATUS 状态码
+ */
+static SERVO_STATUS Servo_ReadByte(uint8_t *byte,uint32_t timeout_ms){
+    size_t n = xStreamBufferReceive(Servo_Rx_StreamHandle,byte,1,pdMS_TO_TICKS(timeout_ms));
+    return n == 1 ? SERVO_STATUS_SUCCESS : SERVO_STATUS_TIMEOUT;
+}
+
 /*舵机进阶模式*/
 #if SERVO_ADVANCED_MODE
 /**
@@ -789,7 +803,7 @@ SERVO_STATUS Servo_Monitor(uint8_t servo_id, ServoData servodata[]) {
  * @return SERVO_STATUS 状态码
  */
 static SERVO_STATUS Servo_Sync_RecvPackage(Package_t *pkg) {
-    extern osMessageQueueId_t Servo_Rx_DataHandle;
+    extern StreamBufferHandle_t Servo_Rx_StreamHandle;
     uint8_t byte;
     uint8_t header = 0;
     uint8_t bIdx = 0;
@@ -802,7 +816,7 @@ static SERVO_STATUS Servo_Sync_RecvPackage(Package_t *pkg) {
     while((osKernelGetTickCount() - startTime) < SERVO_TIMEOUT_MS) {
 
         // 从队列获取一个字节
-        if(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) != osOK) {
+        if(StreamBufferReceive(Servo_Rx_StreamHandle, &byte, 10) != osOK) {
             continue;
         }
 
@@ -937,75 +951,86 @@ static SERVO_STATUS Servo_IsValidResponsePackage(Package_t *pkg) {
  * @return SERVO_STATUS 状态码
  */
 static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
-    extern osMessageQueueId_t Servo_Rx_DataHandle;
-    uint8_t byte;
+    uint8_t byte  = 0;
     uint8_t header_byte1 = 0;
     uint32_t startTime = osKernelGetTickCount();
 
-    // 超时等待（SERVO_TIMEOUT_MS）
-    while((osKernelGetTickCount() - startTime) < SERVO_TIMEOUT_MS) {
+    memset(pkg, 0, sizeof(Package_t));
 
-        // 1. 查找帧头（滑动窗口）
-        while(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) == osOK) {
-            if(header_byte1 == 0 && byte == 0x05) {
-                header_byte1 = byte;  // 收到第一个字节 0x05
-            } else if(header_byte1 == 0x05 && byte == 0x1C) {
-                pkg->header = 0x1C05;  // 帧头检测成功
+    while ((osKernelGetTickCount() - startTime) < 100) {
+     /* 1. 查找帧头 —— [CHANGE] 内层循环加总超时检查，防止死循环 */
+        while ((osKernelGetTickCount() - startTime) < 100 &&
+               Servo_ReadByte(&byte, 10) == SERVO_STATUS_SUCCESS)
+        {
+            if (header_byte1 == 0 && byte == 0x05) {
+                header_byte1 = byte;
+            } else if (header_byte1 == 0x05 && byte == 0x1C) {
+                pkg->header = 0x1C05;
                 break;
             } else {
-                header_byte1 = 0;  // 不匹配，重置
+                header_byte1 = 0;
             }
         }
 
-        if(pkg->header != SERVO_PACK_RESPONSE_HEADER) {
-            continue;  // 没找到帧头，继续
-        }
-
-        // 2. 接收 cmdId
-        if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->cmdId, NULL, 10) != osOK) {
+        if (pkg->header != SERVO_PACK_RESPONSE_HEADER) {
             continue;
         }
 
-        // 3. 接收 size（判断是否同步模式）
-        if(osMessageQueueGet(Servo_Rx_DataHandle, &byte, NULL, 10) != osOK) {
+        /* 2. 接收 cmdId */
+        if (Servo_ReadByte(&pkg->cmdId, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
             continue;
         }
 
-        if(byte == 0xFF) {
-            // 同步模式：size 占2字节
+        /* 3. 接收 size（判断同步模式） */
+        if (Servo_ReadByte(&byte, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
+            continue;
+        }
+
+        if (byte == 0xFF) {
+            /* 同步模式：size 占 2 字节 */
             pkg->isSync = 1;
             uint8_t sizeLow, sizeHigh;
-            if(osMessageQueueGet(Servo_Rx_DataHandle, &sizeLow, NULL, 10) != osOK) continue;
-            if(osMessageQueueGet(Servo_Rx_DataHandle, &sizeHigh, NULL, 10) != osOK) continue;
+            if (Servo_ReadByte(&sizeLow, 10) != SERVO_STATUS_SUCCESS)  { pkg->header = 0; continue; }
+            if (Servo_ReadByte(&sizeHigh, 10) != SERVO_STATUS_SUCCESS) { pkg->header = 0; continue; }
             pkg->size = sizeLow | (sizeHigh << 8);
         } else {
-            // 普通模式：size 占1字节
+            /* 普通模式：size 占 1 字节 */
             pkg->isSync = 0;
             pkg->size = byte;
         }
 
-        // 4. 检查 size 有效性
-        if(pkg->size == 0 || pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE) {
-            continue;  // 无效大小，重新同步
-        }
-
-        // 5. 接收 content
-        for(uint16_t i = 0; i < pkg->size; i++) {
-            if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->content[i], NULL, 10) != osOK) {
-                break;
-            }
-        }
-
-        // 6. 接收 checksum
-        if(osMessageQueueGet(Servo_Rx_DataHandle, &pkg->checksum, NULL, 10) != osOK) {
+        /* 4. 检查 size 有效性 */
+        if (pkg->size == 0 || pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE) {
+            pkg->header = 0;
             continue;
         }
 
-        // 7. 验证包有效性
+        /* 5. [CHANGE] content 一次性批量读取 */
+        size_t received = xStreamBufferReceive(
+            Servo_Rx_StreamHandle,
+            pkg->content,
+            pkg->size,
+            pdMS_TO_TICKS(10)
+        );
+        if (received < pkg->size) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 6. 接收 checksum */
+        if (Servo_ReadByte(&pkg->checksum, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 7. 验证包有效性 */
         return Servo_IsValidResponsePackage(pkg);
     }
 
     return SERVO_STATUS_TIMEOUT;
+
 }
 
 /**
@@ -1193,54 +1218,33 @@ SERVO_STATUS Servo_StopOnControlMode(uint8_t servo_id, uint8_t mode, uint16_t po
  * @return 字节流长度
  */
 static uint16_t Servo_PackageToBytes(Package_t *pkg, uint8_t *buffer) {
-    uint16_t offset = 0;
-    uint8_t checksum = 0;
+     uint16_t offset = 0;
 
-    // 1. 写入帧头（小端：低字节在前）
-    buffer[offset++] = pkg->header & 0xFF;        // 帧头低字节
-    buffer[offset++] = (pkg->header >> 8) & 0xFF; // 帧头高字节
-    checksum += buffer[offset-2] + buffer[offset-1];
+    /* 帧头（小端） */
+    buffer[offset++] = pkg->header & 0xFF;
+    buffer[offset++] = (pkg->header >> 8) & 0xFF;
 
-    // 2. 写入命令ID
+    /* 命令 ID */
     buffer[offset++] = pkg->cmdId;
-    checksum += pkg->cmdId;
 
-    // 3. 写入长度字段
+    /* 长度字段 */
     if (pkg->isSync || pkg->size > 255) {
-        // 同步模式：0xFF + 2字节长度
         buffer[offset++] = 0xFF;
-        checksum += 0xFF;
-        buffer[offset++] = pkg->size & 0xFF;        // 长度低字节
-        buffer[offset++] = (pkg->size >> 8) & 0xFF; // 长度高字节
-        checksum += buffer[offset-2] + buffer[offset-1];
-    } else {
-        // 普通模式：1字节长度
         buffer[offset++] = pkg->size & 0xFF;
-        checksum += pkg->size;
+        buffer[offset++] = (pkg->size >> 8) & 0xFF;
+    } else {
+        buffer[offset++] = pkg->size & 0xFF;
     }
 
-    // 4. 写入内容数据
+    /* 内容 */
     for (uint16_t i = 0; i < pkg->size; i++) {
         buffer[offset++] = pkg->content[i];
-        checksum += pkg->content[i];
     }
 
-    // 5. 写入校验和
-    buffer[offset++] = checksum % 256;
+    /* [CHANGE] 直接用 SendPackage_Common 中已算好的 checksum */
+    buffer[offset++] = pkg->checksum;
 
     return offset;
-}
-
-/**
- * @brief 向串口发送数据
- * @param data 发送数据指针
- * @param size 发送数据大小
- */
-static void Servo_Uart_Send(uint8_t* data, uint16_t size) {
-    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
-    HAL_UART_Transmit_DMA(&huart3, data, size);
-
-    osEventFlagsWait(System_StatusHandle, UART3_TX_IDLE, osFlagsWaitAny, osWaitForever);
 }
 
 /**
@@ -1251,8 +1255,8 @@ void Servo_Tx_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Servo_Tx_DataHandle;
 
-    Package_t pkg;
-    uint8_t txBuffer[256];
+    static Package_t pkg;
+    static uint8_t txBuffer[256];
     uint16_t len;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
@@ -1261,8 +1265,21 @@ void Servo_Tx_Task(void *argument) {
         if(osMessageQueueGet(Servo_Tx_DataHandle, &pkg, NULL, osWaitForever) == osOK) {
             len = Servo_PackageToBytes(&pkg, txBuffer);
 
-            // 同步发送（等待发送完成）
-            Servo_Uart_Send(txBuffer, len);
+            osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
+            HAL_UART_Transmit_DMA(&huart3, txBuffer, len);
+            osEventFlagsWait(System_StatusHandle, UART3_TX_IDLE, osFlagsWaitAny, osWaitForever);
         }
     }
+}
+
+/**
+ * @brief 舵机模块初始化
+ * @note 初始化串口，设置波特率为115200
+ */
+void Servo_Init(void) {
+    MX_USART3_UART_Init();
+    Servo_Rx_StreamHandle = xStreamBufferCreate(512, 1);
+    configASSERT(Servo_Rx_StreamHandle != NULL);
+    osEventFlagsClear(System_StatusHandle, UART3_TX_IDLE);
+    osEventFlagsClear(System_StatusHandle, UART3_RX_IDLE);
 }

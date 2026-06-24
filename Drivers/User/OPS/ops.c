@@ -14,22 +14,47 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static void Data_Analyse(const uint8_t rec, OPSData_t *data);
+
+static OPSData_t *g_ops = NULL;
+static bool is_init = false;
+static void Data_Analyse(const uint8_t rec);
+static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len);
+extern osMutexId_t OPS_MutexHandle;
 
 /**
  * @brief 初始化平面定位模块
  * */
-void OPS_Init(void) {
-    MX_UART4_Init();
+bool OPS_Init(void) {
+    g_ops = pvPortMalloc(sizeof(OPSData_t));
+    if(g_ops == NULL) {
+        return false;
+    }
+    memset(g_ops, 0, sizeof(OPSData_t));
+    is_init = true;
+
+    return true;
 }
 
 /**
- * @brief 发送命令到定位模块
- * @param cmd 命令字符串
- * @param len 命令长度
- */
-static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len) {
-    HAL_UART_Transmit(&huart4, cmd, len, 100);
+ * @brief 获取平面定位数据
+ * @param pose 定位数据指针
+ * */
+bool OPS_Get(OPSData_t *pose) {
+    if(!is_init) return false;
+    if (osMutexAcquire(OPS_MutexHandle, osWaitForever) == osOK) {
+        memcpy(pose, g_ops, sizeof(OPSData_t));
+        osMutexRelease(OPS_MutexHandle);
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief 归零定位模块
+ * */
+void OPS_Zero(void) {
+    OPS_Send_Cmd((const uint8_t *)"ACT0", 4);
 }
 
 /**
@@ -38,20 +63,25 @@ static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len) {
 void OPS_Update_Task(void *argument) {
     (void)argument;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
-    extern osMessageQueueId_t OPS_DataHandle;
-
     Uart4_RxBuf_t rx_buf;
-    OPSData_t ops_data;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    if (!is_init) {
+        osMessageQueueDelete(Uart4_Rx_DataHandle);
+        vTaskDelete(NULL);
+    }
+    MX_UART4_Init();
 
     for (;;) {
         osMessageQueueGet(Uart4_Rx_DataHandle, &rx_buf, NULL, osWaitForever);
 
-        for (uint8_t j = 0; j < rx_buf.len; j++) {
-            Data_Analyse(rx_buf.data[j], &ops_data);
+        if (osMutexAcquire(OPS_MutexHandle, osWaitForever) == osOK) {
+            g_ops->timestamp = xTaskGetTickCount();
+            for (uint8_t j = 0; j < rx_buf.len; j++) {
+                Data_Analyse(rx_buf.data[j]);
+            }
+            osMutexRelease(OPS_MutexHandle);
         }
-        osMessageQueuePut(OPS_DataHandle, &ops_data, NULL, 0);
     }
 }
 
@@ -67,6 +97,10 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
     uint32_t timeout = 16 * 60 * 1000;
     char spinner[] = {'|', '/', '-', '\\'};
     uint8_t spinner_idx = 0;
+
+    if (!is_init) {
+        logWarning("OPS module not initialized"); return;
+    }
 
     logPrintln("The calibration takes about 15 minutes and the error is absolutely stationary.\r\n"
         "Calibration is not recommended in general.\r\n"
@@ -126,7 +160,11 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
  * @brief 位置重置
  */
 static void OPS_Zero_Shell(int argc, char *argv[]) {
-    OPS_Send_Cmd((const uint8_t *)"ACT0", 4);
+    if (!is_init) {
+        logWarning("OPS module not initialized"); return;
+    }
+
+    OPS_Zero();
     logPrintln("Position reset");
 }
 #endif /* OPS_ZERO */
@@ -136,6 +174,10 @@ static void OPS_Zero_Shell(int argc, char *argv[]) {
  * @brief 设置参数命令处理函数
  */
 static void OPS_Set_Shell(int argc, char *argv[]) {
+    if (!is_init) {
+        logWarning("OPS module not initialized"); return;
+    }
+
     if (argc != 3) {
         logPrintln(OPS_SET_HELP); return;
     }
@@ -179,50 +221,56 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
  * @brief 实时查看位置数据
  */
 static void OPS_View_Shell(void) {
-    extern osMessageQueueId_t OPS_DataHandle;
-    OPSData_t ops_data;
     char ch;
     extern Shell shell;
 
-    logPrintln("Position Data Viewer - Press ^C to exit");
+    if (!is_init) {
+        logWarning("OPS module not initialized"); return;
+    }
+
+    logPrintln("\033[?25l\rPosition Data Viewer - Press ^C to exit\r\n"
+               "X: ------.--  Y: ------.--\r\n"
+               "Yaw: ---.--  Pitch: ---.--  Roll: ---.--\r\n"
+               "Wz: ---.-- dps  Timestamp:"
+    );
 
     for (;;) {
-        if (osMessageQueueGet(OPS_DataHandle, &ops_data, NULL, 50) == osOK) {
-            char buf[128];
-            int len = 0;
+        char buf[128];
+        int len = 0;
 #if OPS_USE_POS
-            len += sprintf(buf + len, "\033[2K\rX: %.2f  Y: %.2f\r\n", ops_data.x, ops_data.y);
+        len += sprintf(buf + len, "\033[3A\033[2K\rX: %.2f  Y: %.2f\r\n", g_ops->x, g_ops->y);
 #else
-            len += sprintf(buf + len, "\033[2K\rX: ------.--  Y: ------.--\r\n");
+        len += sprintf(buf + len, "X: ------.--  Y: ------.--\r\n");
 #endif
 #if OPS_USE_YAW
-            len += sprintf(buf + len, "Yaw: %.2f  ", ops_data.yaw);
+        len += sprintf(buf + len, "Yaw: %.2f  ", g_ops->yaw);
 #else
-            len += sprintf(buf + len, "Yaw: ---.--  ");
+        len += sprintf(buf + len, "Yaw: ---.--  ");
 #endif
 #if OPS_USE_PITCH
-            len += sprintf(buf + len, "Pitch: %.2f  ", ops_data.pitch);
+        len += sprintf(buf + len, "Pitch: %.2f  ", g_ops->pitch);
 #else
-            len += sprintf(buf + len, "Pitch: ---.--  ");
+        len += sprintf(buf + len, "Pitch: ---.--  ");
 #endif
 #if OPS_USE_ROLL
-            len += sprintf(buf + len, "Roll: %.2f  \r\n", ops_data.roll);
+        len += sprintf(buf + len, "Roll: %.2f\r\n", g_ops->roll);
 #else
-            len += sprintf(buf + len, "Roll: ---.--  \r\n");
+        len += sprintf(buf + len, "Roll: ---.--\r\n");
 #endif
 #if OPS_USE_ANG_VEL
-            len += sprintf(buf + len, "Wz: %.2f dps", ops_data.w_z);
+        len += sprintf(buf + len, "Wz: %.2f dps", g_ops->w_z);
 #else
-            len += sprintf(buf + len, "Wz: ---.-- dps");
+        len += sprintf(buf + len, "Wz: ---.-- dps  ");
 #endif
-            logPrintln("%s", buf);
-        }
+        len += sprintf(buf + len, "Timestamp: %u", g_ops->timestamp);
+        logPrintln("%s", buf);
 
         if (shell.read(&ch, 1) == 1) {
             if (ch == 0x03) break;
         }
+        osDelay(10);
     }
-    logPrintln("\033[4A\033[J\033[2A");
+    logPrintln("\033[4A\033[J\033[2A\033[?25h");
 }
 
 ShellCommand OPSGroup[] = {
@@ -241,13 +289,20 @@ ShellCommand OPSGroup[] = {
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 ops, OPSGroup, OPS Tool Group);
 
+/**
+ * @brief 发送命令到定位模块
+ * @param cmd 命令字符串
+ * @param len 命令长度
+ */
+static void OPS_Send_Cmd(const uint8_t *cmd, uint16_t len) {
+    HAL_UART_Transmit(&huart4, cmd, len, 100);
+}
 
 /**
  * @brief 数据解析函数
  * @param rec 串口接收到的字节数据
- * @param data 定位数据结构体指针
  * */
-static void Data_Analyse(const uint8_t rec, OPSData_t *data) {
+static void Data_Analyse(const uint8_t rec) {
     static uint8_t count, i;
 	static union {
 		uint8_t date[24];
@@ -268,20 +323,24 @@ static void Data_Analyse(const uint8_t rec, OPSData_t *data) {
 		case 4:
 			if(rec == 0x0d) {
 #if OPS_USE_POS
-				data->x = posture.ActVal[3];
-				data->y = posture.ActVal[4];
+				// g_ops->x = posture.ActVal[3];
+				// g_ops->y = posture.ActVal[4];
+                // 由于实际安装而进行的修改
+                g_ops->x = posture.ActVal[4];
+				g_ops->y = -posture.ActVal[3];
+
 #endif
 #if OPS_USE_YAW
-				data->yaw = posture.ActVal[0];
+				g_ops->yaw = posture.ActVal[0];
 #endif
 #if OPS_USE_PITCH
-				data->pitch = posture.ActVal[1];
+				g_ops->pitch = posture.ActVal[1];
 #endif
 #if OPS_USE_ROLL
-				data->roll = posture.ActVal[2];
+				g_ops->roll = posture.ActVal[2];
 #endif
 #if OPS_USE_ANG_VEL
-				data->w_z = posture.ActVal[5];
+				g_ops->w_z = posture.ActVal[5];
 #endif
 			} count = 0; break;
 		default: count = 0; break;

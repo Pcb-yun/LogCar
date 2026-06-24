@@ -18,6 +18,7 @@ extern "C" {
 
 
 bool Motor_Init(void);
+void Motor_zero(void);
 bool Motor_Send_Cmd(MotorCmd_t *cmd);
 
 
