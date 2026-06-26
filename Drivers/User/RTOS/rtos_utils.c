@@ -236,7 +236,7 @@ static void Event_Info(void) {
         logPrintln("%-20s  %s", "UART3_TX_IDLE", (flags & 0x20) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "UART3_RX_IDLE", (flags & 0x40) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "ADC1_CONVCPLT", (flags & 0x80) ? "SET" : "RESET");
-        logPrintln("%-20s  %s", "MISSION_RUN", (flags & 0x100) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "SHELL_ONLINE", (flags & 0x100) ? "SET" : "RESET");
     }
 }
 
