@@ -111,14 +111,14 @@ const osThreadAttr_t OPS_Update_attributes = {
 osThreadId_t Servo_CtrlHandle;
 const osThreadAttr_t Servo_Ctrl_attributes = {
   .name = "Servo_Ctrl",
-  .stack_size = 256 * 4,
+  .stack_size = 320 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal3,
 };
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
   .name = "Servo_Tx",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal4,
 };
 /* Definitions for Battery_Get */

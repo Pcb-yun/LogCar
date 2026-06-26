@@ -234,6 +234,8 @@ void Nav_Stop(void) {
     MotionControl_Stop();
     g_nav_core->state = NAV_STATE_IDLE;
     g_nav_core->cached_target = NULL;
+    g_nav_core->last_vx = 0.0f;
+    g_nav_core->last_vy = 0.0f;
     restore_motion_params();
 }
 
@@ -359,6 +361,8 @@ void Nav_Task(void *argument) {
                 }
 
             } else {
+                pid_reset(&g_nav_core->yaw_pid);
+
                 float cos_yaw = cosf(current_pose.yaw * DEG_TO_RAD);
                 float sin_yaw = sinf(current_pose.yaw * DEG_TO_RAD);
 
@@ -410,6 +414,10 @@ void Nav_Task(void *argument) {
                 }
             }
 
+            if (g_nav_core->state != NAV_STATE_RUNNING) {
+                out_vx = 0.0f; out_vy = 0.0f; yaw_speed = 0.0f;
+                MotionControl_Stop();
+            }
             MotionControl_SetVelocity(out_vx, out_vy, yaw_speed);
         }
     }
