@@ -12,12 +12,11 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "Events.h"
-#include "shell.h"
+#include "shell_port.h"
 #include "log.h"
 #include "usart.h"
 #include "string.h"
 
-#define SHELL_BUFFER_SIZE 1024
 
 Shell shell;
 char shellBuffer[SHELL_BUFFER_SIZE];
@@ -89,13 +88,56 @@ void Shell_Task(void *argument) {
    for(;;) {
       // 优先将数据发送给需要使用串口的应用程序
       if(osEventFlagsGet(System_StatusHandle) & APP_NEED_USART) {
-         osDelay(200);
+         osDelay(10);
          continue;
       }
       if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 50) == osOK) {
          shellHandler(&shell, data);
       }
    }
+}
+
+/**
+ * @brief 在线检查任务
+ */
+void Online_Check_Task(void *argument) {
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    (void)argument;
+
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+
+    for (;;) {
+        osDelay(SHELL_ONLINE_CHECK_TIME);
+        if((osEventFlagsGet(System_StatusHandle) & APP_NEED_USART)) continue;
+        osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+
+        shell.write((char[]){0x05}, 1);    // 查询指令(ENQ)0x05
+
+        uint8_t read_count = 0;
+        uint8_t read_buf[5] = {0};
+
+        // 尝试读取4个字节
+        while(read_count < 4) {
+           if(osMessageQueueGet(Usart1_Rx_DataHandle, &read_buf[read_count], NULL, 50) == osOK) {
+               read_count++;
+           } else {
+               osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
+               break; // 读取超时，退出循环
+           }
+        }
+
+       if(read_count == 4) {
+           if(strcmp((char*)read_buf, "Wind") == 0) {
+               if((osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE) == 0) {
+                   osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
+                   Shell_New_Convo(&shell);
+               }
+           } else {
+               osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
+           }
+       }
+       osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+    }
 }
 
 /**

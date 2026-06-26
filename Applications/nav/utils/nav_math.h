@@ -152,6 +152,7 @@ static inline float lerp(float a, float b, float t) {
 }
 
 float fast_invsqrt(float x);
+float atan2f(float y, float x);
 
 
 #ifdef __cplusplus

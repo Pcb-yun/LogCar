@@ -45,7 +45,7 @@ bool Battery_Init(void) {
     g_battery->voltage = HAL_ADC_GetValue(&hadc1);
     HAL_ADC_Stop(&hadc1);
 
-    g_battery->interval_ms = 500;
+    g_battery->interval_ms = 200;
 
     float raw_voltage = (float)g_battery->voltage * ADC_VREF_MV / ADC_RESOLUTION;
     g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO + BATTERY_OFFSET);

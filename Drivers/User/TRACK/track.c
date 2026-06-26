@@ -37,8 +37,8 @@ bool Track_Init(void) {
     memset(g_track, 0, sizeof(TrackData_t));
     track_i2c_status = TRACK_STATUS_IDLE;
 
-    g_track->mode = TRACK_DIGITAL;
-    g_track->time = 100;
+    g_track->mode = TRACK_STOP;
+    g_track->time = 20;
     is_init = true;
 
     return is_init;
@@ -243,7 +243,7 @@ static int16_t I2C_ReadDigital(void) {
     }
 
     track_i2c_status = TRACK_STATUS_BUSY;
-    HAL_StatusTypeDef ret = HAL_I2C_Mem_Read_DMA(TRACK_I2C_HANDLE, 
+    HAL_StatusTypeDef ret = HAL_I2C_Mem_Read_DMA(TRACK_I2C_HANDLE,
                                              TRACK_I2C_ADDR << 1,
                                              0x30,
                                              I2C_MEMADD_SIZE_8BIT,

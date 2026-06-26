@@ -183,30 +183,37 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
     }
 
     char *endptr;
-    int32_t int_value = strtol(argv[2], &endptr, 10);
+    float value = strtof(argv[2], &endptr);
     if (*endptr != '\0') {
         logPrintln("Invalid value: %s", argv[2]); return;
     }
-
-    float value = (float)int_value;
 
     union {
         float f;
         uint8_t bytes[4];
     } data;
-    data.f = value;
 
     uint8_t cmd[8] = {'A', 'C', 'T', 0, 0, 0, 0, 0};
 
     if (strcmp(argv[1], "j") == 0) {
         cmd[3] = 'J';
-        logPrintln("Set yaw to %ld", int_value);
-    } else if (strcmp(argv[1], "x") == 0) {
-        cmd[3] = 'X';
-        logPrintln("Set X to %ld", int_value);
+        logPrintln("Set yaw to %.2f", value);
+    // } else if (strcmp(argv[1], "x") == 0) {
+    //     cmd[3] = 'X';
+    //     logPrintln("Set X to %.2f", value);
+    // } else if (strcmp(argv[1], "y") == 0) {
+    //     cmd[3] = 'Y';
+    //     logPrintln("Set Y to %.2f", value);
+    // } else {
+    // 由于实际安装而进行的修改
     } else if (strcmp(argv[1], "y") == 0) {
+        data.f = -value;
+        cmd[3] = 'X';
+        logPrintln("Set Y to %.2f", -value);
+    } else if (strcmp(argv[1], "x") == 0) {
+        data.f = value;
         cmd[3] = 'Y';
-        logPrintln("Set Y to %ld", int_value);
+        logPrintln("Set X to %.2f", value);
     } else {
         logPrintln("Invalid command: %s\r\n"
                 OPS_SET_HELP, argv[1]); return;

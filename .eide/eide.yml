@@ -127,10 +127,10 @@ virtualFolder:
       files:
         - path: Applications/nav/localization/nav_local.c
         - path: Applications/nav/tools/nav_tools.c
-        - path: Applications/nav/trajectory_tracking/nav_tracker.c
         - path: Applications/nav/utils/nav_math.c
-        - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_core.c
         - path: Applications/nav/nav_map_data.c
+        - path: Applications/nav/nav_map.c
       folders: []
     - name: battery
       files:
@@ -148,6 +148,10 @@ virtualFolder:
       files:
         - path: Drivers/User/RTOS/rtos_utils.c
       folders: []
+    - name: scan
+      files:
+        - path: Drivers/User/SCANNER/scan_driver.c
+      folders: []
     - name: servo
       files:
         - path: Drivers/User/SERVO/servo_driver.c
@@ -158,14 +162,11 @@ virtualFolder:
         - path: Drivers/User/STEP/driver/step_ttl.c
         - path: Drivers/User/STEP/driver/ZDT_V5_Driver.c
         - path: Drivers/User/STEP/step_port.c
+        - path: Drivers/User/STEP/step_port_dlc.c
       folders: []
     - name: track
       files:
         - path: Drivers/User/TRACK/track.c
-      folders: []
-    - name: scan
-      files:
-        - path: Drivers/User/SCANNER/scan_driver.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -181,7 +182,7 @@ targets:
         - USE_HAL_DRIVER
         - STM32F407xx
         - STM32_THREAD_SAFE_STRATEGY=4
-        - USE_WG=1
+        - USE_WG=0
       incList:
         - Core/Inc
         - Drivers/STM32F4xx_HAL_Driver/Inc
@@ -205,17 +206,16 @@ targets:
         - Applications/LogCar_mission
         - Applications/nav
         - Applications/nav/localization
-        - Applications/nav/trajectory_tracking
         - Applications/nav/utils
         - Drivers/User/ADC
         - Drivers/User/MISC
         - Drivers/User/OPS
         - Drivers/User/RTOS
+        - Drivers/User/SCANNER
         - Drivers/User/SERVO
         - Drivers/User/STEP
         - Drivers/User/STEP/driver
         - Drivers/User/TRACK
-        - Drivers/User/SCANNER
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

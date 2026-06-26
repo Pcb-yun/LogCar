@@ -6,7 +6,6 @@
 
 #include "nav_math.h"
 
-
 /**
  * @brief 角度归一化
  * @param angle 角度值(度)
@@ -204,4 +203,53 @@ float fast_invsqrt(float x) {
     x = *(float*)&i;
     x = x * (1.5f - xhalf * x * x);
     return x;
+}
+
+/**
+ * @brief 反正切函数（atan）
+ * @param x 输入值
+ * @return arctan(x) 弧度值，范围 [-PI/2, PI/2]
+ */
+static float atanf_approx(float x) {
+    float x2 = x * x;
+    float x3 = x * x2;
+    float x5 = x3 * x2;
+    float x7 = x5 * x2;
+
+    return x - x3/3.0f + x5/5.0f - x7/7.0f;
+}
+
+/**
+ * @brief 四象限反正切函数
+ * @param y Y坐标
+ * @param x X坐标
+ * @return arctan2(y, x) 弧度值，范围 [-PI, PI]
+ */
+float atan2f(float y, float x) {
+    if (fabsf(x) < 1e-10f) {
+        if (y > 0) return M_PI_2;
+        if (y < 0) return -M_PI_2;
+        return 0.0f;
+    }
+
+    float abs_y = fabsf(y);
+    float abs_x = fabsf(x);
+
+    if (abs_x >= abs_y) {
+        float ratio = y / x;
+        float angle = atanf_approx(ratio);
+
+        if (x < 0) {
+            if (y >= 0) angle += M_PI;
+            else angle -= M_PI;
+        }
+        return angle;
+    } else {
+        float ratio = x / y;
+        float angle = atanf_approx(ratio);
+
+        if (y > 0) angle = M_PI_2 - angle;
+        else angle = -M_PI_2 - angle;
+        return angle;
+    }
 }

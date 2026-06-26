@@ -11,7 +11,7 @@
 #include "nav_common.h"
 #include "nav_local.h"
 #include "nav_map.h"
-#include "nav_tracker.h"
+#include "nav_core.h"
 #include "step_port.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -19,17 +19,18 @@
 
 static void shellReadLine(char *buffer, int maxLen);
 static void shellReadLineWithPrompt(char *buffer, int maxLen, const char *default_val, const char *field,const char *name);
+static void NavTools_Pose_View(void);
 
 /**
  * @brief 获取导航状态字符串
  */
-static const char *NavTools_GetStateName(TrackState_t state) {
+static const char *NavTools_GetStateName(NavState_t state) {
     switch (state) {
-        case TRACK_STATE_IDLE:     return "Idle";
-        case TRACK_STATE_RUNNING:  return "Running";
-        case TRACK_STATE_COMPLETE: return "Complete";
-        case TRACK_STATE_ERROR:    return "Error";
-        default:                   return "Unknown";
+        case NAV_STATE_IDLE:     return "Idle";
+        case NAV_STATE_RUNNING:  return "Running";
+        case NAV_STATE_COMPLETE: return "Complete";
+        case NAV_STATE_ERROR:    return "Error";
+        default:                 return "Unknown";
     }
 }
 
@@ -37,12 +38,13 @@ static const char *NavTools_GetStateName(TrackState_t state) {
  * @brief 导航到指定目标点
  */
 static void NavTools_GoTo(int argc, char *argv[]) {
-    if (argc != 2) {
-        logPrintln("Usage: nav goto [id]");
+    if (argc != 3) {
+        logPrintln("Usage: nav goto [id] [view]");
         return;
     }
 
     uint8_t id = (uint8_t)atoi(argv[1]);
+    bool view = strcmp(argv[2], "1") == 0;
     TargetPoint_t *point = Map_GetPoint(id);
 
     if (point == NULL) {
@@ -55,9 +57,10 @@ static void NavTools_GoTo(int argc, char *argv[]) {
         return;
     }
 
-    logPrintln("Navigating to ID:%u (%s)...", id, point->name);
-    if (Nav_Track_GoTo(id)) {
-        logPrintln("Navigation started");
+    if (Nav_GoTo(id)) {
+        if (strcmp(argv[2], "1") == 0) {
+            NavTools_Pose_View();
+        }
     } else {
         logWarning("Failed to start navigation");
     }
@@ -67,7 +70,7 @@ static void NavTools_GoTo(int argc, char *argv[]) {
  * @brief 停止导航
  */
 static void NavTools_Stop(void) {
-    Nav_Track_Stop();
+    Nav_Stop();
     logPrintln("Navigation stopped");
 }
 
@@ -75,24 +78,44 @@ static void NavTools_Stop(void) {
  * @brief 查询导航状态
  */
 static void NavTools_State(void) {
-    TrackState_t state = Nav_Track_GetState();
+    NavState_t state = Nav_GetState();
     logPrintln("Navigation State: %s", NavTools_GetStateName(state));
 }
 
 /**
- * @brief 显示当前位姿
+ * @brief 实时显示当前位姿
  */
-static void NavTools_Pose(int argc, char *argv[]) {
-    Pose_t pose;
-    if (Loc_Get(&pose)) {
-        logPrintln("Current Pose:");
-        logPrintln("  x:     %.2f cm", pose.x);
-        logPrintln("  y:     %.2f cm", pose.y);
-        logPrintln("  yaw:   %.2f deg", pose.yaw);
-        logPrintln("  tick:  %lu", pose.timestamp);
-    } else {
-        logWarning("Failed to get pose");
+static void NavTools_Pose_View(void) {
+    PoseTimestamp_t pose;
+    char ch;
+    extern Shell shell;
+
+    logPrintln("\033[?25l\r"
+        "Current Pose:\r\n"
+        "  x:    0.00 cm\r\n"
+        "  y:    0.00 cm\r\n"
+        "  yaw:  0.00 deg\r\n"
+        "  tick: 0");
+
+    while (1) {
+        if (!Loc_Get(&pose)) {
+            logWarning("Failed to get pose");
+            break;
+        }
+
+        logPrintln("\033[5A\033[2K\rCurrent Pose:\r\n"
+                   "\033[2K\r  x:    %.2f cm\r\n"
+                   "\033[2K\r  y:    %.2f cm\r\n"
+                   "\033[2K\r  yaw:  %.2f deg\r\n"
+                   "\033[2K\r  tick: %lu",
+            pose.pose.x, pose.pose.y, pose.pose.yaw, pose.timestamp);
+
+        if (shell.read(&ch, 1) == 1) {
+            if (ch == 0x03) break;
+        }
+        osDelay(10);
     }
+    logPrintln("\033[5A\033[J\033[2A\033[?25h");
 }
 
 /**
@@ -756,7 +779,7 @@ static void NavTools_MapAdd(void) {
 }
 
 ShellCommand NavToolsGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose, Show Current Pose),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),

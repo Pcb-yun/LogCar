@@ -11,6 +11,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <stdbool.h>
+
+
+void mission_set_running(bool running);
 
 
 #define MISSION_HELP \
