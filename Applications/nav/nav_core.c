@@ -317,7 +317,7 @@ void Nav_Task(void *argument) {
                 if (distance > 0.5f) {
                     // 提前减速：扩大减速区域
                     float speed_factor = 1.0f;
-                    float decel_start = NAV_ALIGN_DIST + 30.0f;
+                    float decel_start = NAV_ALIGN_DIST + NAV_DECEL_START_OFFSET;
                     if (distance < decel_start) {
                         speed_factor = (distance - 0.5f) / (decel_start - 0.5f);
                         if (speed_factor < 0.05f) speed_factor = 0.05f;

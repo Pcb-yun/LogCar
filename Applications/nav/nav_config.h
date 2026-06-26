@@ -21,6 +21,7 @@
 #define NAV_ALIGN_YAW_MIN         4.0f     // 对齐阶段最小偏航速度
 
 #define NAV_ALIGN_DIST            10.0f      // 进入对齐阶段距离
+#define NAV_DECEL_START_OFFSET    10.0f      // 减速起始距离偏移（距ALIGN_DIST）
 #define NAV_ALIGN_XY_KP           0.8f      // 位置P增益
 #define NAV_ALIGN_XY_DEADBAND     0.3f      // 位置死区
 
