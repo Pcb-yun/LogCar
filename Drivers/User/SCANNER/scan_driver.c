@@ -15,8 +15,8 @@ static bool is_init = false;
 Scan_Rx_t       rx;
 Scan_Pending_t  pending;
 
-static bool scan_output_enabled = true;
-static bool pending_output      = false;
+static bool scan_output_enabled = true;         // 扫描器输出使能，默认开启
+static bool pending_output      = false;        // 暂存输出标志位
 
 /**
  * @brief 从缓冲区提取可打印 ASCII 字符（过滤控制字符）
@@ -211,15 +211,15 @@ void Scan_Get_Task(void *argument)
 static void Scan_Shell(int argc, char *argv[])
 {
     if (argc < 2) {
-        logPrintln("Usage: scan [on|off|status]");
+        logPrintln("Usage: scan [on|off|status]");// 打印帮助信息
         return;
     }
 
     if (strcmp(argv[1], "on") == 0) {
-        scan_output_enabled = true;
+        scan_output_enabled = true;// 开启输出
         logPrintln("Scan output: ON");
     } else if (strcmp(argv[1], "off") == 0) {
-        scan_output_enabled = false;
+        scan_output_enabled = false;// 关闭输出
         logPrintln("Scan output: OFF");
     } else if (strcmp(argv[1], "status") == 0) {
         logPrintln("Output : %s", scan_output_enabled ? "ON" : "OFF");
@@ -241,5 +241,5 @@ SHELL_EXPORT_CMD(
     SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
     scan,
     Scan_Shell,
-    "scan control: on | off | status"
+    "scan control: on | off | status",// 扫描器控制命令
 );
