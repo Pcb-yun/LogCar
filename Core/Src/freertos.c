@@ -161,7 +161,7 @@ const osThreadAttr_t Scan_Get_attributes = {
 osThreadId_t Online_CheckHandle;
 const osThreadAttr_t Online_Check_attributes = {
   .name = "Online_Check",
-  .stack_size = 64 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal3,
 };
 /* Definitions for Usart1_Rx_Data */

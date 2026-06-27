@@ -132,20 +132,20 @@ static void process_byte(uint8_t byte, uint32_t now)
  */
 bool Scan_Init(void)
 {
-    
+
     MX_UART5_Init();
     memset(&rx, 0, sizeof(rx));
     memset(&pending, 0, sizeof(pending));
 
     Scan_Rx_Stream = xStreamBufferCreate(SCAN_STREAM_BUF_SIZE,
                                          SCAN_STREAM_TRIGGER_LVL);
-    
+
     if (Scan_Rx_Stream == NULL) {
         configASSERT(Scan_Rx_Stream != NULL);
     } else {
         is_init = true;
     }
-    
+
     return is_init;
 }
 
@@ -233,13 +233,5 @@ static void Scan_Shell(int argc, char *argv[])
         logPrintln("Usage: scan [on|off|status]");
     }
 }
-
-/**
- * @brief 导出 Shell 命令
- */
-SHELL_EXPORT_CMD(
-    SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
-    scan,
-    Scan_Shell,
-    "scan control: on | off | status",// 扫描器控制命令
-);
+SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
+    scan, Scan_Shell, scan control: on | off | status);

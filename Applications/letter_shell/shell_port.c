@@ -91,7 +91,7 @@ void Shell_Task(void *argument) {
          osDelay(10);
          continue;
       }
-      if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 50) == osOK) {
+      if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 0) == osOK) {
          shellHandler(&shell, data);
       }
    }
@@ -108,35 +108,36 @@ void Online_Check_Task(void *argument) {
 
     for (;;) {
         osDelay(SHELL_ONLINE_CHECK_TIME);
-        if((osEventFlagsGet(System_StatusHandle) & APP_NEED_USART)) continue;
-        osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+		if((osEventFlagsGet(System_StatusHandle) & APP_NEED_USART)) continue;
+		osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
-        shell.write((char[]){0x05}, 1);    // 查询指令(ENQ)0x05
+		shell.write((char[]){0x05}, 1);    // 查询指令(ENQ)0x05
 
-        uint8_t read_count = 0;
-        uint8_t read_buf[5] = {0};
+		uint8_t read_count = 0;
+		uint8_t read_buf[5] = {0};
 
-        // 尝试读取4个字节
-        while(read_count < 4) {
-           if(osMessageQueueGet(Usart1_Rx_DataHandle, &read_buf[read_count], NULL, 50) == osOK) {
-               read_count++;
-           } else {
-               osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
-               break; // 读取超时，退出循环
-           }
-        }
+		// 尝试读取4个字节
+		while(read_count < 4) {
+			if(osMessageQueueGet(Usart1_Rx_DataHandle, &read_buf[read_count], NULL, 30) == osOK) {
+				read_count++;
+			} else {
+				osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
+				break; // 读取超时，退出循环
+			}
+		}
 
-       if(read_count == 4) {
-           if(strcmp((char*)read_buf, "Wind") == 0) {
-               if((osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE) == 0) {
-                   osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
-                   Shell_New_Convo(&shell);
-               }
-           } else {
-               osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
-           }
-       }
-       osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+		if(read_count == 4) {
+			if(strcmp((char*)read_buf, "Wind") == 0) {
+				if((osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE) == 0) {
+					osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
+					Shell_New_Convo(&shell);
+				}
+			} else {
+				osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
+			}
+		}
+
+		osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     }
 }
 
