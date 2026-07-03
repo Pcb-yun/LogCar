@@ -110,9 +110,10 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     while(1) {
-        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK)
+        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK){
             if (byte == 'y') break;
-            else osEventFlagsClear(System_StatusHandle, APP_NEED_USART); return;
+            else {osEventFlagsClear(System_StatusHandle, APP_NEED_USART); return;}
+				}
         osDelay(33);
     }
 
