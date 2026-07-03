@@ -21,7 +21,7 @@ extern "C" {
 extern Shell shell;
 
 #define SHELL_BUFFER_SIZE 1024          // shell缓冲区大小
-#define SHELL_ONLINE_CHECK_TIME 2000     // shell在线检查时间间隔，单位：ms
+#define SHELL_ONLINE_CHECK_TIME 500     // shell在线检查时间间隔，单位：ms
 
 void userShellInit(void);
 

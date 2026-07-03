@@ -1443,8 +1443,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\Drivers\User\STEP\zdt-v5-driver\zdt_v5_port.c</PathWithFileName>
-      <FilenameWithoutPath>zdt_v5_port.c</FilenameWithoutPath>
+      <PathWithFileName>..\Drivers\User\STEP\step_port_dlc.c</PathWithFileName>
+      <FilenameWithoutPath>step_port_dlc.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -1455,8 +1455,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\Drivers\User\STEP\step_port_dlc.c</PathWithFileName>
-      <FilenameWithoutPath>step_port_dlc.c</FilenameWithoutPath>
+      <PathWithFileName>..\Drivers\User\STEP\zdt_v5_port.c</PathWithFileName>
+      <FilenameWithoutPath>zdt_v5_port.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

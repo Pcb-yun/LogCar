@@ -161,8 +161,8 @@ virtualFolder:
       files:
         - path: Drivers/User/STEP/zdt-v5-driver/drv/zdt_v5_drv.c
         - path: Drivers/User/STEP/zdt-v5-driver/drv/zdt_v5_engine.c
-        - path: Drivers/User/STEP/zdt-v5-driver/zdt_v5_port.c
         - path: Drivers/User/STEP/step_port_dlc.c
+        - path: Drivers/User/STEP/zdt_v5_port.c
       folders: []
     - name: track
       files:
@@ -213,7 +213,7 @@ targets:
         - Drivers/User/RTOS
         - Drivers/User/SCANNER
         - Drivers/User/SERVO
-        - Drivers/User/STEP/zdt-v5-driver
+        - Drivers/User/STEP
         - Drivers/User/STEP/zdt-v5-driver/core
         - Drivers/User/STEP/zdt-v5-driver/drv
         - Drivers/User/TRACK

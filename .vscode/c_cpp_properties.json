@@ -32,7 +32,7 @@
                 "Drivers/User/RTOS",
                 "Drivers/User/SCANNER",
                 "Drivers/User/SERVO",
-                "Drivers/User/STEP/zdt-v5-driver",
+                "Drivers/User/STEP",
                 "Drivers/User/STEP/zdt-v5-driver/core",
                 "Drivers/User/STEP/zdt-v5-driver/drv",
                 "Drivers/User/TRACK",

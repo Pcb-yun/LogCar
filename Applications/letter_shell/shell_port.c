@@ -120,8 +120,8 @@ void Online_Check_Task(void *argument) {
 		uint8_t read_count = 0;
 		uint8_t byte;
 
-		while(read_count < 8) {
-			if(osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 50) == osOK) {
+		while(read_count < 6) {
+			if(osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 20) == osOK) {
 				read_count++;
 				if(byte == Response[match_index]) {
 					match_index++;
