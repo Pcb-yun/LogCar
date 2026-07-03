@@ -92,7 +92,8 @@ void OPS_Update_Task(void *argument) {
 static void OPS_Cal_Shell(int argc, char *argv[]) {
     extern osThreadId_t OPS_UpdateHandle;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
-    extern Shell shell;
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    uint8_t byte;
     Uart4_RxBuf_t rx_buf;
     uint32_t timeout = 16 * 60 * 1000;
     char spinner[] = {'|', '/', '-', '\\'};
@@ -106,12 +107,13 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         "Calibration is not recommended in general.\r\n"
         "Would you like to proceed? (y/n)\r\n");
 
-    char ch;
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+
     while(1) {
-        if (shell.read(&ch, 1) == 1)
-            if (ch == 'y') break;
-            else return;
-        osDelay(100);
+        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK)
+            if (byte == 'y') break;
+            else osEventFlagsClear(System_StatusHandle, APP_NEED_USART); return;
+        osDelay(33);
     }
 
     osThreadSuspend(OPS_UpdateHandle);
@@ -122,6 +124,7 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         logPrintln("Calibration start: %s\r\nPress ^C to stop\r\n", rx_buf.data);
     } else {
         logPrintln("Calibration start timeout");
+        osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
         osThreadResume(OPS_UpdateHandle); return;
     }
 
@@ -140,8 +143,8 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         logPrintln("\033[1A\033[2K\rCalibrating...  %c          Usage: %02u:%02u", spinner[spinner_idx], min, sec);
         spinner_idx = (spinner_idx + 1) % 4;
 
-        if (shell.read(&ch, 1) == 1) {
-            if (ch == 0x03) {
+        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+            if (byte == 0x03) {
                 logPrintln("Keyboard interruption"); break;
             }
         }
@@ -151,6 +154,7 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         logPrintln("\033[1A\033[2K\rCalibration timeout");
     }
 
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     osThreadResume(OPS_UpdateHandle);
 }
 #endif /* OPS_CAL */
@@ -228,8 +232,8 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
  * @brief 实时查看位置数据
  */
 static void OPS_View_Shell(void) {
-    char ch;
-    extern Shell shell;
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    uint8_t byte;
 
     if (!is_init) {
         logWarning("OPS module not initialized"); return;
@@ -240,6 +244,8 @@ static void OPS_View_Shell(void) {
                "Yaw: ---.--  Pitch: ---.--  Roll: ---.--\r\n"
                "Wz: ---.-- dps  Timestamp:"
     );
+
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     for (;;) {
         char buf[128];
@@ -272,11 +278,12 @@ static void OPS_View_Shell(void) {
         len += sprintf(buf + len, "Timestamp: %u", g_ops->timestamp);
         logPrintln("%s", buf);
 
-        if (shell.read(&ch, 1) == 1) {
-            if (ch == 0x03) break;
-        }
+        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
+        if (byte == 0x03) break;
         osDelay(10);
     }
+
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[4A\033[J\033[2A\033[?25h");
 }
 

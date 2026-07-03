@@ -9,7 +9,7 @@
 #include "log.h"
 #include "shell_cmd_group.h"
 #include "motion_control.h"
-#include "step_cfg.h"
+#include "zdt_v5_cfg.h"
 #include "stdlib.h"
 #include "cmsis_os2.h"
 

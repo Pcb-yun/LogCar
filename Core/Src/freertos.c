@@ -31,7 +31,7 @@
 #include "message.h"
 #include "track.h"
 #include "usart.h"
-#include "step_port.h"
+#include "zdt_v5_cmd.h"
 #include "ops.h"
 #include "servo_driver.h"
 #include "servo_port.h"
@@ -387,7 +387,7 @@ void MX_FREERTOS_Init(void) {
   Usart1_Rx_DataHandle = osMessageQueueNew (32, sizeof(uint8_t), &Usart1_Rx_Data_attributes);
 
   /* creation of MotorCmds */
-  MotorCmdsHandle = osMessageQueueNew (4, sizeof(MotorCmd_t), &MotorCmds_attributes);
+  MotorCmdsHandle = osMessageQueueNew (6, sizeof(MotorCmd_t), &MotorCmds_attributes);
 
   /* creation of Usart6_Rx_Data */
   Usart6_Rx_DataHandle = osMessageQueueNew (4, sizeof(Usart6_RxBuf_t), &Usart6_Rx_Data_attributes);
@@ -521,6 +521,7 @@ void Sys_Init_Task(void *argument)
   }
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
+  extern bool Motor_Init(void);
   if (!Motor_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else {
     SHOW_DMESG(dmesg_ok, NULL);

@@ -8,6 +8,7 @@
 #include "shell.h"
 #include <string.h>
 #include "log.h"
+#include "Events.h"
 
 /**
  * @brief ASCII Art渲染函数
@@ -21,7 +22,11 @@ bool Art_show(const char *name) {
     }
 
     Shell *shell = shellGetCurrent();
+
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     ART_OUT(shell, data, strlen(data));
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+
     return true;
 }
 

@@ -13,7 +13,6 @@
 #include "nav_core.h"
 #include "nav_map.h"
 #include "ops.h"
-#include "step_port.h"
 
 static uint8_t current_point = 0;
 static bool mission_running = false;
@@ -85,7 +84,6 @@ static void mission_shell(int argc, char *argv[]) {
     }
 
     if (strcmp(argv[1], "run") == 0) {
-        OPS_Zero();
         logPrintln("Mission Start");
         mission_set_running(true);
     } else if (strcmp(argv[1], "stop") == 0) {

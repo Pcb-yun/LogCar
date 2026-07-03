@@ -24,6 +24,7 @@ typedef enum {
     NAV_STATE_ERROR,
 } NavState_t;
 
+#define NAV_UPDATE_TIME 10 // 导航状态更新时间间隔（毫秒）
 
 bool Nav_GoTo(uint8_t target_id);
 void Nav_Stop(void);

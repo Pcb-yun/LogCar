@@ -6,8 +6,9 @@
 
 #include "motion_control.h"
 #include "chassis_config.h"
-#include "step_port.h"
-#include "step_ttl.h"
+#include "zdt_v5_cfg.h"
+#include "zdt_v5_cmd.h"
+#include "zdt_v5_port.h"
 #include "nav_math.h"
 #include "kinematics.h"
 #include "cmsis_os2.h"

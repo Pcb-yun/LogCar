@@ -10,7 +10,6 @@
 #include "nav_map.h"
 #include "nav_config.h"
 #include "motion_control.h"
-#include "step_ttl.h"
 #include "cmsis_os2.h"
 #include "Events.h"
 #include <math.h>
@@ -19,6 +18,7 @@
 #include "task.h"
 #include <chassis_config.h>
 #include "log.h"
+#include "zdt_v5_cfg.h"
 
 #if !MOTOR_VELOCITY_MODE
     #error "MOTOR_VELOCITY_MODE must be enabled for velocity-based navigation"
@@ -260,7 +260,7 @@ void Nav_Task(void *argument) {
     uint32_t last_control_tick = 0;
 
     for (;;) {
-        osDelay(1);
+        osDelay(NAV_UPDATE_TIME);
 
         if (g_nav_core->state == NAV_STATE_IDLE) {
             last_control_tick = osKernelGetTickCount();

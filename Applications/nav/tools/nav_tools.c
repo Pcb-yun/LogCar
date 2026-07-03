@@ -12,10 +12,10 @@
 #include "nav_local.h"
 #include "nav_map.h"
 #include "nav_core.h"
-#include "step_port.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
+#include "Events.h"
 
 static void shellReadLine(char *buffer, int maxLen);
 static void shellReadLineWithPrompt(char *buffer, int maxLen, const char *default_val, const char *field,const char *name);
@@ -87,8 +87,8 @@ static void NavTools_State(void) {
  */
 static void NavTools_Pose_View(void) {
     PoseTimestamp_t pose;
-    char ch;
-    extern Shell shell;
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    uint8_t byte;
 
     logPrintln("\033[?25l\r"
         "Current Pose:\r\n"
@@ -96,6 +96,8 @@ static void NavTools_Pose_View(void) {
         "  y:    0.00 cm\r\n"
         "  yaw:  0.00 deg\r\n"
         "  tick: 0");
+
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     while (1) {
         if (!Loc_Get(&pose)) {
@@ -110,11 +112,11 @@ static void NavTools_Pose_View(void) {
                    "\033[2K\r  tick: %lu",
             pose.pose.x, pose.pose.y, pose.pose.yaw, pose.timestamp);
 
-        if (shell.read(&ch, 1) == 1) {
-            if (ch == 0x03) break;
-        }
+        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
+        if (byte == 0x03) break;
         osDelay(10);
     }
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[5A\033[J\033[2A\033[?25h");
 }
 
