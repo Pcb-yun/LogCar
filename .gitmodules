@@ -1,0 +1,3 @@
+[submodule "Drivers/User/STEP/zdt-v5-driver"]
+	path = Drivers/User/STEP/zdt-v5-driver
+	url = https://github.com/Pcb-yun/zdt-v5-driver.git
