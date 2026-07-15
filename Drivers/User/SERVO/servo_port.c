@@ -24,19 +24,12 @@
  * @param power_mW 输出功率，单位mW（0-1000）
  * @note 通过消息队列发送命令
  */
-bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
+void Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW) {
     if (id == 0 || id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
-        return false; 
     }
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_ANGLE_SHELL,
-        .servoId = id,
-        .angle = angle,
-        .interval = interval_ms,
-        .power = power_mW
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+    Servo_SetServoAngle(id,angle,interval_ms,power_mW);
+
 }
 
 /**
@@ -65,25 +58,18 @@ static void Servo_Angle_Shell(int argc, char *argv[]) {
 
 /**
  * @brief 舵机轮式运动控制接口（非阻塞式API）
- * @param servo_id 舵机ID (1-254)
+ * @param id 舵机ID (1-254)
  * @param angle 目标角度，范围-180°-180°（单圈绝对位置）
  * @param interval 运动时间，单位ms（0-65535）
  * @param power 输出功率，单位mW（0-1000）
  * @note 通过消息队列发送命令
  */
-bool Servo_MTURN(uint8_t servo_id, float angle,uint32_t interval, uint16_t power){
-    if (servo_id == 0 || servo_id > 254) {
-        logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
-        return false;
+void Servo_MTURN(uint8_t id, float angle,uint32_t interval, uint16_t power){
+    if (id == 0 || id > 254) {
+        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
     }
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_MTURN_SHELL,
-        .servoId = servo_id,
-        .angle = angle,
-        .interval = interval,
-        .power = power
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+    Servo_SetServoAngleMTurn(id,angle,interval,power);
+
 }
 
 static void Servo_Mturn_Shell(int argc, char *argv[]){
@@ -106,19 +92,13 @@ static void Servo_Mturn_Shell(int argc, char *argv[]){
 
 /**
  * @param id 舵机ID (1-254)
- * @return 命令发送结果，true=发送成功，false=发送失败
  * @note 通过消息队列发送命令
  */
-bool Servo_STOP(uint8_t id) {
+void Servo_STOP(uint8_t id) {
     if (id == 0 || id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
-        return false;
     }
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_STOP_SHELL,
-        .servoId = id
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+    Servo_StopOnControlMode(id,1,1);
 }
 
 /**
@@ -163,19 +143,25 @@ static void Servo_StopAll_Shell(void) {
 /**
  * @brief 舵机Ping接口（非阻塞式API）
  * @param id 舵机ID (1-254)
- * @return 命令发送结果，true=发送成功，false=发送失败
  * @note 通过消息队列发送命令
  */
-bool Servo_PING(uint8_t id) {
+void Servo_PING(uint8_t id) {
     if (id == 0 || id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
-        return false;
     }
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_PING_SHELL,
-        .servoId = id
-    };
-    return osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK;
+    int status = Servo_Ping(id);
+    switch (status)
+    {
+    case SERVO_STATUS_SUCCESS:
+        logPrintln("Servo %d is ONLINE", id);
+        break;
+    case SERVO_STATUS_TIMEOUT:
+        logPrintln("Servo %d is TIMEOUT", id);
+        break;
+    default:
+        logPrintln("Unknown status: %d", status);
+        break;
+    }
 }
 /**
  * @brief 舵机连通性测试命令(Shell接口)
@@ -207,31 +193,19 @@ static void Servo_Ping_Shell(int argc, char *argv[]) {
  * @param t_acc 加速时间，单位ms
  * @param t_dec 减速时间，单位ms
  * @param power 输出功率，单位mW（0-1000）
- * @return SERVO_STATUS 执行状态
  * @note 通过消息队列发送命令
  */
-bool Servo_AngleByInterval(uint8_t servo_id, float angle, 
+void Servo_AngleByInterval(uint8_t servo_id, float angle, 
                                             uint16_t interval, uint16_t t_acc,
                                             uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
-        return false;
     }
     if (angle < -180.0f || angle > 180.0f) {
         logPrintln("Invalid angle: %.2f (must be -180~180)", angle);
-        return false;
     }
-    
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_ANGLE_BY_INTERVAL_SHELL,
-        .servoId = servo_id,
-        .angle = angle,
-        .interval = interval,
-        .t_acc = t_acc,
-        .t_dec = t_dec,
-        .power = power
-    };
-    return (osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK);
+    Servo_SetServoAngleByInterval(servo_id, angle, interval, t_acc, t_dec, power);
+
 }
 
 /**
@@ -242,35 +216,22 @@ bool Servo_AngleByInterval(uint8_t servo_id, float angle,
  * @param t_acc 加速时间，单位ms
  * @param t_dec 减速时间，单位ms
  * @param power 输出功率，单位mW（0-1000）
- * @return SERVO_STATUS 执行状态
  * @note 通过消息队列发送命令
  */
-bool Servo_AngleByVelocity(uint8_t servo_id, float angle, 
+void Servo_AngleByVelocity(uint8_t servo_id, float angle, 
                                             float velocity, uint16_t t_acc,
                                             uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
-        return false;
     }
     if (angle < -180.0f || angle > 180.0f) {
         logPrintln("Invalid angle: %.2f (must be -180~180)", angle);
-        return false;
     }
     if (velocity <= 0.0f) {
         logPrintln("Invalid velocity: %.2f (must be > 0)", velocity);
-        return false;
     }
-    
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_ANGLE_BY_VELOCITY_SHELL,
-        .servoId = servo_id,
-        .angle = angle,
-        .velocity = velocity,
-        .t_acc = t_acc,
-        .t_dec = t_dec,
-        .power = power
-    };
-    return (osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK);
+    Servo_SetServoAngleByVelocity(servo_id, angle, velocity, t_acc, t_dec, power);
+
 }
 
 /**
@@ -281,35 +242,21 @@ bool Servo_AngleByVelocity(uint8_t servo_id, float angle,
  * @param t_acc 加速时间，单位ms
  * @param t_dec 减速时间，单位ms
  * @param power 输出功率，单位mW（0-1000）
- * @return SERVO_STATUS 执行状态
  * @note 通过消息队列发送命令
  */
-bool Servo_MTurnByVelocity(uint8_t servo_id, float angle,
+void Servo_MTurnByVelocity(uint8_t servo_id, float angle,
                                                  float velocity, uint16_t t_acc,
                                                  uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
-        return false;   
     }
     if (angle < -36000.0f || angle > 36000.0f) {
         logPrintln("Invalid multi-turn angle: %.2f (must be -36000~36000)", angle);
-        return false;
     }
     if (velocity <= 0.0f) {
         logPrintln("Invalid velocity: %.2f (must be > 0)", velocity);
-        return false;
     }
-    
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_MTURN_ANGLE_BY_VELOCITY_SHELL,
-        .servoId = servo_id,
-        .angle = angle,
-        .velocity = velocity,
-        .t_acc = t_acc,
-        .t_dec = t_dec,
-        .power = power
-    };
-    return (osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK);
+    Servo_SetServoAngleMTurnByInterval(servo_id, angle, velocity, t_acc, t_dec, power);
 }
 
 /**
@@ -320,35 +267,21 @@ bool Servo_MTurnByVelocity(uint8_t servo_id, float angle,
  * @param t_acc 加速时间，单位ms
  * @param t_dec 减速时间，单位ms
  * @param power 输出功率，单位mW（0-1000）
- * @return SERVO_STATUS 执行状态
  * @note 通过消息队列发送命令
  */
-bool Servo_MTurnByInterval(uint8_t servo_id, float angle,
+void Servo_MTurnByInterval(uint8_t servo_id, float angle,
                                                  uint32_t interval, uint16_t t_acc,
                                                  uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
-        return false;
     }
     if (angle < -36000.0f || angle > 36000.0f) {
         logPrintln("Invalid multi-turn angle: %.2f (must be -36000~36000)", angle);
-        return false;
     }
     if (interval == 0) {
         logPrintln("Invalid interval: %u (must be > 0)", interval);
-        return false;
     }
-    
-    ServoCmd_t cmd = {
-        .cmdType = SERVO_CMD_SET_MTURN_ANGLE_BY_INTERVAL_SHELL,
-        .servoId = servo_id,
-        .angle = angle,
-        .interval = interval,
-        .t_acc = t_acc,
-        .t_dec = t_dec,
-        .power = power
-    };
-    return (osMessageQueuePut(Servo_CmdHandle, &cmd, 0, 0) == osOK);
+    Servo_SetServoAngleMTurnByVelocity(servo_id, angle, interval, t_acc, t_dec, power);
 }
 
 // ============ Shell接口函数 ============
@@ -563,95 +496,3 @@ static void Servo_Shell(int argc, char *argv[]){
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 servo, Servo_Shell, servo control commands);
-
-/**
- * @brief 执行舵机控制命令
- * @param cmd 舵机命令结构体指针，包含命令类型、舵机ID、角度、速度等参数
- * @note 支持多种命令类型：角度控制、多圈角度控制、速度控制、阻尼模式、停止、复位等
- */
-static void Servo_ExecuteCommand(const ServoCmd_t *cmd) {
-    switch (cmd->cmdType) {
-        case SERVO_CMD_SET_ANGLE_SHELL:
-            if(Servo_SetServoAngle(cmd->servoId, cmd->angle,
-                               cmd->interval, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d angle set to %.2f", cmd->servoId, cmd->angle);
-            }
-            break;
-        case SERVO_CMD_SET_MTURN_SHELL:
-            if(Servo_SetServoAngleMTurn(cmd->servoId, cmd->angle,
-                               cmd->interval, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d mturn set to %.2f", cmd->servoId, cmd->angle);
-            } else {
-                logPrintln("Servo %d mturn failed", cmd->servoId);
-            }
-            break;
-        case SERVO_CMD_STOP_SHELL:
-            if(Servo_StopOnControlMode(cmd->servoId, 0, 0)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d stop", cmd->servoId);
-            } else {
-                logPrintln("Servo %d stop failed", cmd->servoId);
-            }
-            break;
-        #if SERVO_PING
-        case SERVO_CMD_PING_SHELL:
-            logPrintln("Servo %d ping status: %s", cmd->servoId, 
-                        (Servo_Ping(cmd->servoId) == SERVO_STATUS_SUCCESS) ? "SUCCESS" : "TIMEOUT");
-            break;
-        #endif
-        #if SERVO_ADVANCED_MODE
-        case SERVO_CMD_SET_ANGLE_BY_INTERVAL_SHELL:
-            if(Servo_SetServoAngleByInterval(cmd->servoId, cmd->angle,
-                               cmd->interval, cmd->t_acc, cmd->t_dec, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d angle set to %.2f, interval %.2f", cmd->servoId, cmd->angle);
-            } else {
-                logPrintln("Servo %d angle set failed", cmd->servoId);
-            }
-            break;
-        case SERVO_CMD_SET_ANGLE_BY_VELOCITY_SHELL:
-            if(Servo_SetServoAngleByVelocity(cmd->servoId, cmd->angle,
-                               cmd->velocity, cmd->t_acc, cmd->t_dec, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d angle set to %.2f, velocity %.2f", cmd->servoId, cmd->angle, cmd->velocity);
-            } else {
-                logPrintln("Servo %d angle set failed", cmd->servoId);
-            }
-            break;
-        case SERVO_CMD_SET_MTURN_ANGLE_BY_VELOCITY_SHELL:
-            if(Servo_SetServoAngleMTurnByVelocity(cmd->servoId, cmd->angle,
-                               cmd->velocity,cmd->t_acc, cmd->t_dec, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d mturn set to %.2f, velocity %.2f", cmd->servoId, cmd->angle, cmd->velocity);
-            } else {
-                logPrintln("Servo %d mturn set failed", cmd->servoId);
-            }
-            break;
-        case SERVO_CMD_SET_MTURN_ANGLE_BY_INTERVAL_SHELL:
-            if(Servo_SetServoAngleMTurnByInterval(cmd->servoId, cmd->angle,
-                               cmd->interval, cmd->t_acc, cmd->t_dec, cmd->power)==SERVO_STATUS_SUCCESS){
-                // logPrintln("Servo %d mturn set to %.2f, interval %.2f", cmd->servoId, cmd->angle);
-            } else {
-                logPrintln("Servo %d mturn set failed", cmd->servoId);
-            }
-            break;
-        #endif
-        default:
-            break;
-    }
-}
-
-/**
- * @brief 舵机模块控制任务
- * @param argument 任务参数
- */
-void Servo_Ctrl_Task(void *argument) {
-    (void)argument;
-    ServoCmd_t cmd;
-
-    // 等待系统初始化完成
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
-
-    for (;;) {
-        // 阻塞等待命令
-        if (osMessageQueueGet(Servo_CmdHandle, &cmd, NULL, osWaitForever) == osOK) {
-            Servo_ExecuteCommand(&cmd);
-        }
-    }
-}

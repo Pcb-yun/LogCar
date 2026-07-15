@@ -250,7 +250,6 @@ static void Queue_Info(void) {
     extern osMessageQueueId_t MotorCmdsHandle;
     extern osMessageQueueId_t Usart6_Rx_DataHandle;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
-    extern osMessageQueueId_t Servo_CmdHandle;
     extern osMessageQueueId_t Servo_Tx_DataHandle;
 
     logPrintln("ID        Name                  Count/Max    MsgSize");
@@ -289,15 +288,6 @@ static void Queue_Info(void) {
         uint32_t msg_size = osMessageQueueGetMsgSize(Uart4_Rx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Uart4_Rx_DataHandle, "Uart4_Rx_Data",
-                  count, capacity, msg_size);
-    }
-
-    if (Servo_CmdHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(Servo_CmdHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(Servo_CmdHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(Servo_CmdHandle);
-        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
-                  Servo_CmdHandle, "Servo_Cmd",
                   count, capacity, msg_size);
     }
 

@@ -108,13 +108,6 @@ const osThreadAttr_t OPS_Update_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh5,
 };
-/* Definitions for Servo_Ctrl */
-osThreadId_t Servo_CtrlHandle;
-const osThreadAttr_t Servo_Ctrl_attributes = {
-  .name = "Servo_Ctrl",
-  .stack_size = 320 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal3,
-};
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
 const osThreadAttr_t Servo_Tx_attributes = {
@@ -184,11 +177,6 @@ osMessageQueueId_t Uart4_Rx_DataHandle;
 const osMessageQueueAttr_t Uart4_Rx_Data_attributes = {
   .name = "Uart4_Rx_Data"
 };
-/* Definitions for Servo_Cmd */
-osMessageQueueId_t Servo_CmdHandle;
-const osMessageQueueAttr_t Servo_Cmd_attributes = {
-  .name = "Servo_Cmd"
-};
 /* Definitions for Servo_Tx_Data */
 osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
@@ -232,7 +220,6 @@ extern void Motor_Get_Sta_Task(void *argument);
 extern void Motor_Ctrl_Task(void *argument);
 extern void Motor_Update_Task(void *argument);
 extern void OPS_Update_Task(void *argument);
-extern void Servo_Ctrl_Task(void *argument);
 extern void Servo_Tx_Task(void *argument);
 extern void Battery_Get_Task(void *argument);
 extern void Loc_Update_Task(void *argument);
@@ -395,9 +382,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of Uart4_Rx_Data */
   Uart4_Rx_DataHandle = osMessageQueueNew (2, sizeof(Uart4_RxBuf_t), &Uart4_Rx_Data_attributes);
 
-  /* creation of Servo_Cmd */
-  Servo_CmdHandle = osMessageQueueNew (4, sizeof(ServoCmd_t), &Servo_Cmd_attributes);
-
   /* creation of Servo_Tx_Data */
   Servo_Tx_DataHandle = osMessageQueueNew (4, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
@@ -426,9 +410,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of OPS_Update */
   OPS_UpdateHandle = osThreadNew(OPS_Update_Task, NULL, &OPS_Update_attributes);
-
-  /* creation of Servo_Ctrl */
-  Servo_CtrlHandle = osThreadNew(Servo_Ctrl_Task, NULL, &Servo_Ctrl_attributes);
 
   /* creation of Servo_Tx */
   Servo_TxHandle = osThreadNew(Servo_Tx_Task, NULL, &Servo_Tx_attributes);

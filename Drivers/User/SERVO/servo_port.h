@@ -78,7 +78,7 @@ extern "C" {
     SERVO_CMD_MTURN_BY_INTERVAL_HELP
 
 /* 舵机数量配置 */
-#define SERVO_COUNT         6
+#define SERVO_COUNT         SERVO_MAX_COUNT
 
 typedef enum {
     SERVO_CMD_SET_ANGLE_SHELL = 0,
@@ -93,17 +93,6 @@ typedef enum {
 } ServoCmdType_t;
 
 typedef struct {
-    ServoCmdType_t cmdType;
-    uint8_t servoId;
-    float angle;
-    float velocity;
-    uint16_t interval;
-    uint16_t t_acc;
-    uint16_t t_dec;
-    uint16_t power;
-} ServoCmd_t;
-
-typedef struct {
     uint8_t id;
     float angle;
     int16_t voltage;
@@ -115,28 +104,25 @@ typedef struct {
 } ServoData_t;
 
 extern osMessageQueueId_t Servo_DataHandle;
-extern osMessageQueueId_t Servo_CmdHandle;
 
-void Servo_Ctrl_Task(void *argument);
-
-bool Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
-bool Servo_STOP(uint8_t id);
+void Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
+void Servo_STOP(uint8_t id);
 void Servo_STOP_ALL(void);
 
 #if SERVO_PING
-bool Servo_PING(uint8_t id);
+void Servo_PING(uint8_t id);
 #endif
 #if SERVO_ADVANCED_MODE
-bool Servo_AngleByInterval(uint8_t servo_id, float angle, 
+void Servo_AngleByInterval(uint8_t servo_id, float angle, 
                                             uint16_t interval, uint16_t t_acc,
                                             uint16_t t_dec, uint16_t power);
-bool Servo_AngleByVelocity(uint8_t servo_id, float angle, 
+void Servo_AngleByVelocity(uint8_t servo_id, float angle, 
                                             float velocity, uint16_t t_acc,
                                             uint16_t t_dec, uint16_t power);
-bool Servo_MTurnByVelocity(uint8_t servo_id, float angle,
+void Servo_MTurnByVelocity(uint8_t servo_id, float angle,
                                                  float velocity, uint16_t t_acc,
                                                  uint16_t t_dec, uint16_t power);
-bool Servo_MTurnByInterval(uint8_t servo_id, float angle,
+void Servo_MTurnByInterval(uint8_t servo_id, float angle,
                                                  uint32_t interval, uint16_t t_acc,
                                                  uint16_t t_dec, uint16_t power);
 #endif
