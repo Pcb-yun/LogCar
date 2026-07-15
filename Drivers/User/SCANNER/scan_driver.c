@@ -15,8 +15,8 @@ static bool is_init = false;
 Scan_Rx_t       rx;
 Scan_Pending_t  pending;
 
-static bool scan_output_enabled = true;         // 扫描器输出使能，默认开启
-static bool pending_output      = false;        // 暂存输出标志位
+static bool scan_output_enabled = true;
+static bool pending_output      = false;
 
 /**
  * @brief 从缓冲区提取可打印 ASCII 字符（过滤控制字符）
@@ -89,7 +89,7 @@ static void parse_and_store(void)
  * @brief 分组窗口超时 → 输出暂存条码
  * @param now 当前时间戳（毫秒）
  */
-static void  flush_pending(uint32_t now)
+static void flush_pending(uint32_t now)
 {
     if (pending.valid && !pending_output &&
         (now - pending.time) >= SCAN_GROUP_WINDOW_MS) {
@@ -132,20 +132,20 @@ static void process_byte(uint8_t byte, uint32_t now)
  */
 bool Scan_Init(void)
 {
-
+    
     MX_UART5_Init();
     memset(&rx, 0, sizeof(rx));
     memset(&pending, 0, sizeof(pending));
 
     Scan_Rx_Stream = xStreamBufferCreate(SCAN_STREAM_BUF_SIZE,
                                          SCAN_STREAM_TRIGGER_LVL);
-
+    
     if (Scan_Rx_Stream == NULL) {
         configASSERT(Scan_Rx_Stream != NULL);
     } else {
         is_init = true;
     }
-
+    
     return is_init;
 }
 
@@ -211,15 +211,15 @@ void Scan_Get_Task(void *argument)
 static void Scan_Shell(int argc, char *argv[])
 {
     if (argc < 2) {
-        logPrintln("Usage: scan [on|off|status]");// 打印帮助信息
+        logPrintln("Usage: scan [on|off|status]");
         return;
     }
 
     if (strcmp(argv[1], "on") == 0) {
-        scan_output_enabled = true;// 开启输出
+        scan_output_enabled = true;
         logPrintln("Scan output: ON");
     } else if (strcmp(argv[1], "off") == 0) {
-        scan_output_enabled = false;// 关闭输出
+        scan_output_enabled = false;
         logPrintln("Scan output: OFF");
     } else if (strcmp(argv[1], "status") == 0) {
         logPrintln("Output : %s", scan_output_enabled ? "ON" : "OFF");
@@ -233,5 +233,13 @@ static void Scan_Shell(int argc, char *argv[])
         logPrintln("Usage: scan [on|off|status]");
     }
 }
-SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
-    scan, Scan_Shell, scan control: on | off | status);
+
+/**
+ * @brief 导出 Shell 命令
+ */
+SHELL_EXPORT_CMD(
+    SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
+    scan,
+    Scan_Shell,
+    "scan control: on | off | status"
+);

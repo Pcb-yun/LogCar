@@ -154,7 +154,7 @@ const osThreadAttr_t Mission_attributes = {
 osThreadId_t Scan_GetHandle;
 const osThreadAttr_t Scan_Get_attributes = {
   .name = "Scan_Get",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal1,
 };
 /* Definitions for Online_Check */
