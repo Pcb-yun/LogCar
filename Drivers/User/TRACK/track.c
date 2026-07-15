@@ -18,10 +18,11 @@
 TrackData_t *g_track = NULL;
 TrackI2CStatus_t track_i2c_status;
 static bool is_init = false;
+static uint8_t track_dma_value = 0;
 
 static void Track_Reset(void);
 static void Track_Key(void);
-static int16_t I2C_ReadDigital(void);
+static bool I2C_Start_DMA_Read(void);
 
 
 /**
@@ -54,22 +55,24 @@ void Track_Get_Task(void *argument) {
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
+    TickType_t last_wake_time = xTaskGetTickCount();
+
     for(;;) {
-        osDelay(g_track->time);
-
-        if (g_track->mode != TRACK_DIGITAL) {
-            continue;
-        }
-
-        // 通过I2C读取数字量
-        int16_t digital = I2C_ReadDigital();
-        if (digital != -1) {
-            if (osMutexAcquire(Track_MutexHandle, osWaitForever) == osOK) {
-                g_track->digitalData = digital;
-                g_track->timestamp = xTaskGetTickCount();
-                osMutexRelease(Track_MutexHandle);
+        if (g_track->mode == TRACK_DIGITAL) {
+            if (I2C_Start_DMA_Read()) {
+                uint32_t flags = osEventFlagsWait(System_StatusHandle, TRACK_DMA_DONE,
+                                                  osFlagsWaitAny, pdMS_TO_TICKS(g_track->time * 3));
+                if (flags & TRACK_DMA_DONE) {
+                    if (osMutexAcquire(Track_MutexHandle, osWaitForever) == osOK) {
+                        g_track->digitalData = track_dma_value;
+                        g_track->timestamp = xTaskGetTickCount();
+                        osMutexRelease(Track_MutexHandle);
+                    }
+                }
             }
         }
+
+        vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(g_track->time));
     }
 }
 
@@ -240,10 +243,10 @@ static void Track_Key(void) {
  * @brief 通过I2C读取数字量寄存器（0x30）
  * @return 读取到的数字值，失败返回-1
  */
-static int16_t I2C_ReadDigital(void) {
-    static int16_t value = 0;
+
+static bool I2C_Start_DMA_Read(void) {
     if (track_i2c_status != TRACK_STATUS_IDLE) {
-        return -1;
+        return false;
     }
 
     track_i2c_status = TRACK_STATUS_BUSY;
@@ -251,11 +254,11 @@ static int16_t I2C_ReadDigital(void) {
                                              TRACK_I2C_ADDR << 1,
                                              0x30,
                                              I2C_MEMADD_SIZE_8BIT,
-                                             (uint8_t*)&value,
+                                             &track_dma_value,
                                              1);
-    track_i2c_status = TRACK_STATUS_IDLE;
-    if(ret != HAL_OK) {
-        return -1;
+    if (ret != HAL_OK) {
+        track_i2c_status = TRACK_STATUS_IDLE;
+        return false;
     }
-    return value;
+    return true;
 }

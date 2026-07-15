@@ -46,9 +46,9 @@ typedef struct {
  */
 typedef struct {
     char     data[SCAN_BARCODE_MAX_LEN + 1];
-    uint32_t time;
-    bool     valid;
-} Scan_Pending_t;
+    uint32_t time; /** 时间戳 */
+    bool     valid; /** 是否有效 */
+   } Scan_Pending_t;
 
 extern StreamBufferHandle_t Scan_Rx_Stream;
 extern Scan_Rx_t            rx;

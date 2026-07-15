@@ -24,6 +24,7 @@ extern osEventFlagsId_t System_StatusHandle;
 #define UART3_RX_IDLE (1UL << 6)        // UART3接收空闲
 #define ADC1_CONVCPLT (1UL << 7)        // ADC1转换完成
 #define SHELL_ONLINE (1UL << 8)         // shell在线
+#define TRACK_DMA_DONE (1UL << 9)       // 巡线模块DMA读取完成
 
 #ifdef __cplusplus
 }

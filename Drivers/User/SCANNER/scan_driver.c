@@ -89,7 +89,7 @@ static void parse_and_store(void)
  * @brief 分组窗口超时 → 输出暂存条码
  * @param now 当前时间戳（毫秒）
  */
-static void flush_pending(uint32_t now)
+static void  flush_pending(uint32_t now)
 {
     if (pending.valid && !pending_output &&
         (now - pending.time) >= SCAN_GROUP_WINDOW_MS) {
