@@ -9,14 +9,31 @@
 #include "usart.h"
 #include <string.h>
 
+/**
+ * @brief 帧接收状态
+ */
+typedef struct {
+    uint8_t  buf[SCAN_FRAME_MAX_SIZE];
+    uint16_t len;
+    uint32_t last_time;
+} Scan_Rx_t;
+
+/**
+ * @brief 暂存条码
+ */
+typedef struct {
+    char     data[SCAN_BARCODE_MAX_LEN + 1];
+    uint32_t time;        /**< 时间戳 */
+    bool     valid;       /**< 是否有效 */
+} Scan_Pending_t;
+
 StreamBufferHandle_t Scan_Rx_Stream = NULL;
-static bool is_init = false;
+static bool          is_init       = false;
+static Scan_Rx_t     rx;
+static Scan_Pending_t pending;
 
-Scan_Rx_t       rx;
-Scan_Pending_t  pending;
-
-static bool scan_output_enabled = true;
-static bool pending_output      = false;
+static bool scan_output_enabled  = true;
+static bool pending_output       = false;
 
 /**
  * @brief 从缓冲区提取可打印 ASCII 字符（过滤控制字符）
@@ -211,7 +228,7 @@ void Scan_Get_Task(void *argument)
 static void Scan_Shell(int argc, char *argv[])
 {
     if (argc < 2) {
-        logPrintln("Usage: scan [on|off|status]");
+        logPrintln("Usage: scan [on|off|status|get]");
         return;
     }
 
@@ -228,9 +245,16 @@ static void Scan_Shell(int argc, char *argv[])
                    pending.valid ? HAL_GetTick() - pending.time : 0UL);
         logPrintln("Stream : %u bytes available",
                    (unsigned)xStreamBufferBytesAvailable(Scan_Rx_Stream));
+    } else if (strcmp(argv[1], "get") == 0) {
+        char buf[SCAN_BARCODE_MAX_LEN + 1];
+        if (Scan_GetLatestBarcode(buf, sizeof(buf))) {
+            logPrintln("Latest barcode: %s", buf);
+        } else {
+            logPrintln("No new barcode available");
+        }
     } else {
         logPrintln("Invalid argument: %s", argv[1]);
-        logPrintln("Usage: scan [on|off|status]");
+        logPrintln("Usage: scan [on|off|status|get]");
     }
 }
 
@@ -241,5 +265,5 @@ SHELL_EXPORT_CMD(
     SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) | SHELL_CMD_DISABLE_RETURN,
     scan,
     Scan_Shell,
-    "scan control: on | off | status"
+    scan control: on | off | status | get
 );

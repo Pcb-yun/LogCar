@@ -1,6 +1,6 @@
 /**
  * @file scan_driver.h
- * @brief 扫描器驱动层
+ * @brief 扫描器驱动层 - 公共接口
  */
 
 #ifndef __SCAN_DRIVER_H
@@ -32,27 +32,7 @@
  */
 #define SCAN_STREAM_TRIGGER_LVL  1     // 收到多少字节才唤醒消费者
 
-/**
- * @brief 接收状态结构
- */
-typedef struct {
-    uint8_t  buf[SCAN_FRAME_MAX_SIZE];
-    uint16_t len;
-    uint32_t last_time;
-} Scan_Rx_t;
-
-/**
- * @brief 暂存条码结构
- */
-typedef struct {
-    char     data[SCAN_BARCODE_MAX_LEN + 1];
-    uint32_t time; /** 时间戳 */
-    bool     valid; /** 是否有效 */
-   } Scan_Pending_t;
-
-extern StreamBufferHandle_t Scan_Rx_Stream;
-extern Scan_Rx_t            rx;
-extern Scan_Pending_t       pending;
+extern StreamBufferHandle_t     Scan_Rx_Stream;
 
 bool Scan_Init(void);
 void Scan_Get_Task(void *argument);
