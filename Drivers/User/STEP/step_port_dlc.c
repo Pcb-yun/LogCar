@@ -19,93 +19,111 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 	bool keep_alive = false;
     cmd->motor_id = motor_id;
     cmd->op_type = OP_PARAM_READ;
+	MotorParamRead_t read;
 
 /******************** 系统状态参数 *********************/
 {
-    cmd->type.read.type = MP_SYS;
+    read.type = MP_SYS;
 #if MOTOR_STATUS_READ_BATCH
-    cmd->type.read.p.sys = S_BATCH;
+    read.p.sys = S_BATCH;
+	cmd->type.read = read;
 	Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #else
 #if MOTOR_STATUS_BUS_VOLTAGE
-    cmd->type.read.p.sys = S_VBUS;
+    read.p.sys = S_VBUS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_PHASE_CURRENT
-    cmd->type.read.p.sys = S_CPHA;
+    read.p.sys = S_CPHA;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_ENCODER_VALUE
-    cmd->type.read.p.sys = S_ENCL;
+    read.p.sys = S_ENCL;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_TARGET_POS
-    cmd->type.read.p.sys = S_TPOS;
+    read.p.sys = S_TPOS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_SPEED
-    cmd->type.read.p.sys = S_VEL;
+    read.p.sys = S_VEL;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_REAL_POS
-    cmd->type.read.p.sys = S_CPOS;
+    read.p.sys = S_CPOS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_POS_ERROR
-    cmd->type.read.p.sys = S_PERR;
+    read.p.sys = S_PERR;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_MOTOR_FLAGS
-    cmd->type.read.p.sys = S_FLAG;
+    read.p.sys = S_FLAG;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_HOME_FLAGS
-    cmd->type.read.p.sys = S_OFLAG;
+    read.p.sys = S_OFLAG;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_BUS_CURRENT
-    cmd->type.read.p.sys = S_CBUS;
+    read.p.sys = S_CBUS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_TEMPERATURE
-    cmd->type.read.p.sys = S_TEMP;
+    read.p.sys = S_TEMP;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_FLAGS_COMBINED
-    cmd->type.read.p.sys = S_OAF;
+    read.p.sys = S_OAF;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #endif /* MOTOR_STATUS_READ_BATCH */
 #if MOTOR_STATUS_INPUT_PULSES
-    cmd->type.read.p.sys = S_CLKI;
+    read.p.sys = S_CLKI;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_SET_POS
-    cmd->type.read.p.sys = S_SPOS;
+    read.p.sys = S_SPOS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_PIN_STATUS
-    cmd->type.read.p.sys = S_PIN;
+    read.p.sys = S_PIN;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_STATUS_BATTERY_VOLTAGE
-    cmd->type.read.p.sys = S_VBAT;
+    read.p.sys = S_VBAT;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
@@ -113,19 +131,22 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 
 /******************** 驱动配置参数 *********************/
 {
-    cmd->type.read.type = MP_DEV;
+    read.type = MP_DEV;
 #if MOTOR_DRIVER_READ_BATCH
-    cmd->type.read.p.drv = D_BATCH;
+    read.p.drv = D_BATCH;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 
 #elif MOTOR_DRIVER_POS_WINDOW
-    cmd->type.read.p.drv = D_POS_WINDOW;
+    read.p.drv = D_POS_WINDOW;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_DRIVER_HOME
-    cmd->type.read.p.drv = D_HOME;
+    read.p.drv = D_HOME;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
@@ -133,29 +154,34 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 
 /******************** 电机控制参数 *********************/
 {
-    cmd->type.read.type = MP_CTRL;
+    read.type = MP_CTRL;
 #if MOTOR_PID_READ
-    cmd->type.read.p.ctrl = C_PID;
+    read.p.ctrl = C_PID;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_INTEGRAL_LIMIT_READ
-    cmd->type.read.p.ctrl = C_INTEGRAL_LIMIT;
+    read.p.ctrl = C_INTEGRAL_LIMIT;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_PROTECT_THRESHOLD_READ
-    cmd->type.read.p.ctrl = C_PROTECT_THRESHOLD;
+    read.p.ctrl = C_PROTECT_THRESHOLD;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_COLLISION_ANGLE_READ
-    cmd->type.read.p.ctrl = C_COLLISION_ANGLE;
+    read.p.ctrl = C_COLLISION_ANGLE;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_HEARTBEAT_READ
-    cmd->type.read.p.ctrl = C_HEARTBEAT;
+    read.p.ctrl = C_HEARTBEAT;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
@@ -163,29 +189,34 @@ void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id) {
 
 // /******************** 设备信息与特殊功能 *********************/
 {
-    cmd->type.read.type = MP_INFO;
+    read.type = MP_INFO;
 #if MOTOR_DRIVER_DMX512
-    cmd->type.read.p.info = I_DMX512;
+    read.p.info = I_DMX512;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_READ_VERSION
-    cmd->type.read.p.info = I_VERSION;
+    read.p.info = I_VERSION;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_READ_PHASE_PARAMS
-    cmd->type.read.p.info = I_PHASE_PARAMS;
+    read.p.info = I_PHASE_PARAMS;
+	cmd->type.read = read;
     Motor_Send_Cmd(cmd);
 	keep_alive = true;
 #endif
 #if MOTOR_READ_OPTION_PARAMS
 #if MOTOR_DRIVER_MOTOR_TYPE || MOTOR_DIRECTION || MOTOR_FIRMWARE_TYPE || MOTOR_LOCK_PARAMS || MOTOR_DRIVER_CONTROL_MODE || MOTOR_DRIVER_LOCK_KEY || MOTOR_DRIVER_SCALE_10X
-	cmd->type.read.p.info = I_OPTION;
+	read.p.info = I_OPTION;
+	cmd->type.read = read;
 	Motor_Send_Cmd(cmd);
 #elif USE_HEARTBEAT
 	if (!keep_alive) {
-		cmd->type.read.p.info = I_OPTION;
+		read.p.info = I_OPTION;
+		cmd->type.read = read;
 		Motor_Send_Cmd(cmd);
 	}
 #endif

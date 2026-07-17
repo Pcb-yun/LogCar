@@ -86,11 +86,9 @@ void Shell_Task(void *argument) {
 
     char data;
     for(;;) {
-        osDelay(16);
+        osDelay(5);
         // 优先将数据发送给需要使用串口的应用程序
-        if(osEventFlagsGet(System_StatusHandle) & APP_NEED_USART) {
-            continue;
-        }
+        if(osEventFlagsGet(System_StatusHandle) & APP_NEED_USART) continue;
         if(osMessageQueueGet(Usart1_Rx_DataHandle, &data, NULL, 0) == osOK) {
             shellHandler(&shell, data);
         }
@@ -109,42 +107,42 @@ void Online_Check_Task(void *argument) {
 
     for (;;) {
         osDelay(SHELL_ONLINE_CHECK_TIME);
-		if((osEventFlagsGet(System_StatusHandle) & APP_NEED_USART)) continue;
-		osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
-
-		shell.write((char[]){0x05}, 1);    // 查询指令(ENQ)0x05
-
-		uint8_t Response[] = "Wind";
-		uint8_t Response_Len = 4;
-		uint8_t match_index = 0;
-		uint8_t read_count = 0;
-		uint8_t byte;
-
-		while(read_count < 6) {
-			if(osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 20) == osOK) {
-				read_count++;
-				if(byte == Response[match_index]) {
-					match_index++;
-					if(match_index == Response_Len) {
-						if((osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE) == 0) {
-							osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
-							Shell_New_Convo(&shell);
-						}
-						break;
-					}
-				} else {
-					match_index = 0;
-				}
-			} else {
-				break;
-			}
-		}
-
-		if(match_index != Response_Len) {
-			osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
-		}
-
-		osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+// 		if((osEventFlagsGet(System_StatusHandle) & APP_NEED_USART)) continue;
+// 		osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+//
+// 		shell.write((char[]){0x05}, 1);    // 查询指令(ENQ)0x05
+//
+// 		uint8_t Response[] = "Wind";
+// 		uint8_t Response_Len = 4;
+// 		uint8_t match_index = 0;
+// 		uint8_t read_count = 0;
+// 		uint8_t byte;
+//
+// 		while(read_count < 6) {
+// 			if(osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 20) == osOK) {
+// 				read_count++;
+// 				if(byte == Response[match_index]) {
+// 					match_index++;
+// 					if(match_index == Response_Len) {
+// 						if((osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE) == 0) {
+// 							osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
+// 							Shell_New_Convo(&shell);
+// 						}
+// 						break;
+// 					}
+// 				} else {
+// 					match_index = 0;
+// 				}
+// 			} else {
+// 				break;
+// 			}
+// 		}
+//
+// 		if(match_index != Response_Len) {
+// 			osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
+// 		}
+//
+// 		osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     }
 }
 

@@ -1,8 +1,18 @@
 build/
 
+MDK-ARM/RTE/
 MDK-ARM/LogCar_Code/
 MDK-ARM/DebugConfig/
 MDK-ARM/LogCar_Code.uvguix.*
+MDK-ARM/*.lst
+MDK-ARM/*.scvd
+MDK-ARM/armlib_lock_glue.c
+MDK-ARM/stm32_lock.h
+MDK-ARM/*.o
+MDK-ARM/*.axf
+MDK-ARM/*.hex
+MDK-ARM/*.bin
+MDK-ARM/*.d
 
 keilkilll.bat
 .trae/

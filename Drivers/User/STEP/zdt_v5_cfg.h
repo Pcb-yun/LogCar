@@ -208,8 +208,9 @@
 #define MOTOR_CMD_ENABLE                    1   // 电机使能控制
 #define MOTOR_CMD_STOP                      1   // 立即停止
 #define MOTOR_POS_MODE_FAST                 0   // 快速位置模式
-#define MOTOR_POS_MODE_TRAPEZOIDAL          1   // 位置模式
+#define MOTOR_POS_MODE                      1   // 位置模式
 #define MOTOR_VELOCITY_MODE                 1   // 速度模式
+#define MOTOR_SYNC_TRIGGER                  1   // 触发同步
 
 #if CURRENT_FIRMWARE == FIRMWARE_X
 #define MOTOR_POS_MODE_DIRECT               0   // 直通限速位置模式
@@ -217,19 +218,18 @@
 
 #define MOTOR_POS_MODE_DIRECT_LIMIT         0   // 直通限速位置模式（+最大电流限制）
 #define MOTOR_TORQUE_MODE_LIMIT             0   // 力矩模式（+最大速度限制）
-#define MOTOR_POS_MODE_TRAPEZOIDAL_LIMIT    0   // 位置模式（+最大电流限制）
+#define MOTOR_POS_MODE_LIMIT                0   // 位置模式（+最大电流限制）
 #define MOTOR_VELOCITY_MODE_LIMIT           0   // 速度模式（+最大电流限制）
 #endif /* CURRENT_FIRMWARE */
 
-#define MOTOR_SYNC_TRIGGER                  1   // 触发多机同步运动
 
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_X42S || CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
-#define MOTOR_MULTI_CMD                     0   // 多电机命令
+#define MOTOR_MULTI_CMD                     1   // 多电机命令
 #endif
 
 
 /******************** 触发动作命令 *********************/
-#define MOTOR_TRIGGER_ENCODER_CALIB         1   // 触发编码器校准
+#define MOTOR_TRIGGER_ENCODER_CALIB         0   // 触发编码器校准
 #define MOTOR_TRIGGER_RESET_POS             0   // 当前位置角度清零
 #define MOTOR_TRIGGER_CLEAR_PROTECT         0   // 解除堵转/过热/过流保护
 #define MOTOR_TRIGGER_FACTORY_RESET         0   // 恢复出厂设置

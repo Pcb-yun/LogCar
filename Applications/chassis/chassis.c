@@ -12,6 +12,7 @@
 #include "zdt_v5_cfg.h"
 #include "stdlib.h"
 #include "cmsis_os2.h"
+#include "Events.h"
 
 static bool is_init = false;
 
@@ -26,7 +27,7 @@ bool Chassis_Init(void) {
     return true;
 }
 
-#if MOTOR_POS_MODE_TRAPEZOIDAL
+#if MOTOR_POS_MODE
 /**
  * @brief 将车移动指定距离
  */
@@ -45,7 +46,7 @@ static void Car_Move(int argc, char *argv[]) {
 
     MotionControl_SetPosition(x_offset, y_offset, yaw_offset);
 }
-#endif /* MOTOR_POS_MODE_TRAPEZOIDAL */
+#endif /* MOTOR_POS_MODE */
 
 #if MOTOR_VELOCITY_MODE
 /**
@@ -82,6 +83,7 @@ static void Car_Key(void) {
 	uint32_t last_time;
 	float linear_speed, yaw_speed, acc, dec;
 	MotionControl_GetMotionParams(&linear_speed, &yaw_speed, &acc, &dec);
+	osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
 	for (;;) {
 		uint8_t ret = shell->read(&key, 1);
@@ -119,8 +121,9 @@ static void Car_Key(void) {
 			prev_key = 0;
 			MotionControl_Stop();
 		}
-		osDelay(1);
+		osDelay(20);
 	}
+	osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[%dA\033[J\033[2A", 1);
 }
 #endif /* MOTOR_VELOCITY_MODE */
@@ -155,7 +158,7 @@ static void Car_Params(int argc, char *argv[]) {
 }
 
 ShellCommand MoveGroup[] = {
-#if MOTOR_POS_MODE_TRAPEZOIDAL
+#if MOTOR_POS_MODE
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Car_Move, Move car),
 #endif
 #if MOTOR_VELOCITY_MODE

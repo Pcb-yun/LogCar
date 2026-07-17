@@ -184,9 +184,11 @@ void Motor_Update_Task(void *argument) {
  */
 void Motor_zero(uint8_t motor_id) {
 	MotorCmd_t cmd;
+	MotorTrigger_t trigger;
 	cmd.op_type = OP_TRIGGER;
 	cmd.motor_id = motor_id;
-	cmd.type.trigger.type = TRIG_RESET_POS;
+	trigger.type = TRIG_RESET_POS;
+	cmd.type.trigger = trigger;
 	Motor_Send_Cmd(&cmd);
 }
 #endif /* MOTOR_TRIGGER_RESET_POS */
@@ -254,11 +256,15 @@ static void Motor_vel_Shell(int argc, char *argv[]) {
 	MotorCmd_t cmd;
 	cmd.op_type = OP_CONTROL;
 	cmd.motor_id = motor_id;
-	cmd.type.ctrl.type = CTRL_VELOCITY;
-	cmd.type.ctrl.p.vel.dir = dir;
-	cmd.type.ctrl.p.vel.vel = vel;
-	cmd.type.ctrl.p.vel.acc = acc;
-	cmd.type.ctrl.p.vel.sync = false;
+
+	MotorCtrl_t ctrl;
+	cmd.type.ctrl = ctrl;
+
+	ctrl.type = CTRL_VEL;
+	ctrl.p.vel.dir = dir;
+	ctrl.p.vel.vel = vel;
+	ctrl.p.vel.acc = acc;
+	ctrl.p.vel.sync = false;
 
 	if (Motor_Send_Cmd(&cmd)) {
 		logPrintln("Velocity cmd sent to motor %d: dir=%d, vel=%d, acc=%d", motor_id, dir, vel, acc);
@@ -309,7 +315,7 @@ static void Tool_Help(void) {
 			   "  time      View or Set Update Time\r\n");
             }
 
-#if MOTOR_POS_MODE_TRAPEZOIDAL
+#if MOTOR_POS_MODE
 /**
  * @brief 单个电机位置控制
  */
@@ -342,17 +348,20 @@ if (argc != 7) {
 	MotorCmd_t cmd;
 	cmd.op_type = OP_CONTROL;
 	cmd.motor_id = motor_id;
-	cmd.type.ctrl.type = CTRL_POSITION;
-	cmd.type.ctrl.p.pos.dir = dir;
-	cmd.type.ctrl.p.pos.vel = vel;
-	cmd.type.ctrl.p.pos.acc = acc;
+	MotorCtrl_t ctrl;
+	cmd.type.ctrl = ctrl;
+
+	ctrl.type = CTRL_POS;
+	ctrl.p.pos.dir = dir;
+	ctrl.p.pos.vel = vel;
+	ctrl.p.pos.acc = acc;
 #if CURRENT_FIRMWARE == FIRMWARE_X
     uint16_t dec = atoi(argv[6]);
-	cmd.type.ctrl.p.pos.dec = dec;
+	ctrl.p.pos.dec = dec;
 #endif
-	cmd.type.ctrl.p.pos.target = target_angle;
-	cmd.type.ctrl.p.pos.mode = mode;
-	cmd.type.ctrl.p.pos.sync = false;
+	ctrl.p.pos.target = target_angle;
+	ctrl.p.pos.mode = mode;
+	ctrl.p.pos.sync = false;
 
 	if (Motor_Send_Cmd(&cmd)) {
 #if CURRENT_FIRMWARE == FIRMWARE_X
@@ -366,7 +375,7 @@ if (argc != 7) {
 		logPrintln("Failed to send position command");
 	}
 }
-#endif /* MOTOR_POS_MODE_TRAPEZOIDAL */
+#endif /* MOTOR_POS_MODE */
 
 /**
  * @brief 电机实用工具组
@@ -378,6 +387,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 	if (argc < 2) { Tool_Help(); return; }
 	MotorCmd_t cmd;
+	MotorCtrl_t ctrl;
+	MotorTrigger_t trigger;
+	MotorParamWrite_t write;
 	uint8_t motor_id;
 #if MOTOR_POS_WINDOW_WRITE || MOTOR_PID_WRITE || MOTOR_INTEGRAL_LIMIT_WRITE
 	bool save = false;
@@ -415,10 +427,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
-		cmd.type.ctrl.type = CTRL_ENABLE;
-		cmd.type.ctrl.p.en.enable = state;
-		cmd.type.ctrl.p.en.sync = false;
-
+		ctrl.type = CTRL_ENABLE;
+		ctrl.p.en.enable = state;
+		ctrl.p.en.sync = false;
+		cmd.type.ctrl = ctrl;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d is %s", motor_id, state ? "enabled" : "disabled");
 		else
@@ -437,8 +449,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
-		cmd.type.ctrl.type = CTRL_STOP;
-		cmd.type.ctrl.p.stop.sync = false;
+		ctrl.type = CTRL_STOP;
+		ctrl.p.stop.sync = false;
+		cmd.type.ctrl = ctrl;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d is stopped", motor_id);
 		else
@@ -457,7 +470,8 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
-		cmd.type.trigger.type = TRIG_RESET_POS;
+		trigger.type = TRIG_RESET_POS;
+		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d position reset to zero", motor_id);
 		else
@@ -476,9 +490,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
-		cmd.type.trigger.type = TRIG_HOME_RETURN;
-		cmd.type.trigger.p.home.mode = 0;
-		cmd.type.trigger.p.home.sync = false;
+		trigger.type = TRIG_HOME_RETURN;
+		trigger.p.home.mode = 0;
+		trigger.p.home.sync = false;
+		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d homing triggered", motor_id);
 		else
@@ -497,7 +512,8 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
-		cmd.type.trigger.type = TRIG_ENCODER_CALIB;
+		trigger.type = TRIG_ENCODER_CALIB;
+		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Starting calibration for motor %d...", motor_id);
 		else
@@ -514,9 +530,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #if MOTOR_HEARTBEAT_WRITE
 		cmd.motor_id = motor_id;
 		cmd.op_type = OP_PARAM_WRITE;
-		cmd.type.write.type = PARAM_HEARTBEAT;
-		cmd.type.write.p.heartbeat.save = false;
-		cmd.type.write.p.heartbeat.time_ms = atoi(argv[2]) + 100;
+		write.type = PARAM_HEARTBEAT;
+		write.p.heartbeat.save = false;
+		write.p.heartbeat.time_ms = atoi(argv[2]) + 100;
+		cmd.type.write = write;
 		if (Motor_Send_Cmd(&cmd)) {
 			step_update_time = atoi(argv[2]);
 			logPrintln("Motor update time set to: %d ms", step_update_time);
@@ -553,16 +570,16 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
-		cmd.type.ctrl.type = CTRL_VELOCITY;
-		cmd.type.ctrl.p.vel.dir = 0;
-		cmd.type.ctrl.p.vel.vel = 300;
-		cmd.type.ctrl.p.vel.acc = 100;
-		cmd.type.ctrl.p.vel.sync = false;
-
+		ctrl.type = CTRL_VEL;
+		ctrl.p.vel.dir = 0;
+		ctrl.p.vel.vel = 300;
+		ctrl.p.vel.acc = 100;
+		ctrl.p.vel.sync = false;
+		cmd.type.ctrl = ctrl;
 		if (!Motor_Send_Cmd(&cmd)) logPrintln("Failed to send velocity command");
 		logPrintln("Motor %d running 3s", motor_id);
 		osDelay(3000);
-		cmd.type.ctrl.p.vel.vel = 0;
+		ctrl.p.vel.vel = 0;
 		while (!Motor_Send_Cmd(&cmd));
 	}
 #endif /* MOTOR_VELOCITY_MODE */
@@ -581,10 +598,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_PARAM_WRITE;
 		cmd.motor_id = motor_id;
-		cmd.type.write.type = PARAM_POS_WINDOW;
-		cmd.type.write.p.pos_window.window = window;
-		cmd.type.write.p.pos_window.save = save;
-
+		write.type = PARAM_POS_WINDOW;
+		write.p.pos_window.window = window;
+		write.p.pos_window.save = save;
+		cmd.type.write = write;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d window set: %d save=%d", motor_id, window, save);
 		else
@@ -642,11 +659,12 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
-			cmd.type.write.type = PARAM_PID;
-			cmd.type.write.p.pid.kp = kp;
-			cmd.type.write.p.pid.ki = ki;
-			cmd.type.write.p.pid.kd = kd;
-			cmd.type.write.p.pid.save = save;
+			write.type = PARAM_PID;
+			write.p.pid.kp = kp;
+			write.p.pid.ki = ki;
+			write.p.pid.kd = kd;
+			write.p.pid.save = save;
+			cmd.type.write = write;
 			if (Motor_Send_Cmd(&cmd))
 				logPrintln("Motor %d PID set: kp=%lu ki=%lu kd=%lu save=%d",
 						motor_id, (unsigned long)kp, (unsigned long)ki, (unsigned long)kd, save);
@@ -668,12 +686,13 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
-			cmd.type.write.type = PARAM_PID;
-			cmd.type.write.p.pid.trapezoidal_kp = trap_kp;
-			cmd.type.write.p.pid.direct_kp = direct_kp;
-			cmd.type.write.p.pid.vel_kp = vel_kp;
-			cmd.type.write.p.pid.vel_ki = vel_ki_val;
-			cmd.type.write.p.pid.save = save;
+			write.type = PARAM_PID;
+			write.p.pid.trapezoidal_kp = trap_kp;
+			write.p.pid.direct_kp = direct_kp;
+			write.p.pid.vel_kp = vel_kp;
+			write.p.pid.vel_ki = vel_ki_val;
+			write.p.pid.save = save;
+			cmd.type.write = write;
 			if (Motor_Send_Cmd(&cmd))
 				logPrintln("Motor %d PID set: trap_kp=%lu direct_kp=%lu vel_kp=%lu vel_ki=%lu save=%d",
 						motor_id, (unsigned long)trap_kp, (unsigned long)direct_kp, (unsigned long)vel_kp, (unsigned long)vel_ki_val, save);
@@ -718,9 +737,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
-			cmd.type.write.type = PARAM_INTEGRAL_LIMIT;
-			cmd.type.write.p.integral_limit.value = ilimit_val;
-			cmd.type.write.p.integral_limit.save = save;
+			write.type = PARAM_INTEGRAL_LIMIT;
+			write.p.integral_limit.value = ilimit_val;
+			write.p.integral_limit.save = save;
+			cmd.type.write = write;
 			if (Motor_Send_Cmd(&cmd))
 				logPrintln("Motor %d integral_limit set: value=%lu save=%d", motor_id, (unsigned long)ilimit_val, save);
 			else
@@ -744,7 +764,8 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.motor_id = motor_id;
 		cmd.op_type = OP_TRIGGER;
-		cmd.type.trigger.type = TRIG_RESTART;
+		trigger.type = TRIG_RESTART;
+		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
 			logPrintln("Motor %d restart success", motor_id);
 		else
@@ -768,7 +789,7 @@ ShellCommand StepGroup[] = {
 #if MOTOR_VELOCITY_MODE
 	SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, vel, Motor_vel_Shell, Set Motor Velocity),
 #endif
-#if MOTOR_POS_MODE_TRAPEZOIDAL
+#if MOTOR_POS_MODE
 	SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pos, Motor_pos_Shell, Set Motor Position),
 #endif
 	SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, tool, Motor_tool_Shell, Motor Tools),
