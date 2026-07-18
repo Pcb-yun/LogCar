@@ -171,6 +171,10 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: measure
+      files:
+        - path: Drivers/User/MEASURE/sensor.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -219,6 +223,7 @@ targets:
         - Drivers/User/TRACK
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
+        - Drivers/User/MEASURE
       libList: []
     excludeList: []
     settings:

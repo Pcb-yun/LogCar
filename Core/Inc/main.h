@@ -100,6 +100,8 @@ void Error_Handler(void);
 #define Tracking_SCL_GPIO_Port GPIOB
 #define Tracking_SDA_Pin GPIO_PIN_7
 #define Tracking_SDA_GPIO_Port GPIOB
+#define sensor_Pin GPIO_PIN_1
+#define sensor_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
 
