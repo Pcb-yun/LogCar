@@ -91,7 +91,7 @@ const osThreadAttr_t Motor_Get_Sta_attributes = {
 osThreadId_t Motor_CtrlHandle;
 const osThreadAttr_t Motor_Ctrl_attributes = {
   .name = "Motor_Ctrl",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh4,
 };
 /* Definitions for Motor_Update */

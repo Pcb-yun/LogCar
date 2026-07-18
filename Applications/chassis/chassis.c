@@ -121,7 +121,7 @@ static void Car_Key(void) {
 			prev_key = 0;
 			MotionControl_Stop();
 		}
-		osDelay(20);
+		osDelay(10);
 	}
 	osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[%dA\033[J\033[2A", 1);

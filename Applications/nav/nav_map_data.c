@@ -23,13 +23,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -46,13 +46,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -69,13 +69,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -92,13 +92,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -115,13 +115,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -138,13 +138,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -161,13 +161,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -184,13 +184,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -207,13 +207,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -230,13 +230,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -253,13 +253,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -276,13 +276,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -299,13 +299,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -322,13 +322,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
@@ -345,13 +345,13 @@ static const TargetPoint_t g_map_points[] = {
         .motion = {
             .target_speed = 60.0f,
             .target_angular_speed = 110.0f,
-            .acceleration = 60.0f,
-            .deceleration = 100.0f,
+            .acceleration = 150.0f,
+            .deceleration = 800.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.5f,
+            .yaw_threshold = 1.8f,
             .timeout_ms = 15000
         },
         .enable = true
