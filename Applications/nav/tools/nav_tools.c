@@ -67,6 +67,45 @@ static void NavTools_GoTo(int argc, char *argv[]) {
 }
 
 /**
+ * @brief 导航到指定坐标
+ */
+static void NavTools_GotoDirect(int argc, char *argv[]) {
+    if (argc != 4) {
+        logPrintln("Usage: goto [x] [y] [yaw]"); return;
+    }
+
+    float x = atof(argv[1]);
+    float y = atof(argv[2]);
+    float yaw = atof(argv[3]);
+
+    static TargetPoint_t debug_target = {0};
+    debug_target.id = 0xFF;
+    strncpy(debug_target.name, "Manual Point", 15);
+    debug_target.name[15] = '\0';
+    debug_target.type = TARGET_POINT_NORMAL;
+    debug_target.pose.x = x;
+    debug_target.pose.y = y;
+    debug_target.pose.yaw = yaw;
+
+    debug_target.motion.target_speed = 60.0f;
+    debug_target.motion.target_angular_speed = 100.0f;
+    debug_target.motion.acceleration = 150.0f;
+    debug_target.motion.deceleration = 350.0f;
+    debug_target.motion.angular_acceleration = 350.0f;
+
+    debug_target.arrive.check_mode = ARRIVE_CHECK_BOTH;
+    debug_target.arrive.distance_threshold = 2.0f;
+    debug_target.arrive.yaw_threshold = 3.0f;
+    debug_target.arrive.timeout_ms = 5000;
+
+    debug_target.enable = true;
+
+    if (!Nav_GoToDirect(&debug_target)) {
+        logWarning("Failed to start navigation");
+    }
+}
+
+/**
  * @brief 停止导航
  */
 static void NavTools_Stop(void) {
@@ -112,9 +151,8 @@ static void NavTools_Pose_View(void) {
                    "\033[2K\r  tick: %lu",
             pose.pose.x, pose.pose.y, pose.pose.yaw, pose.timestamp);
 
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
+        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 10);
         if (byte == 0x03) break;
-        osDelay(10);
     }
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[5A\033[J\033[2A\033[?25h");
@@ -783,6 +821,7 @@ static void NavTools_MapAdd(void) {
 ShellCommand NavToolsGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
     SHELL_CMD_GROUP_END()

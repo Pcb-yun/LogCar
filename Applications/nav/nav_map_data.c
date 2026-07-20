@@ -21,10 +21,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -44,10 +44,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -45.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -67,10 +67,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -90.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -90,10 +90,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -135.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -113,10 +113,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -136,10 +136,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -225.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -159,10 +159,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -270.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -182,10 +182,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -315.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -205,10 +205,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -228,10 +228,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -251,10 +251,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -274,10 +274,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = -180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -297,10 +297,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -320,10 +320,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = 0.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
@@ -343,10 +343,10 @@ static const TargetPoint_t g_map_points[] = {
             .yaw = 180.0f
         },
         .motion = {
-            .target_speed = 60.0f,
-            .target_angular_speed = 110.0f,
-            .acceleration = 150.0f,
-            .deceleration = 800.0f,
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,

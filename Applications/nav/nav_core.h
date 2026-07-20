@@ -13,6 +13,7 @@ extern "C" {
 
 #include "stdbool.h"
 #include "nav_common.h"
+#include "nav_map.h"
 
 /**
  * @brief 导航状态枚举
@@ -20,11 +21,13 @@ extern "C" {
 typedef enum {
     NAV_STATE_IDLE = 0,
     NAV_STATE_RUNNING,
+    NAV_STATE_STOPPING,
     NAV_STATE_COMPLETE,
     NAV_STATE_ERROR,
 } NavState_t;
 
 bool Nav_GoTo(uint8_t target_id);
+bool Nav_GoToDirect(TargetPoint_t *target);
 void Nav_Stop(void);
 NavState_t Nav_GetState(void);
 
