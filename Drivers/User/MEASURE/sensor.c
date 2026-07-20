@@ -20,6 +20,7 @@
 #include "Events.h"
 #include "tim.h"
 #include "main.h"
+#include <math.h>
 
 /** 频率测量超时 (TIM2 ticks, 1 tick = 1us) */
 #define TCS230_TIMEOUT_US  1000000UL
@@ -30,11 +31,15 @@
 /**
  * @brief 白色平衡参数
  */
-uint32_t fR0 = 0;
-uint32_t fG0 = 0;
-uint32_t fB0 = 0;
-uint32_t fC0 = 0;
+TCS230_RGBC_t rgbc_wb = {0};
+
+/**
+ * @brief 颜色参数
+ */
+TCS230_RGBC_t rgb_color = {0};
+
 bool isWB = false;
+
 
 /**
  * @brief 使用 TIM2 微秒忙等待
@@ -161,31 +166,66 @@ static void SENSOR_Read_Shell(void) {
  * @brief 读取 TCS230 颜色传感器的所有通道频率并打印到串口
  */
 static void SENSOR_Color_Shell(void) {
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    uint8_t byte;
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+
     TCS230_RGBC_t rgbc;
     SENSOR_ReadAll(&rgbc);
+
     if (!isWB) {
         logPrintln("White Balance Not Set");
         return;
     }
+
     /*
     *Rn = (fR / fC) × (fC0 / fR0)
     *Gn = (fG / fC) × (fC0 / fG0)
     *Bn = (fB / fC) × (fC0 / fB0)
     */
-    logPrintln("Rn: %f, Gn: %f, Bn: %f",
-               (float)rgbc.red / (float)rgbc.clear * (float)fC0 / (float)fR0,
-               (float)rgbc.green / (float)rgbc.clear * (float)fC0 / (float)fG0,
-               (float)rgbc.blue / (float)rgbc.clear * (float)fC0 / (float)fB0);
+
+    for (;;) {
+        SENSOR_ReadAll(&rgbc);
+
+        float Rn =   (float)rgbc.red / (float)rgbc.clear * (float)rgbc_wb.clear / (float)rgbc_wb.red;
+        float Gn =   (float)rgbc.green / (float)rgbc.clear * (float)rgbc_wb.clear / (float)rgbc_wb.green;
+        float Bn =   (float)rgbc.blue / (float)rgbc.clear * (float)rgbc_wb.clear / (float)rgbc_wb.blue;
+
+        float maxVal = fmaxf(fmaxf(Rn, Gn), Bn);
+
+        if (maxVal > 0) {
+            rgb_color.red = (uint8_t)((Rn / maxVal) * 255.0f);
+            rgb_color.green = (uint8_t)((Gn / maxVal) * 255.0f);
+            rgb_color.blue = (uint8_t)((Bn / maxVal) * 255.0f);
+            // 打印 R,G,B 或使用这些数值
+        }
+
+        osDelay(200);
+        logPrintln("\033[2K\rR: %f, G: %f, B: %f",
+                 rgb_color.red, rgb_color.green, rgb_color.blue);
+
+        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+            if (byte == 0x03) break;
+        }
+
+    }
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+    logPrintln("\033[1A\033[2K\r");
 }
 
 static void SENSOR_WB_Shell(void) {
     TCS230_RGBC_t rgbc;
     SENSOR_ReadAll(&rgbc);
-    fR0 = rgbc.red;
-    fG0 = rgbc.green;
-    fB0 = rgbc.blue;
-    fC0 = rgbc.clear;
-    logPrintln("W: %f", (float)rgbc.clear / (float)rgbc.red);
+
+    rgbc_wb.red = rgbc.red;
+    rgbc_wb.green = rgbc.green;
+    rgbc_wb.blue = rgbc.blue;
+    rgbc_wb.clear = rgbc.clear;
+
+    logPrintln("W: %f", rgbc_wb.clear / rgbc_wb.red); 
+    logPrintln("W: %f", rgbc_wb.clear / rgbc_wb.green);
+    logPrintln("W: %f", rgbc_wb.clear / rgbc_wb.blue);
+    
     isWB = true;
     logPrintln("White Balance Set");
 }
