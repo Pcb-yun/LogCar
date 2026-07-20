@@ -61,6 +61,12 @@ extern "C" {
 #define SERVO_CMD_MTURN_BY_INTERVAL_HELP ""
 #endif
 
+#if SERVO_MONITOR
+#define SERVO_CMD_MONITOR_HELP \
+    "  monitor    Monitor servo status\r\n"
+#else
+#define SERVO_CMD_MONITOR_HELP ""
+#endif
 
 
 
@@ -75,7 +81,8 @@ extern "C" {
     SERVO_CMD_ANGLE_BY_VELOCITY_HELP \
     SERVO_CMD_ANGLE_BY_INTERVAL_HELP \
     SERVO_CMD_MTURN_BY_VELOCITY_HELP \
-    SERVO_CMD_MTURN_BY_INTERVAL_HELP
+    SERVO_CMD_MTURN_BY_INTERVAL_HELP \
+    SERVO_CMD_MONITOR_HELP
 
 /* 舵机数量配置 */
 #define SERVO_COUNT         SERVO_MAX_COUNT
@@ -106,12 +113,18 @@ typedef struct {
 extern osMessageQueueId_t Servo_DataHandle;
 
 void Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_mW);
+void Servo_MTURN(uint8_t id, float angle,uint32_t interval, uint16_t power);
 void Servo_STOP(uint8_t id);
 void Servo_STOP_ALL(void);
+
+#if SERVO_MONITOR
+void Servo_MONITOR(uint8_t servo_id, ServoData servodata[]);
+#endif
 
 #if SERVO_PING
 void Servo_PING(uint8_t id);
 #endif
+
 #if SERVO_ADVANCED_MODE
 void Servo_AngleByInterval(uint8_t servo_id, float angle, 
                                             uint16_t interval, uint16_t t_acc,

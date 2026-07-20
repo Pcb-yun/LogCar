@@ -10,7 +10,7 @@
 #define SERVO_DLC 0             // 舵机其他功能
 #define SERVO_ASYNC 0           // 异步命令
 #define SERVO_SYNC 0            // 同步命令
-#define SERVO_MONITOR 0         // 监控命令
+#define SERVO_MONITOR 1        // 监控命令
 #define SERVO_SYNC_MONITOR 0    // 同步监控命令
 #define SERVO_PING 1            // Ping命令
 

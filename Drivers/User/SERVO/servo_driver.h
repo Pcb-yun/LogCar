@@ -247,14 +247,14 @@ typedef struct {
 
 // 舵机的数据结构体
 typedef struct {
-    uint8_t id;
-    int16_t voltage;
-    int16_t current;
-    int16_t power;
-    int16_t temperature;
-    uint8_t status;
-    float angle;
-    int16_t circle_count;
+    uint8_t id;             // 舵机ID
+    int16_t voltage;        // 舵机电压 (单位mV)
+    int16_t current;        // 舵机电流 (单位mA)
+    int16_t power;          // 舵机功率 (单位mW)
+    int16_t temperature;    // 舵机温度 (单位 摄氏度)
+    uint8_t status;         // 舵机状态
+    float angle;            // 舵机角度 (单位0.1度)
+    int16_t circle_count;   // 舵机当前圈数
 } ServoData;
 
 /*同步命令的舵机设置参数结构体*/

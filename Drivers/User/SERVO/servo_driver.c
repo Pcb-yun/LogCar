@@ -750,6 +750,141 @@ SERVO_STATUS Servo_SyncCommand(uint8_t servo_count, uint8_t ServoMode, Sync_Serv
     return SERVO_STATUS_SUCCESS;
 }
 #endif
+
+/*Ping命令*/
+#if SERVO_PING
+static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
+/**
+ * @brief 验证伺服数据包有效性
+ * @param pkg 数据包指针
+ * @return SERVO_STATUS 状态码
+ */
+static SERVO_STATUS Servo_IsValidResponsePackage(Package_t *pkg) {
+    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
+        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
+    if (pkg->cmdId > SERVO_CMD_NUM)
+        return SERVO_STATUS_UNKNOWN_CMD_ID;
+    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
+        return SERVO_STATUS_SIZE_TOO_BIG;
+    if (Servo_CalcChecksum(pkg) != pkg->checksum)
+        return SERVO_STATUS_CHECKSUM_ERROR;
+    return SERVO_STATUS_SUCCESS;
+}
+
+/**
+ * @brief 接收伺服数据包
+ * @param pkg 数据包指针
+ * @return SERVO_STATUS 状态码
+ */
+static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
+    uint8_t byte  = 0;
+    uint8_t header_byte1 = 0;
+    uint32_t startTime = osKernelGetTickCount();
+
+    memset(pkg, 0, sizeof(Package_t));
+
+    while ((osKernelGetTickCount() - startTime) < 100) {
+     /* 1. 查找帧头 —— [CHANGE] 内层循环加总超时检查，防止死循环 */
+        while ((osKernelGetTickCount() - startTime) < 100 &&
+               Servo_ReadByte(&byte, 10) == SERVO_STATUS_SUCCESS)
+        {
+            if (header_byte1 == 0 && byte == 0x05) {
+                header_byte1 = byte;
+            } else if (header_byte1 == 0x05 && byte == 0x1C) {
+                pkg->header = 0x1C05;
+                break;
+            } else {
+                header_byte1 = 0;
+            }
+        }
+
+        if (pkg->header != SERVO_PACK_RESPONSE_HEADER) {
+            continue;
+        }
+
+        /* 2. 接收 cmdId */
+        if (Servo_ReadByte(&pkg->cmdId, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 3. 接收 size（判断同步模式） */
+        if (Servo_ReadByte(&byte, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
+            continue;
+        }
+
+        if (byte == 0xFF) {
+            /* 同步模式：size 占 2 字节 */
+            pkg->isSync = 1;
+            uint8_t sizeLow, sizeHigh;
+            if (Servo_ReadByte(&sizeLow, 10) != SERVO_STATUS_SUCCESS)  { pkg->header = 0; continue; }
+            if (Servo_ReadByte(&sizeHigh, 10) != SERVO_STATUS_SUCCESS) { pkg->header = 0; continue; }
+            pkg->size = sizeLow | (sizeHigh << 8);
+        } else {
+            /* 普通模式：size 占 1 字节 */
+            pkg->isSync = 0;
+            pkg->size = byte;
+        }
+
+        /* 4. 检查 size 有效性 */
+        if (pkg->size == 0 || pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 5. [CHANGE] content 一次性批量读取 */
+        size_t received = xStreamBufferReceive(
+            Servo_Rx_StreamHandle,
+            pkg->content,
+            pkg->size,
+            pdMS_TO_TICKS(10)
+        );
+        if (received < pkg->size) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 6. 接收 checksum */
+        if (Servo_ReadByte(&pkg->checksum, 10) != SERVO_STATUS_SUCCESS) {
+            pkg->header = 0;
+            continue;
+        }
+
+        /* 7. 验证包有效性 */
+        return Servo_IsValidResponsePackage(pkg);
+    }
+
+    return SERVO_STATUS_TIMEOUT;
+
+}
+
+/**
+ * @brief 舵机通讯检测
+ * @param servo_id 伺服ID
+ * @return SERVO_STATUS 状态码
+ */
+SERVO_STATUS Servo_Ping(uint8_t servo_id){
+	SERVO_STATUS statusCode; // 状态码
+	uint8_t ehcoServoId; // PING得到的舵机ID
+	// printf("[PING]Send Ping Package\r\n");
+	// 发送请求包
+	Servo_SendPackage_Common(SERVO_CMD_PING, 1, &servo_id,0);
+	// 接收返回的Ping
+	Package_t pkg = {0};
+	statusCode = Servo_RecvPackage(&pkg);
+	if(statusCode == SERVO_STATUS_SUCCESS){
+		// 进一步检查ID号是否匹配
+		ehcoServoId = (uint8_t)pkg.content[0];
+		if (ehcoServoId != servo_id){
+			// 反馈得到的舵机ID号不匹配
+			return SERVO_STATUS_ID_NOT_MATCH;
+		}
+	}
+	return statusCode;
+}
+#endif
+
 /*监控命令*/
 #if SERVO_MONITOR
 /**
@@ -769,8 +904,8 @@ SERVO_STATUS Servo_Monitor(uint8_t servo_id, ServoData servodata[]) {
 	double temp;//温度数据转换
 	Servo_SendPackage_Common(SERVO_CMD_SET_SERVO_ReadData,(uint8_t)size, content,0);
 
-  Package_t pkg;
-  SERVO_STATUS status=Servo_RecvPackage(&pkg);
+    Package_t pkg;
+    SERVO_STATUS status=Servo_RecvPackage(&pkg);
 
    if (status != SERVO_STATUS_SUCCESS) {
        return status;  // 如果接收失败，返回错误状态
@@ -923,139 +1058,6 @@ SERVO_STATUS Servo_SyncServoMonitor(uint8_t servo_count, ServoData servodata[]) 
     }
 
     return SERVO_STATUS_SUCCESS;
-}
-#endif
-/*Ping命令*/
-#if SERVO_PING
-static SERVO_STATUS Servo_SendPackage_Common(uint8_t cmdId, uint16_t size, uint8_t *content, uint8_t isSync);
-/**
- * @brief 验证伺服数据包有效性
- * @param pkg 数据包指针
- * @return SERVO_STATUS 状态码
- */
-static SERVO_STATUS Servo_IsValidResponsePackage(Package_t *pkg) {
-    if (pkg->header != SERVO_PACK_RESPONSE_HEADER)
-        return SERVO_STATUS_WRONG_RESPONSE_HEADER;
-    if (pkg->cmdId > SERVO_CMD_NUM)
-        return SERVO_STATUS_UNKNOWN_CMD_ID;
-    if (pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE)
-        return SERVO_STATUS_SIZE_TOO_BIG;
-    if (Servo_CalcChecksum(pkg) != pkg->checksum)
-        return SERVO_STATUS_CHECKSUM_ERROR;
-    return SERVO_STATUS_SUCCESS;
-}
-
-/**
- * @brief 接收伺服数据包
- * @param pkg 数据包指针
- * @return SERVO_STATUS 状态码
- */
-static SERVO_STATUS Servo_RecvPackage(Package_t *pkg) {
-    uint8_t byte  = 0;
-    uint8_t header_byte1 = 0;
-    uint32_t startTime = osKernelGetTickCount();
-
-    memset(pkg, 0, sizeof(Package_t));
-
-    while ((osKernelGetTickCount() - startTime) < 100) {
-     /* 1. 查找帧头 —— [CHANGE] 内层循环加总超时检查，防止死循环 */
-        while ((osKernelGetTickCount() - startTime) < 100 &&
-               Servo_ReadByte(&byte, 10) == SERVO_STATUS_SUCCESS)
-        {
-            if (header_byte1 == 0 && byte == 0x05) {
-                header_byte1 = byte;
-            } else if (header_byte1 == 0x05 && byte == 0x1C) {
-                pkg->header = 0x1C05;
-                break;
-            } else {
-                header_byte1 = 0;
-            }
-        }
-
-        if (pkg->header != SERVO_PACK_RESPONSE_HEADER) {
-            continue;
-        }
-
-        /* 2. 接收 cmdId */
-        if (Servo_ReadByte(&pkg->cmdId, 10) != SERVO_STATUS_SUCCESS) {
-            pkg->header = 0;
-            continue;
-        }
-
-        /* 3. 接收 size（判断同步模式） */
-        if (Servo_ReadByte(&byte, 10) != SERVO_STATUS_SUCCESS) {
-            pkg->header = 0;
-            continue;
-        }
-
-        if (byte == 0xFF) {
-            /* 同步模式：size 占 2 字节 */
-            pkg->isSync = 1;
-            uint8_t sizeLow, sizeHigh;
-            if (Servo_ReadByte(&sizeLow, 10) != SERVO_STATUS_SUCCESS)  { pkg->header = 0; continue; }
-            if (Servo_ReadByte(&sizeHigh, 10) != SERVO_STATUS_SUCCESS) { pkg->header = 0; continue; }
-            pkg->size = sizeLow | (sizeHigh << 8);
-        } else {
-            /* 普通模式：size 占 1 字节 */
-            pkg->isSync = 0;
-            pkg->size = byte;
-        }
-
-        /* 4. 检查 size 有效性 */
-        if (pkg->size == 0 || pkg->size > SERVO_PACK_RESPONSE_MAX_SIZE) {
-            pkg->header = 0;
-            continue;
-        }
-
-        /* 5. [CHANGE] content 一次性批量读取 */
-        size_t received = xStreamBufferReceive(
-            Servo_Rx_StreamHandle,
-            pkg->content,
-            pkg->size,
-            pdMS_TO_TICKS(10)
-        );
-        if (received < pkg->size) {
-            pkg->header = 0;
-            continue;
-        }
-
-        /* 6. 接收 checksum */
-        if (Servo_ReadByte(&pkg->checksum, 10) != SERVO_STATUS_SUCCESS) {
-            pkg->header = 0;
-            continue;
-        }
-
-        /* 7. 验证包有效性 */
-        return Servo_IsValidResponsePackage(pkg);
-    }
-
-    return SERVO_STATUS_TIMEOUT;
-
-}
-
-/**
- * @brief 舵机通讯检测
- * @param servo_id 伺服ID
- * @return SERVO_STATUS 状态码
- */
-SERVO_STATUS Servo_Ping(uint8_t servo_id){
-	SERVO_STATUS statusCode; // 状态码
-	uint8_t ehcoServoId; // PING得到的舵机ID
-	// printf("[PING]Send Ping Package\r\n");
-	// 发送请求包
-	Servo_SendPackage_Common(SERVO_CMD_PING, 1, &servo_id,0);
-	// 接收返回的Ping
-	Package_t pkg = {0};
-	statusCode = Servo_RecvPackage(&pkg);
-	if(statusCode == SERVO_STATUS_SUCCESS){
-		// 进一步检查ID号是否匹配
-		ehcoServoId = (uint8_t)pkg.content[0];
-		if (ehcoServoId != servo_id){
-			// 反馈得到的舵机ID号不匹配
-			return SERVO_STATUS_ID_NOT_MATCH;
-		}
-	}
-	return statusCode;
 }
 #endif
 

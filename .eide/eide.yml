@@ -175,6 +175,10 @@ virtualFolder:
       files:
         - path: Drivers/User/MEASURE/sensor.c
       folders: []
+    - name: turntable
+      files:
+        - path: Applications/turntable/turntable_ctrl.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -224,6 +228,7 @@ targets:
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
         - Drivers/User/MEASURE
+        - Applications/turntable
       libList: []
     excludeList: []
     settings:
