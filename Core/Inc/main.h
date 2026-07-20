@@ -57,6 +57,10 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SENSOR_S2_Pin GPIO_PIN_2
+#define SENSOR_S2_GPIO_Port GPIOE
+#define SENSOR_S3_Pin GPIO_PIN_3
+#define SENSOR_S3_GPIO_Port GPIOE
 #define LED_Red_Pin GPIO_PIN_9
 #define LED_Red_GPIO_Port GPIOF
 #define LED_IDLE_Pin GPIO_PIN_10
@@ -100,8 +104,8 @@ void Error_Handler(void);
 #define Tracking_SCL_GPIO_Port GPIOB
 #define Tracking_SDA_Pin GPIO_PIN_7
 #define Tracking_SDA_GPIO_Port GPIOB
-#define sensor_Pin GPIO_PIN_1
-#define sensor_GPIO_Port GPIOE
+#define SENSOR_OUT_Pin GPIO_PIN_1
+#define SENSOR_OUT_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
 
