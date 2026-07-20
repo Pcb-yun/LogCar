@@ -302,6 +302,33 @@ static void Queue_Info(void) {
 }
 
 /**
+ * @brief 持续显示系统状态信息
+ */
+static void OS_Htop(void) {
+    uint8_t byte;
+    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+
+    while(1) {
+        logPrintln("\033[?25l\r\033[2J\033[H");
+        // Time_Info();
+        Task_Info();
+        Queue_Info();
+        // Memory_Info();
+        // Event_Info();
+        // Mutex_Info();
+        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 100);
+        if (byte == 0x03) break;
+    }
+    logPrintln("\033[?25h");
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
+
+}
+SHELL_EXPORT_CMD(
+SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+htop, OS_Htop, View system status);
+
+/**
  * @brief OS命令处理函数
  * @param argc 参数数量
  * @param argv 参数列表
