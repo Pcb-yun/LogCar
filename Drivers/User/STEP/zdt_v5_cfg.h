@@ -222,10 +222,20 @@
 #define MOTOR_VELOCITY_MODE_LIMIT           0   // 速度模式（+最大电流限制）
 #endif /* CURRENT_FIRMWARE */
 
-
 #if CURRENT_MOTOR_MODEL == MOTOR_MODEL_X42S || CURRENT_MOTOR_MODEL == MOTOR_MODEL_Y42
 #define MOTOR_MULTI_CMD                     1   // 多电机命令
-#endif
+#if MOTOR_MULTI_CMD
+/**
+ * @brief 多电机命令使用指针缓冲区
+ * @note 如果禁用（默认），ZDT_V5_Multi_Cmd_t.data为固定大小数组，管理简单但占用更多内存，使用MOTOR_MULTI_BUF_SIZE定义缓冲区大小
+ * @note 如果启用，ZDT_V5_Multi_Cmd_t.data为指针类型，需用户分配和管理内存，提供MOTOR_MULTI_BUF_FREE供用户在使用引擎层时释放内存
+ */
+#define MOTOR_MULTI_PTR_BUF                 0
+#define MOTOR_MULTI_BUF_SIZE                96  // 多机指令数组缓冲区大小
+// 在启用指针缓冲区时，提供引擎层的内存释放接口
+#define MOTOR_MULTI_BUF_FREE(ptr)           vPortFree(ptr)
+#endif /* MOTOR_MULTI_CMD */
+#endif /* CURRENT_MOTOR_MODEL */
 
 
 /******************** 触发动作命令 *********************/

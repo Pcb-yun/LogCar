@@ -8,27 +8,32 @@
 #define __NAV_CONFIG_H__
 
 
+#define NAV_UPDATE_TIME 6 // 导航状态更新时间间隔（毫秒）
+
 // 航向角PID控制器参数
-#define NAV_YAW_PID_KP            1.2f      // yaw比例系数
-#define NAV_YAW_PID_KI            0.9f      // 积分系数
-#define NAV_YAW_PID_KD            0.1f      // 微分系数
-#define NAV_YAW_PID_OUTPUT_LIMIT  110.0f    // 限制yaw输出
+#define NAV_YAW_PID_KP            1.8f      // yaw比例系数
+#define NAV_YAW_PID_KI            0.05f     // 积分系数（降低防止积分饱和）
+#define NAV_YAW_PID_KD            0.3f      // 微分系数（增大增加阻尼）
+#define NAV_YAW_PID_OUTPUT_LIMIT  150.0f    // 限制yaw输出
 
 #define NAV_APPROACH_YAW_KP       0.2f      // 接近阶段偏航P增益
 #define NAV_APPROACH_YAW_MAX      80.0f     // 接近阶段最大偏航速度
 
-#define NAV_ALIGN_YAW_MAX         80.0f    // 对齐阶段最大偏航速度
-#define NAV_ALIGN_YAW_MIN         4.0f     // 对齐阶段最小偏航速度
+#define NAV_ALIGN_YAW_MAX         100.0f    // 对齐阶段最大偏航速度
+#define NAV_ALIGN_YAW_MIN         2.0f     // 对齐阶段最小偏航速度
+#define NAV_YAW_ACCEL_LIMIT       350.0f    // yaw加速度限制
+#define NAV_YAW_ZERO_CROSS_LOCK_MS  2      // yaw零交叉锁存持续时间(ms)
 
 #define NAV_ALIGN_DIST            10.0f      // 进入对齐阶段距离
-#define NAV_DECEL_START_OFFSET    10.0f      // 减速起始距离偏移（距ALIGN_DIST）
+#define NAV_DECEL_START_OFFSET    30.0f      // 减速起始距离偏移
 #define NAV_ALIGN_XY_KP           0.8f      // 位置P增益
+#define NAV_ALIGN_XY_KI           0.1f      // 位置I增益
 #define NAV_ALIGN_XY_DEADBAND     0.3f      // 位置死区
 
-#define NAV_MIN_SPEED             4.0f      // 最低速度
+#define NAV_MIN_SPEED             3.0f      // 最低速度
 
 #define NAV_TIME_DECAY_FACTOR     5.0f      // 时间衰减因子
-#define NAV_MAX_SENSOR            4         // 最大传感器数量
+#define NAV_MAX_SENSOR            3         // 最大传感器数量
 
 
 

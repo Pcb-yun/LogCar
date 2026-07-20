@@ -80,12 +80,8 @@ static void send_wheel_velocity_commands(Wheel_t *wheels) {
     MotorCmd_t cmd;
 
 #if MOTOR_MULTI_CMD
-    uint8_t BUF_SIZE = 41;
-    uint8_t multi_buf[BUF_SIZE];
-
     ZDT_V5_Multi_Cmd_t multi_cmd = {
-        .data = multi_buf,
-        .buf_size = BUF_SIZE
+        .buf_size = MOTOR_MULTI_BUF_SIZE
     };
     MotorMulti_t multi;
 
@@ -186,12 +182,8 @@ static void send_wheel_position_commands(Wheel_t *wheels) {
     MotorCmd_t cmd;
 
 #if MOTOR_MULTI_CMD
-    uint8_t BUF_SIZE = 69;
-    uint8_t multi_buf[BUF_SIZE];
-
     ZDT_V5_Multi_Cmd_t multi_cmd = {
-        .data = multi_buf,
-        .buf_size = BUF_SIZE
+        .buf_size = MOTOR_MULTI_BUF_SIZE
     };
     MotorMulti_t multi;
 

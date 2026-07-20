@@ -138,15 +138,8 @@ static void Loc_Update(void) {
 static void Loc_Fusion_WeightedAverage(WeightedPose_t *sources[], uint8_t count, Pose2D_t *fused_pose) {
     uint32_t current_tick = osKernelGetTickCount();
     float total_weight = 0.0f;
-    float sum_x = 0.0f, sum_y = 0.0f, sum_yaw = 0.0f;
-
-    // 找到最旧的时间戳用于归一化
-    uint32_t oldest_tick = current_tick;
-    for (uint8_t i = 0; i < count; i++) {
-        if (sources[i]->timestamp < oldest_tick) {
-            oldest_tick = sources[i]->timestamp;
-        }
-    }
+    float sum_x = 0.0f, sum_y = 0.0f;
+    float sum_sin_yaw = 0.0f, sum_cos_yaw = 0.0f;
 
     for (uint8_t i = 0; i < count; i++) {
         if (sources[i]->weight > 0.0f) {
@@ -157,7 +150,11 @@ static void Loc_Fusion_WeightedAverage(WeightedPose_t *sources[], uint8_t count,
 
             sum_x += sources[i]->pose.x * final_weight;
             sum_y += sources[i]->pose.y * final_weight;
-            sum_yaw += sources[i]->pose.yaw * final_weight;
+
+            float yaw_rad = sources[i]->pose.yaw * DEG_TO_RAD;
+            sum_sin_yaw += sinf(yaw_rad) * final_weight;
+            sum_cos_yaw += cosf(yaw_rad) * final_weight;
+
             total_weight += final_weight;
         }
     }
@@ -165,6 +162,6 @@ static void Loc_Fusion_WeightedAverage(WeightedPose_t *sources[], uint8_t count,
     if (total_weight > 0.0f) {
         fused_pose->x = sum_x / total_weight;
         fused_pose->y = sum_y / total_weight;
-        fused_pose->yaw = sum_yaw / total_weight;
+        fused_pose->yaw = atan2f(sum_sin_yaw, sum_cos_yaw) * RAD_TO_DEG;
     }
 }
