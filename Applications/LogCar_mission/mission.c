@@ -28,7 +28,7 @@ static bool wait_tracker(void) {
             return false;
         }
         if (state == NAV_STATE_ERROR) {
-            logError("Mission Error at point: %d", current_point);
+            logError("Mission Failed at point: %d", current_point);
             return false;
         } else if (state != NAV_STATE_RUNNING) {
             return true;

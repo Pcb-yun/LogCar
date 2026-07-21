@@ -14,7 +14,6 @@
 #include "kinematics.h"
 #include "cmsis_os2.h"
 #include "log.h"
-#include <math.h>
 #include <string.h>
 
 
