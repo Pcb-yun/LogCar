@@ -91,23 +91,25 @@ void Battery_Get_Task(void *argument) {
  * @brief 实时刷新显示电池电压
  */
 static void Battery_ViewRealtime(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    Shell *shell;
     uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
 
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     logPrintln("Battery Voltage Viewer - Press ^C to exit\r\n"
                "Voltage: ----- mV");
 
-    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
-
     while (1) {
         logPrintln("\033[1A\033[2K\rVoltage: %d mV", g_battery->voltage);
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
-        if (byte == 0x03) break;
+        if (shell->read((char*)&byte, 1)) {
+            if (byte == 0x03) break;
+        }
         osDelay(33);
     }
 
-    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[2A\033[J\033[2A");
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
 /**

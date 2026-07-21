@@ -175,16 +175,17 @@ static void Track_Time_Shell(int argc, char *argv[]) {
  * @brief 实时刷新巡线模块数据
  */
 static void Track_View_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
-    uint8_t byte;
-
     if (!is_init) {
         logWarning("Track module not initialized"); return;
     }
-
     logPrintln("Track Data Viewer - Press ^C to exit\r\n"
-               "Digital: - - - - - - - -\r\n"
-               "Timestamp:");
+        "Digital: - - - - - - - -\r\n"
+        "Timestamp:");
+
+    Shell *shell;
+    uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
@@ -201,11 +202,11 @@ static void Track_View_Shell(void) {
                     (g_track->digitalData & 0x01) ? 0 : 1,
                     g_track->timestamp);
 
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
-        if (byte == 0x03) break;
+        if (shell->read((char*)&byte, 1)) {
+            if (byte == 0x03) break;
+        }
         osDelay(33);
     }
-
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[3A\033[J\033[2A");
 }

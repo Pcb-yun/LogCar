@@ -343,7 +343,6 @@ static const char* rsp_mode_str(uint8_t v) {
  * @brief 查看电机状态
  */
 void Motor_View_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
     uint8_t byte;
 	extern Shell shell;
 	extern MotorStatus_t *g_motor_status[ZDT_STEP_NUM];
@@ -911,7 +910,7 @@ void Motor_View_Shell(void) {
 
 		extern uint32_t step_update_time;
 		osDelay(step_update_time);
-		if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+		if (shell->read(&byte, 1)) {
 			if (byte == 0x03) break;
 		}
 	}

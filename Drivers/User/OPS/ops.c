@@ -92,8 +92,6 @@ void OPS_Update_Task(void *argument) {
 static void OPS_Cal_Shell(int argc, char *argv[]) {
     extern osThreadId_t OPS_UpdateHandle;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
-    uint8_t byte;
     Uart4_RxBuf_t rx_buf;
     uint32_t timeout = 16 * 60 * 1000;
     char spinner[] = {'|', '/', '-', '\\'};
@@ -103,14 +101,19 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         logWarning("OPS module not initialized"); return;
     }
 
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     logPrintln("The calibration takes about 15 minutes and the error is absolutely stationary.\r\n"
         "Calibration is not recommended in general.\r\n"
         "Would you like to proceed? (y/n)\r\n");
 
-    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+
+    Shell *shell;
+    uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) {osEventFlagsClear(System_StatusHandle, APP_NEED_USART); return;}
 
     while(1) {
-        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK){
+        if (shell->read((char*)&byte, 1)){
             if (byte == 'y') break;
             else {osEventFlagsClear(System_StatusHandle, APP_NEED_USART); return;}
 				}
@@ -144,7 +147,7 @@ static void OPS_Cal_Shell(int argc, char *argv[]) {
         logPrintln("\033[1A\033[2K\rCalibrating...  %c          Usage: %02u:%02u", spinner[spinner_idx], min, sec);
         spinner_idx = (spinner_idx + 1) % 4;
 
-        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+        if (shell->read((char*)&byte, 1)) {
             if (byte == 0x03) {
                 logPrintln("Keyboard interruption"); break;
             }
@@ -233,12 +236,14 @@ static void OPS_Set_Shell(int argc, char *argv[]) {
  * @brief 实时查看位置数据
  */
 static void OPS_View_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
-    uint8_t byte;
-
     if (!is_init) {
         logWarning("OPS module not initialized"); return;
     }
+
+    Shell *shell;
+    uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
 
     logPrintln("\033[?25l\rPosition Data Viewer - Press ^C to exit\r\n"
                "X: ------.--  Y: ------.--\r\n"
@@ -279,8 +284,9 @@ static void OPS_View_Shell(void) {
         len += sprintf(buf + len, "Timestamp: %u", g_ops->timestamp);
         logPrintln("%s", buf);
 
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0);
-        if (byte == 0x03) break;
+        if (shell->read((char*)&byte, 1)) {
+            if (byte == 0x03) break;
+        }
         osDelay(10);
     }
 

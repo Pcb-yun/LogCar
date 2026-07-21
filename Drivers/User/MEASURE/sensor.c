@@ -210,39 +210,43 @@ static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb
  * @brief 读取 TCS230 颜色传感器的所有通道频率并打印到串口
  */
 static void SENSOR_Read_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
-    uint8_t byte;
     TCS230_RGBC_t rgbc;
 
-    SENSOR_Init();
-
-    logPrintln("TCS230 Reader - Press ^C to exit\r\n"
-               "  R       G       B       C");
+    Shell *shell;
+    uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
+    SENSOR_Init();
+    logPrintln("TCS230 Reader - Press ^C to exit\r\n"
+               "  R       G       B       C");
+
     for (;;) {
-        osDelay(200);
         SENSOR_ReadAll(&rgbc);
         logPrintln("\033[1A\033[2K\r%5lu  %5lu  %5lu  %5lu Hz",
                    rgbc.red, rgbc.green, rgbc.blue, rgbc.clear);
 
-        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+        if (shell->read((char*)&byte, 1)) {
             if (byte == 0x03) break;
         }
+        osDelay(200);
     }
-
-    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[1A\033[2K\r");
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
 /**
  * @brief 读取 TCS230 颜色传感器的所有通道频率并打印到串口
  */
 static void SENSOR_Color_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    Shell *shell;
     uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
 
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     TCS230_RGBC_t rgbc;
     SENSOR_ReadAll(&rgbc);
 
@@ -280,13 +284,13 @@ static void SENSOR_Color_Shell(void) {
                    cr, cg, cb,
                    inferred.color_name, inferred.confidence);
 
-        if (osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 0) == osOK) {
+        if (shell->read((char*)&byte, 1)) {
             if (byte == 0x03) break;
         }
-
+        osDelay(200);
     }
-    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[1A\033[2K\r");
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
 static void SENSOR_WB_Shell(void) {
@@ -448,6 +452,5 @@ ShellCommand SensorGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, detect, SENSOR_Detect_Shell, detect color and show confidence),
     SHELL_CMD_GROUP_END()
 };
-
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
                        sensor, SensorGroup, TCS230 Color Sensor Tool Group);

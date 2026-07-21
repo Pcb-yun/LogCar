@@ -126,9 +126,13 @@ static void NavTools_State(void) {
  */
 static void NavTools_Pose_View(void) {
     PoseTimestamp_t pose;
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
-    uint8_t byte;
 
+    Shell *shell;
+    uint8_t byte;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
+
+    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[?25l\r"
         "Current Pose:\r\n"
         "  x:    0.00 cm\r\n"
@@ -136,12 +140,9 @@ static void NavTools_Pose_View(void) {
         "  yaw:  0.00 deg\r\n"
         "  tick: 0");
 
-    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
-
     while (1) {
         if (!Loc_Get(&pose)) {
-            logWarning("Failed to get pose");
-            break;
+            logWarning("Failed to get pose"); break;
         }
 
         logPrintln("\033[5A\033[2K\rCurrent Pose:\r\n"
@@ -151,11 +152,13 @@ static void NavTools_Pose_View(void) {
                    "\033[2K\r  tick: %lu",
             pose.pose.x, pose.pose.y, pose.pose.yaw, pose.timestamp);
 
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 10);
-        if (byte == 0x03) break;
+        if (shell->read((char*)&byte, 1)) {
+            if (byte == 0x03) break;
+        }
+        osDelay(10);
     }
-    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
     logPrintln("\033[5A\033[J\033[2A\033[?25h");
+    osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
 /**

@@ -305,8 +305,11 @@ static void Queue_Info(void) {
  * @brief 持续显示系统状态信息
  */
 static void OS_Htop(void) {
+    Shell *shell;
     uint8_t byte;
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
+    shell = shellGetCurrent();
+    if (shell == NULL) return;
+
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     while(1) {
@@ -317,12 +320,13 @@ static void OS_Htop(void) {
         // Memory_Info();
         // Event_Info();
         // Mutex_Info();
-        osMessageQueueGet(Usart1_Rx_DataHandle, &byte, NULL, 100);
-        if (byte == 0x03) break;
+        if (shell->read((char*)&byte, 1)) {
+            if (byte == 0x03) break;
+        }
+        osDelay(50);
     }
     logPrintln("\033[?25h");
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
-
 }
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
