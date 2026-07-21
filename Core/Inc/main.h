@@ -78,6 +78,8 @@ void Error_Handler(void);
 #define SERVO_TX_GPIO_Port GPIOB
 #define SERVO_RX_Pin GPIO_PIN_11
 #define SERVO_RX_GPIO_Port GPIOB
+#define SENSOR_OUT_Pin GPIO_PIN_12
+#define SENSOR_OUT_GPIO_Port GPIOD
 #define STEP_TX_Pin GPIO_PIN_6
 #define STEP_TX_GPIO_Port GPIOC
 #define STEP_RX_Pin GPIO_PIN_7
@@ -104,8 +106,6 @@ void Error_Handler(void);
 #define Tracking_SCL_GPIO_Port GPIOB
 #define Tracking_SDA_Pin GPIO_PIN_7
 #define Tracking_SDA_GPIO_Port GPIOB
-#define SENSOR_OUT_Pin GPIO_PIN_1
-#define SENSOR_OUT_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
 

@@ -10,19 +10,34 @@
 #include "cmsis_os2.h"
 #include <stdlib.h>
 
+float turntable_angle_current = TURNABLE_INIT;
+
 /**
- * @brief 转盘模块移动到指定角度
+ * @brief 计算最短路径的目标角度（基于当前位置，在±180°内选择最近路径）
+ * @param current 当前角度
+ * @param target 目标角度（0-360范围）
+ * @return 最短路径对应的实际目标角度
+ */
+static float turntable_calc_shortest_target(float current, float target) {
+    float diff = target - current;
+    while (diff > 180.0f) diff -= 360.0f;
+    while (diff < -180.0f) diff += 360.0f;
+    return current + diff;
+}
+
+/**
+ * @brief 转盘模块移动到指定角度（基于当前位置走最短路径）
  * @param angle 角度值
  */
  
 static void turntable_move_to(float angle){
-    Servo_MTURN(1, angle, 0.5f, 0.0f);
+    turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
+    Servo_MTURN(1, turntable_angle_current, 0, 0);
 }
 
 static void turntable_move_to_close(void){
-    ServoData servodata = {0};
-    Servo_MONITOR(1, &servodata);
-    turntable_move_to(servodata.angle - 18.0f);
+    turntable_move_to(turntable_angle_current - 18.0f);
+
 }
 
 /**

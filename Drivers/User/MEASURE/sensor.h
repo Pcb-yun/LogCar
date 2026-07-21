@@ -58,4 +58,24 @@ uint32_t SENSOR_ReadChannel(TCS230_Filter_t filter);
  */
 void SENSOR_ReadAll(TCS230_RGBC_t *out);
 
+/**
+ * @brief 颜色识别结果
+ */
+typedef struct {
+    const char *color_name;    /**< 颜色名称 */
+    uint8_t confidence;        /**< 可信度 0-100 */
+} SENSOR_ColorResult_t;
+
+/**
+ * @brief 根据色度 RGB + 亮度因子推断当前颜色
+ * @param r 红色色度 (0-255)
+ * @param g 绿色色度 (0-255)
+ * @param b 蓝色色度 (0-255)
+ * @param brightness  亮度因子 0.0~1.0 (fC/fC_wb)
+ * @return 颜色识别结果
+ *
+ * 可识别颜色: Black, White, Red, Green, Blue
+ */
+SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b, float brightness);
+
 #endif /* __SENSOR_H__ */
