@@ -35,8 +35,11 @@ static void turntable_move_to(float angle){
     Servo_MTURN(1, turntable_angle_current, 0, 0);
 }
 
+/**
+ * @brief 转盘模块移动到关闭位置（基于当前位置走最短路径）
+ */
 static void turntable_move_to_close(void){
-    turntable_move_to(turntable_angle_current - 18.0f);
+    turntable_move_to(turntable_angle_current - TURNABLE_CLOSE_OFFSET);
 
 }
 

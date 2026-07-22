@@ -1,10 +1,11 @@
 #ifndef __TURNTABLE_CONF_H__
 #define __TURNTABLE_CONF_H__
 
-#define TURNABLE_INIT 0.0f
+#define TURNABLE_INIT 39.0f
 
-#define TURNABLE_ID_0_ANGLE 36.0f
+#define TURNABLE_ID_0_ANGLE 3.0f
 #define TURNABLE_ANGLE 36.0f
+#define TURNABLE_CLOSE_OFFSET 18.0f
 
 #define TURNABLE_ID_MAX 5
 
