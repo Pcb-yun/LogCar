@@ -52,6 +52,7 @@ void Track_Get_Task(void *argument) {
     (void)argument;
 
     extern osMutexId_t Track_MutexHandle;
+    extern osMutexId_t I2C1_MutexHandle;
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
@@ -59,9 +60,9 @@ void Track_Get_Task(void *argument) {
 
     for(;;) {
         if (g_track->mode == TRACK_DIGITAL) {
+            osMutexAcquire(I2C1_MutexHandle, osWaitForever);
             if (I2C_Start_DMA_Read()) {
-                uint32_t flags = osEventFlagsWait(System_StatusHandle, TRACK_DMA_DONE,
-                                                  osFlagsWaitAny, pdMS_TO_TICKS(g_track->time * 3));
+                uint32_t flags = osEventFlagsWait(System_StatusHandle, TRACK_DMA_DONE, osFlagsWaitAny, osWaitForever);
                 if (flags & TRACK_DMA_DONE) {
                     if (osMutexAcquire(Track_MutexHandle, osWaitForever) == osOK) {
                         g_track->digitalData = track_dma_value;
@@ -70,6 +71,7 @@ void Track_Get_Task(void *argument) {
                     }
                 }
             }
+            osMutexRelease(I2C1_MutexHandle);
         }
 
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(g_track->time));
@@ -244,7 +246,6 @@ static void Track_Key(void) {
  * @brief 通过I2C读取数字量寄存器（0x30）
  * @return 读取到的数字值，失败返回-1
  */
-
 static bool I2C_Start_DMA_Read(void) {
     if (track_i2c_status != TRACK_STATUS_IDLE) {
         return false;

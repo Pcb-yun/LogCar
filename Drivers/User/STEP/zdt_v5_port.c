@@ -184,9 +184,10 @@ void Motor_Update_Task(void *argument) {
  */
 void Motor_zero(uint8_t motor_id) {
 	MotorCmd_t cmd;
-	MotorTrigger_t trigger;
 	cmd.op_type = OP_TRIGGER;
 	cmd.motor_id = motor_id;
+
+	MotorTrigger_t trigger;
 	trigger.type = TRIG_RESET_POS;
 	cmd.type.trigger = trigger;
 	Motor_Send_Cmd(&cmd);
@@ -258,13 +259,12 @@ static void Motor_vel_Shell(int argc, char *argv[]) {
 	cmd.motor_id = motor_id;
 
 	MotorCtrl_t ctrl;
-	cmd.type.ctrl = ctrl;
-
 	ctrl.type = CTRL_VEL;
 	ctrl.p.vel.dir = dir;
 	ctrl.p.vel.vel = vel;
 	ctrl.p.vel.acc = acc;
 	ctrl.p.vel.sync = false;
+	cmd.type.ctrl = ctrl;
 
 	if (Motor_Send_Cmd(&cmd)) {
 		logPrintln("Velocity cmd sent to motor %d: dir=%d, vel=%d, acc=%d", motor_id, dir, vel, acc);
@@ -348,20 +348,20 @@ if (argc != 7) {
 	MotorCmd_t cmd;
 	cmd.op_type = OP_CONTROL;
 	cmd.motor_id = motor_id;
-	MotorCtrl_t ctrl;
-	cmd.type.ctrl = ctrl;
 
+	MotorCtrl_t ctrl;
 	ctrl.type = CTRL_POS;
 	ctrl.p.pos.dir = dir;
 	ctrl.p.pos.vel = vel;
 	ctrl.p.pos.acc = acc;
-#if CURRENT_FIRMWARE == FIRMWARE_X
+	#if CURRENT_FIRMWARE == FIRMWARE_X
     uint16_t dec = atoi(argv[6]);
 	ctrl.p.pos.dec = dec;
-#endif
+	#endif
 	ctrl.p.pos.target = target_angle;
 	ctrl.p.pos.mode = mode;
 	ctrl.p.pos.sync = false;
+	cmd.type.ctrl = ctrl;
 
 	if (Motor_Send_Cmd(&cmd)) {
 #if CURRENT_FIRMWARE == FIRMWARE_X
@@ -423,10 +423,10 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-		bool state = atoi(argv[3]);
-
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
+
+		bool state = atoi(argv[3]);
 		ctrl.type = CTRL_ENABLE;
 		ctrl.p.en.enable = state;
 		ctrl.p.en.sync = false;
@@ -446,9 +446,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
+
 		ctrl.type = CTRL_STOP;
 		ctrl.p.stop.sync = false;
 		cmd.type.ctrl = ctrl;
@@ -467,9 +467,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
+
 		trigger.type = TRIG_RESET_POS;
 		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
@@ -487,9 +487,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
+
 		trigger.type = TRIG_HOME_RETURN;
 		trigger.p.home.mode = 0;
 		trigger.p.home.sync = false;
@@ -509,9 +509,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.op_type = OP_TRIGGER;
 		cmd.motor_id = motor_id;
+
 		trigger.type = TRIG_ENCODER_CALIB;
 		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))
@@ -530,6 +530,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 #if MOTOR_HEARTBEAT_WRITE
 		cmd.motor_id = motor_id;
 		cmd.op_type = OP_PARAM_WRITE;
+
 		write.type = PARAM_HEARTBEAT;
 		write.p.heartbeat.save = false;
 		write.p.heartbeat.time_ms = atoi(argv[2]) + 100;
@@ -567,9 +568,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.op_type = OP_CONTROL;
 		cmd.motor_id = motor_id;
+
 		ctrl.type = CTRL_VEL;
 		ctrl.p.vel.dir = 0;
 		ctrl.p.vel.vel = 300;
@@ -598,6 +599,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 		cmd.op_type = OP_PARAM_WRITE;
 		cmd.motor_id = motor_id;
+
 		write.type = PARAM_POS_WINDOW;
 		write.p.pos_window.window = window;
 		write.p.pos_window.save = save;
@@ -659,6 +661,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
+
 			write.type = PARAM_PID;
 			write.p.pid.kp = kp;
 			write.p.pid.ki = ki;
@@ -686,6 +689,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
+
 			write.type = PARAM_PID;
 			write.p.pid.trapezoidal_kp = trap_kp;
 			write.p.pid.direct_kp = direct_kp;
@@ -737,6 +741,7 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 
 			cmd.motor_id = motor_id;
 			cmd.op_type = OP_PARAM_WRITE;
+
 			write.type = PARAM_INTEGRAL_LIMIT;
 			write.p.integral_limit.value = ilimit_val;
 			write.p.integral_limit.save = save;
@@ -761,9 +766,9 @@ static void Motor_tool_Shell(int argc, char *argv[]) {
 			return;
 		}
 		motor_id = (uint8_t)val;
-
 		cmd.motor_id = motor_id;
 		cmd.op_type = OP_TRIGGER;
+
 		trigger.type = TRIG_RESTART;
 		cmd.type.trigger = trigger;
 		if (Motor_Send_Cmd(&cmd))

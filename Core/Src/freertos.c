@@ -157,6 +157,13 @@ const osThreadAttr_t Online_Check_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal3,
 };
+/* Definitions for Dist_Get */
+osThreadId_t Dist_GetHandle;
+const osThreadAttr_t Dist_Get_attributes = {
+  .name = "Dist_Get",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -202,6 +209,11 @@ osMutexId_t OPS_MutexHandle;
 const osMutexAttr_t OPS_Mutex_attributes = {
   .name = "OPS_Mutex"
 };
+/* Definitions for I2C1_Mutex */
+osMutexId_t I2C1_MutexHandle;
+const osMutexAttr_t I2C1_Mutex_attributes = {
+  .name = "I2C1_Mutex"
+};
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
 const osEventFlagsAttr_t System_Status_attributes = {
@@ -227,6 +239,7 @@ extern void Nav_Task(void *argument);
 extern void mission_run(void *argument);
 extern void Scan_Get_Task(void *argument);
 extern void Online_Check_Task(void *argument);
+extern void Dist_Get_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -357,6 +370,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of OPS_Mutex */
   OPS_MutexHandle = osMutexNew(&OPS_Mutex_attributes);
 
+  /* creation of I2C1_Mutex */
+  I2C1_MutexHandle = osMutexNew(&I2C1_Mutex_attributes);
+
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
@@ -432,6 +448,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Online_Check */
   Online_CheckHandle = osThreadNew(Online_Check_Task, NULL, &Online_Check_attributes);
 
+  /* creation of Dist_Get */
+  Dist_GetHandle = osThreadNew(Dist_Get_Task, NULL, &Dist_Get_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -463,7 +482,7 @@ void Sys_Init_Task(void *argument)
   MX_IWDG_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 #else
-  my_printf("[info] Debug Mode, Watch Dog Disabled.\r\n");
+  my_printf("[warn] Debug Mode, Watch Dog Disabled.\r\n");
 #endif
 
   SHOW_DMESG(dmesg_wait, "Initialize Shell");
@@ -485,6 +504,11 @@ void Sys_Init_Task(void *argument)
   if (!Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize VL53L0X Module");
+  extern bool VL53L0X_Init(void);
+  if (!VL53L0X_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
   SHOW_DMESG(dmesg_wait, "Initialize OPS Module");
   if (!OPS_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
@@ -495,11 +519,8 @@ void Sys_Init_Task(void *argument)
   else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Scan Module");
-  if (!Scan_Init()) {
-    SHOW_DMESG(dmesg_fail, NULL);
-  } else {
-    SHOW_DMESG(dmesg_ok, NULL);
-  }
+  if (!Scan_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize Motor Module");
   extern bool Motor_Init(void);
@@ -528,7 +549,6 @@ void Sys_Init_Task(void *argument)
   else SHOW_DMESG(dmesg_ok, NULL);
 
 
-
   extern Shell shell;
   Shell_New_Convo(&shell);
   osEventFlagsSet(System_StatusHandle, SYS_INIT_COMPLETE);
@@ -540,4 +560,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

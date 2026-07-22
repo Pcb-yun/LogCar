@@ -174,6 +174,7 @@ static void Mutex_Info(void) {
     extern osMutexId_t Track_MutexHandle;
     extern osMutexId_t Motor_MutexHandle;
     extern osMutexId_t OPS_MutexHandle;
+    extern osMutexId_t I2C1_MutexHandle;
 
     logPrintln("ID        Name                  Owner         State");
     logPrintln("---------------------------------------------------------");
@@ -207,6 +208,14 @@ static void Mutex_Info(void) {
         const char *owner_name = owner ? osThreadGetName(owner) : "none";
         logPrintln("%p  %-20s  %-12s  %s",
                   OPS_MutexHandle, "OPS_Mutex",
+                  owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
+    }
+
+    if (I2C1_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(I2C1_MutexHandle);
+        const char *owner_name = owner ? osThreadGetName(owner) : "none";
+        logPrintln("%p  %-20s  %-12s  %s",
+                  I2C1_MutexHandle, "I2C1_Mutex",
                   owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
     }
 }
