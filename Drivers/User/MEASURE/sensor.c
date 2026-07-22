@@ -9,7 +9,12 @@
  *   S0, S1 外部硬件固定为 H (100% 频率标定)
  *
  * 使用 TIM4 PWM 输入模式 (6 MHz) 硬件捕获输出信号周期，
- * TIM2 (1MHz, 32-bit) 仅用于超时计时。
+ * TIM2 (1MHz, 32-bit) 用于非阻塞超时计时。
+ *
+ * === 非阻塞状态机 ===
+ * 通过 SENSOR_StartReadAll() 启动测量，SENSOR_Process() 驱动状态机，
+ * 每个通道经历: SET_FILTER → SETTLE → DISCARD → SAMPLE(5) → COMPUTE
+ * 完成后通过回调或轮询通知调用者。
  */
 
 #include "sensor.h"
@@ -23,21 +28,27 @@
 #include "main.h"
 #include <math.h>
 
-/** 频率测量超时 (TIM2 ticks, 1 tick = 1us) */
+/**
+ * @brief 频率测量超时 (TIM2 ticks, 1 tick = 1us)
+ */
 #define TCS230_TIMEOUT_US  1000000UL
 
-/** 滤波器切换后稳定等待时间 (us) */
+/**
+ * @brief 滤波器切换后稳定等待时间 (us)
+ */
 #define TCS230_SETTLE_US   2000UL
 
 /**
- * TIM4 计数器频率
- * SENSOR_Init 中将 TIM4 预分频器从 83(1MHz) 改为 13(6MHz)，
- * 提高高频测量分辨率。原始值保留在 tim.c 中避免 CubeMX 冲突。
+ * @brief TIM4 计数器频率 (6MHz)
+ * 预分频器 84MHz/14=6MHz，提高高频测量分辨率。
  */
 #define TCS230_TIM_CLOCK_HZ  6000000UL
 
-/** 频率测量采样数 (取奇数，便于去极值后取中段均值) */
+/**
+ * @brief 频率测量采样数 (取奇数，便于去极值后取中段均值)
+ */
 #define FREQ_NSAMPLES  5
+
 
 /**
  * @brief 白色平衡参数
@@ -51,82 +62,57 @@ TCS230_RGBC_t rgb_color = {0};
 
 bool isWB = false;
 
+/**
+ * @brief 单通道测量阶段
+ */
+typedef enum {
+    PHASE_IDLE = 0,
+    PHASE_SET_FILTER,       // 切换滤波器 GPIO
+    PHASE_SETTLE,           // 等待信号稳定 (TCS230_SETTLE_US)
+    PHASE_DISCARD,          // 丢弃第一个捕获
+    PHASE_SAMPLE,           // 采集 FREQ_NSAMPLES 个样本
+    PHASE_COMPUTE,          // 计算频率
+} SENSOR_Phase_t;
 
 /**
- * @brief 使用 TIM2 微秒忙等待
+ * @brief 单通道测量上下文
  */
-static inline void delay_us(uint32_t us) {
-    uint32_t start = TIM2->CNT;
-    while ((TIM2->CNT - start) < us);
-}
+typedef struct {
+    TCS230_Filter_t channels[4];    // 4 个通道按顺序
+    int channel_idx;                // 当前通道 (0~3)
+    SENSOR_Phase_t phase;           // 当前阶段
 
-/**
- * @brief 使用 TIM4 输入捕获（PWM 输入模式）测量 SENSOR_OUT 引脚的频率
- * @return 频率，单位为 Hz，0 表示超时
- *
- * TIM4 已配置为 PWM 输入模式 (6 MHz, 16-bit):
- *   - 每个上升沿计数器复位，CCR1 记录周期（μs 当量）
- *   - CCR2 记录高电平脉宽（μs 当量）（目前未使用）
- *
- * 测量策略：
- *   1. 丢弃第一个捕获（滤波器切换后信号可能不稳定）
- *   2. 采集 5 个周期样本
- *   3. 去掉最大值和最小值，取中间 3 个的平均值
- *   4. 用平均周期计算频率
- */
-static uint32_t measure_frequency(void) {
-    uint32_t start = TIM2->CNT;
-
-    /* 丢弃第一个捕获 — 滤波器切换后信号可能尚未稳定 */
-    TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
-    while ((TIM4->SR & TIM_SR_CC1IF) == 0) {
-        if ((TIM2->CNT - start) > TCS230_TIMEOUT_US) return 0;
-    }
-
-    /* 采集 FREQ_NSAMPLES 个周期的样本 */
+    int sample_idx;                 // 当前样本索引
     uint32_t samples[FREQ_NSAMPLES];
-    for (int i = 0; i < FREQ_NSAMPLES; i++) {
-        TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
-        while ((TIM4->SR & TIM_SR_CC1IF) == 0) {
-            if ((TIM2->CNT - start) > TCS230_TIMEOUT_US) return 0;
-        }
-        samples[i] = TIM4->CCR1;
-    }
 
-    /* 冒泡排序，方便去极值 */
-    for (int i = 0; i < FREQ_NSAMPLES - 1; i++) {
-        for (int j = i + 1; j < FREQ_NSAMPLES; j++) {
-            if (samples[i] > samples[j]) {
-                uint32_t t = samples[i];
-                samples[i] = samples[j];
-                samples[j] = t;
-            }
-        }
-    }
+    uint32_t phase_start;           // 当前阶段开始时的 TIM2->CNT
 
-    /* 去掉最小和最大的各 1 个，取中间值平均 */
-    uint32_t sum = 0;
-    for (int i = 1; i < FREQ_NSAMPLES - 1; i++) {
-        sum += samples[i];
-    }
-    uint32_t period = sum / (FREQ_NSAMPLES - 2);
+    volatile bool capture_ready;
 
-    if (period == 0) return 0;
+    TCS230_RGBC_t result;
 
-    return TCS230_TIM_CLOCK_HZ / period;
-}
+    bool busy;
+    bool complete;
+
+    SENSOR_ReadAll_Callback_t callback;
+} SENSOR_Context_t;
 
 /**
- * @brief 初始化 TCS230 颜色传感器
+ * @brief 单通道测量上下文
+ */
+static SENSOR_Context_t s_ctx;
+
+/**
+ * @brief 初始化 TCS230 传感器接口
+ * - 设置默认滤波器为 Clear (S2=H, S3=L)
  */
 void SENSOR_Init(void) {
-    /* 默认滤波器：清除 */
     SENSOR_SetFilter(TCS230_FILTER_CLEAR);
 }
 
 /**
- * @brief 设置 TCS230 颜色传感器的滤波器
- * @param filter 滤波器选择
+ * @brief 选择颜色滤波器
+ * @param filter 颜色滤波器选择
  */
 void SENSOR_SetFilter(TCS230_Filter_t filter) {
     HAL_GPIO_WritePin(SENSOR_S2_GPIO_Port, SENSOR_S2_Pin,
@@ -136,43 +122,254 @@ void SENSOR_SetFilter(TCS230_Filter_t filter) {
 }
 
 /**
- * @brief 读取 TCS230 颜色传感器的指定通道频率
- * @param filter 滤波器选择
- * @return 频率，单位为 Hz，0 表示超时
+ * @brief TIM IC 捕获回调（由 TIM4_IRQHandler → HAL_TIM_IRQHandler 调用）
+ *
+ * 覆盖 HAL 弱定义，在 ISR 上下文中运行，仅设置标志并读取 CCR1。
+ * CCR1 在 PWM 输入模式下记录周期计数值。
  */
-uint32_t SENSOR_ReadChannel(TCS230_Filter_t filter) {
-    /* 确保 TIM4 计数器时钟为 6MHz（预分频器 84MHz/14=6MHz） */
-    TIM4->PSC = 13;
-    TIM4->EGR = TIM_EGR_UG;
-
-    SENSOR_SetFilter(filter);
-    delay_us(TCS230_SETTLE_US);
-    return measure_frequency();
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM4 && s_ctx.busy) {
+        s_ctx.capture_ready = true;
+    }
 }
 
 /**
- * @brief 读取 TCS230 颜色传感器的所有通道频率
- * @param out 输出结构体指针，用于存储读取到的频率
+ * @brief 计算样本缓冲区中有效周期的均值频率
+ * @param samples  原始周期样本
+ * @return 频率 Hz，0 表示无效
  */
-void SENSOR_ReadAll(TCS230_RGBC_t *out) {
-    out->clear = SENSOR_ReadChannel(TCS230_FILTER_CLEAR);
-    out->red   = SENSOR_ReadChannel(TCS230_FILTER_RED);
-    out->green = SENSOR_ReadChannel(TCS230_FILTER_GREEN);
-    out->blue  = SENSOR_ReadChannel(TCS230_FILTER_BLUE);
+static uint32_t compute_frequency(const uint32_t *samples) {
+    /* 冒泡排序 */
+    uint32_t buf[FREQ_NSAMPLES];
+    memcpy(buf, samples, sizeof(buf));
+    for (int i = 0; i < FREQ_NSAMPLES - 1; i++) {
+        for (int j = i + 1; j < FREQ_NSAMPLES; j++) {
+            if (buf[i] > buf[j]) {
+                uint32_t t = buf[i];
+                buf[i] = buf[j];
+                buf[j] = t;
+            }
+        }
+    }
+    /* 去掉最小和最大的各 1 个，取中间 3 个平均 */
+    uint32_t sum = 0;
+    for (int i = 1; i < FREQ_NSAMPLES - 1; i++) {
+        sum += buf[i];
+    }
+    uint32_t period = sum / (FREQ_NSAMPLES - 2);
+    if (period == 0) return 0;
+    return TCS230_TIM_CLOCK_HZ / period;
+}
+
+/**
+ * @brief 获取当前通道对应的 result 字段指针
+ */
+static uint32_t* channel_result_ptr(int channel_idx) {
+    switch (s_ctx.channels[channel_idx]) {
+        case TCS230_FILTER_CLEAR: return &s_ctx.result.clear;
+        case TCS230_FILTER_RED:   return &s_ctx.result.red;
+        case TCS230_FILTER_GREEN: return &s_ctx.result.green;
+        case TCS230_FILTER_BLUE:  return &s_ctx.result.blue;
+        default:                  return NULL;
+    }
+}
+
+/**
+ * @brief 进入下一个通道
+ * @return true 还有更多通道，false 所有通道已完成
+ */
+static bool start_next_channel(void) {
+    s_ctx.channel_idx++;
+    if (s_ctx.channel_idx >= 4) {
+        return false;  // 所有通道完成
+    }
+    s_ctx.phase = PHASE_SET_FILTER;
+    s_ctx.sample_idx = 0;
+    return true;
+}
+
+/**
+ * @brief 启动指定阶段的计时
+ */
+static inline void start_phase_timer(void) {
+    s_ctx.phase_start = TIM2->CNT;
+}
+
+/**
+ * @brief 终止当前测量（超时或取消）
+ */
+static void abort_measurement(void) {
+    s_ctx.busy = false;
+    s_ctx.complete = false;
+    s_ctx.phase = PHASE_IDLE;
+    TIM4->DIER &= ~TIM_DIER_CC1IE;  // 关闭 CC1 中断
+    if (s_ctx.callback) {
+        s_ctx.callback(&s_ctx.result, false);
+    }
+}
+
+void SENSOR_StartReadAll(SENSOR_ReadAll_Callback_t callback) {
+    if (s_ctx.busy) return;
+
+    /* 初始化上下文 */
+    memset(&s_ctx, 0, sizeof(s_ctx));
+    s_ctx.channels[0] = TCS230_FILTER_CLEAR;
+    s_ctx.channels[1] = TCS230_FILTER_RED;
+    s_ctx.channels[2] = TCS230_FILTER_GREEN;
+    s_ctx.channels[3] = TCS230_FILTER_BLUE;
+    s_ctx.channel_idx = 0;
+    s_ctx.phase = PHASE_SET_FILTER;
+    s_ctx.busy = true;
+    s_ctx.complete = false;
+    s_ctx.callback = callback;
+
+    /* 启用 TIM4 CC1 中断（PWM 输入模式下捕获完成时触发） */
+    TIM4->DIER |= TIM_DIER_CC1IE;
+
+    /* 进入第一阶段 */
+    s_ctx.phase = PHASE_SET_FILTER;
+}
+
+/**
+ * @brief 检查所有通道是否已完成读取
+ * @return true 所有通道已完成读取，false 有通道未完成
+ */
+bool SENSOR_ReadAll_IsComplete(void) {
+    return s_ctx.complete;
+}
+
+/**
+ * @brief 获取所有通道的读取结果
+ * @return 指向读取结果的指针（仅在 SENSOR_ReadAll_IsComplete 为 true 时有效）
+ */
+const TCS230_RGBC_t* SENSOR_GetResult(void) {
+    return &s_ctx.result;
+}
+
+/**
+ * @brief 取消当前测量（超时或取消）
+ */
+void SENSOR_Cancel(void) {
+    if (!s_ctx.busy) return;
+    abort_measurement();
+}
+
+/**
+ * @brief 检查传感器是否正在忙于读取
+ * @return true 正在读取，false 未读取
+ */
+bool SENSOR_IsBusy(void) {
+    return s_ctx.busy;
+}
+
+/**
+ * @brief 驱动非阻塞状态机（必须周期性调用）
+ *
+ * 每次调用最多执行一个阶段的非阻塞转移。
+ * 建议 1ms 周期调用。
+ */
+void SENSOR_Process(void) {
+    if (!s_ctx.busy) return;
+
+    uint32_t now = TIM2->CNT;
+
+    switch (s_ctx.phase) {
+
+    /* ========== 1. 设置滤波器 ========== */
+    case PHASE_SET_FILTER: {
+        TCS230_Filter_t filter = s_ctx.channels[s_ctx.channel_idx];
+        SENSOR_SetFilter(filter);
+        /* 确保 TIM4 PSC = 13 (6MHz) */
+        TIM4->PSC = 13;
+        TIM4->EGR = TIM_EGR_UG;
+        s_ctx.phase = PHASE_SETTLE;
+        start_phase_timer();
+        break;
+    }
+
+    /* ========== 2. 等待稳定 ========== */
+    case PHASE_SETTLE: {
+        if ((now - s_ctx.phase_start) >= TCS230_SETTLE_US) {
+            /* 清楚捕获标志，准备丢弃第一个捕获 */
+            TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
+            s_ctx.capture_ready = false;
+            s_ctx.phase = PHASE_DISCARD;
+            start_phase_timer();
+        }
+        break;
+    }
+
+    /* ========== 3. 丢弃第一个捕获 ========== */
+    case PHASE_DISCARD: {
+        if ((now - s_ctx.phase_start) > TCS230_TIMEOUT_US) {
+            /* 整个通道超时 */
+            *channel_result_ptr(s_ctx.channel_idx) = 0;
+            if (!start_next_channel()) {
+                goto done;
+            }
+            break;
+        }
+        if (s_ctx.capture_ready) {
+            s_ctx.capture_ready = false;
+            /* 丢弃第一个捕获值，清楚标志开始采样 */
+            TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
+            s_ctx.sample_idx = 0;
+            s_ctx.phase = PHASE_SAMPLE;
+            start_phase_timer();
+        }
+        break;
+    }
+
+    /* ========== 4. 采集样本 ========== */
+    case PHASE_SAMPLE: {
+        if ((now - s_ctx.phase_start) > TCS230_TIMEOUT_US) {
+            *channel_result_ptr(s_ctx.channel_idx) = 0;
+            if (!start_next_channel()) {
+                goto done;
+            }
+            break;
+        }
+        if (s_ctx.capture_ready) {
+            s_ctx.capture_ready = false;
+            s_ctx.samples[s_ctx.sample_idx++] = TIM4->CCR1;
+            /* 在最后一次采集中已经清楚标志，不需要再次清除 */
+            TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
+
+            if (s_ctx.sample_idx >= FREQ_NSAMPLES) {
+                s_ctx.phase = PHASE_COMPUTE;
+            }
+        }
+        break;
+    }
+
+    /* ========== 5. 计算频率 ========== */
+    case PHASE_COMPUTE: {
+        uint32_t *result = channel_result_ptr(s_ctx.channel_idx);
+        *result = compute_frequency(s_ctx.samples);
+        /* 进入下一通道 */
+        if (!start_next_channel()) {
+            goto done;
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
+    return;
+
+done:
+    /* 所有 4 个通道读取完成 */
+    s_ctx.busy = false;
+    s_ctx.complete = true;
+    TIM4->DIER &= ~TIM_DIER_CC1IE;  // 关闭 CC1 中断
+    if (s_ctx.callback) {
+        s_ctx.callback(&s_ctx.result, true);
+    }
 }
 
 /**
  * @brief 将原始 RGBC 频率转换为色度 RGB (0-255) + 亮度因子
- * @param raw       原始频率读数
- * @param wb        白平衡参考
- * @param r         输出红色色度 (0-255)
- * @param g         输出绿色色度 (0-255)
- * @param b         输出蓝色色度 (0-255)
- * @param brightness 输出亮度因子 0.0~1.0 (fC / fC_wb)
- * @return true 转换成功, false 数据无效
- *
- * 色度 = 通道占比 / 白平衡校正, 归一化到峰值 = 1.0 (纯色度, 与亮度无关)
- * 亮度 = fC / fC_wb, 用于 InferColor 区分黑/白/灰/彩色
  */
 static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
                                 uint8_t *r, uint8_t *g, uint8_t *b,
@@ -188,12 +385,10 @@ static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb
     float Gn = (float)raw->green / (float)raw->clear * (float)wb->clear / (float)wb->green;
     float Bn = (float)raw->blue  / (float)raw->clear * (float)wb->clear / (float)wb->blue;
 
-    /* 亮度因子：用于 InferColor 区分黑/白 */
     float bri = (float)raw->clear / (float)wb->clear;
     if (bri > 1.0f) bri = 1.0f;
     if (brightness) *brightness = bri;
 
-    /* 色度归一化：峰值通道 = 1.0，与亮度无关 */
     float maxRGB = fmaxf(Rn, fmaxf(Gn, Bn));
     if (maxRGB > 0.0f) {
         float inv = 1.0f / maxRGB;
@@ -207,7 +402,10 @@ static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb
 }
 
 /**
- * @brief 读取 TCS230 颜色传感器的所有通道频率并打印到串口
+ * @brief 读取所有四个 RGBC 通道的频率（阻塞）
+ * @param out RGBC 读取结构体指针
+ *
+ * 依次读取 Clear → Red → Green → Blue，每次阻塞。
  */
 static void SENSOR_Read_Shell(void) {
     TCS230_RGBC_t rgbc;
@@ -224,7 +422,15 @@ static void SENSOR_Read_Shell(void) {
                "  R       G       B       C");
 
     for (;;) {
-        SENSOR_ReadAll(&rgbc);
+        /* 非阻塞读取 */
+        SENSOR_StartReadAll(NULL);
+        while (!SENSOR_ReadAll_IsComplete()) {
+            SENSOR_Process();
+            osDelay(1);
+        }
+        const TCS230_RGBC_t *p = SENSOR_GetResult();
+        rgbc = *p;  // copy
+
         logPrintln("\033[1A\033[2K\r%5lu  %5lu  %5lu  %5lu Hz",
                    rgbc.red, rgbc.green, rgbc.blue, rgbc.clear);
 
@@ -238,7 +444,10 @@ static void SENSOR_Read_Shell(void) {
 }
 
 /**
- * @brief 读取 TCS230 颜色传感器的所有通道频率并打印到串口
+ * @brief 读取所有四个 RGBC 通道的频率（阻塞）
+ * @param out RGBC 读取结构体指针
+ *
+ * 依次读取 Clear → Red → Green → Blue，每次阻塞。
  */
 static void SENSOR_Color_Shell(void) {
     Shell *shell;
@@ -247,28 +456,27 @@ static void SENSOR_Color_Shell(void) {
     if (shell == NULL) return;
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
-    TCS230_RGBC_t rgbc;
-    SENSOR_ReadAll(&rgbc);
 
     if (!isWB) {
         logPrintln("White Balance Not Set");
+        osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
         return;
     }
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
-    /*
-    *Rn = (fR / fC) × (fC0 / fR0)
-    *Gn = (fG / fC) × (fC0 / fG0)
-    *Bn = (fB / fC) × (fC0 / fB0)
-    */
-
     for (;;) {
-        SENSOR_ReadAll(&rgbc);
+        /* 非阻塞读取 */
+        SENSOR_StartReadAll(NULL);
+        while (!SENSOR_ReadAll_IsComplete()) {
+            SENSOR_Process();
+            osDelay(1);
+        }
+        const TCS230_RGBC_t *rgbc = SENSOR_GetResult();
 
         uint8_t cr, cg, cb;
         float bri;
-        if (!sensor_rgbc_to_rgb(&rgbc, &rgbc_wb, &cr, &cg, &cb, &bri)) {
+        if (!sensor_rgbc_to_rgb(rgbc, &rgbc_wb, &cr, &cg, &cb, &bri)) {
             osDelay(200);
             continue;
         }
@@ -279,7 +487,6 @@ static void SENSOR_Color_Shell(void) {
 
         SENSOR_ColorResult_t inferred = SENSOR_InferColor(cr, cg, cb, bri);
 
-        osDelay(200);
         logPrintln("\r\033[1A\033[2K\rR: %3u  G: %3u  B: %3u  |  %s (%u%%)",
                    cr, cg, cb,
                    inferred.color_name, inferred.confidence);
@@ -293,27 +500,23 @@ static void SENSOR_Color_Shell(void) {
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
+/**
+ * @brief 读取所有四个 RGBC 通道的频率（阻塞）
+ * @param out RGBC 读取结构体指针
+ *
+ * 依次读取 Clear → Red → Green → Blue，每次阻塞。
+ */
 static void SENSOR_WB_Shell(void) {
-    extern osMessageQueueId_t Usart1_Rx_DataHandle;
     TCS230_RGBC_t rgbc;
 
-    SENSOR_ReadAll(&rgbc);
-
-    // if(rgbc.clear > 600000 ||
-    //      rgbc.red > 60000 ||
-    //      rgbc.green > 60000 ||
-    //      rgbc.blue > 60000) {
-    //     logPrintln("Exposure Too High  R: %u  G: %u  B: %u  C: %u",
-    //                rgbc.red, rgbc.green, rgbc.blue, rgbc.clear);
-    //     return;
-    // }else if(rgbc.clear < 1000 ||
-    //      rgbc.red < 1000 ||
-    //      rgbc.green < 1000 ||
-    //      rgbc.blue < 1000) {
-    //     logPrintln("Exposure Too Low  R: %u  G: %u  B: %u  C: %u",
-    //                rgbc.red, rgbc.green, rgbc.blue, rgbc.clear);
-    //     return;
-    // }
+    /* 非阻塞读取 */
+    SENSOR_StartReadAll(NULL);
+    while (!SENSOR_ReadAll_IsComplete()) {
+        SENSOR_Process();
+        osDelay(1);
+    }
+    const TCS230_RGBC_t *p = SENSOR_GetResult();
+    rgbc = *p;
 
     rgbc_wb.red = rgbc.red;
     rgbc_wb.green = rgbc.green;
@@ -328,86 +531,14 @@ static void SENSOR_WB_Shell(void) {
 
     isWB = true;
     logPrintln("White Balance Set");
-
 }
 
 /**
- * @brief 根据色度 RGB + 亮度因子推断颜色
- * @param r 红色色度 (0-255)
- * @param g 绿色色度 (0-255)
- * @param b 蓝色色度 (0-255)
- * @param brightness  亮度因子 0.0~1.0 (fC/fC_wb)
- * @return 颜色识别结果
+ * @brief 读取所有四个 RGBC 通道的频率（阻塞）
+ * @param out RGBC 读取结构体指针
  *
- * 算法:
- *   1. brightness < 0.15 → Black (极暗)
- *   2. brightness > 0.4 && range < 0.3 → White (高亮 + 通道高度均匀)
- *   3. 否则按通道占比偏离均匀基准 (1/3) 判定 Red/Green/Blue
- *   4. 亮度过低时对彩色评分施加惩罚
- *   5. 最佳评分 < 5% 时视为 Unknown（防止噪声误判）
+ * 依次读取 Clear → Red → Green → Blue，每次阻塞。
  */
-SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
-                                        float brightness) {
-    SENSOR_ColorResult_t result = {"Unknown", 0};
-
-    float fr = r / 255.0f;
-    float fg = g / 255.0f;
-    float fb = b / 255.0f;
-
-    float maxC = fmaxf(fr, fmaxf(fg, fb));
-    float minC = fminf(fr, fminf(fg, fb));
-    float range = maxC - minC;
-    float sum  = fr + fg + fb;
-
-    const char *names[] = {"Black", "White", "Red", "Green", "Blue"};
-    float scores[5] = {0};
-
-    /* --- Black: 亮度极低 --- */
-    if (brightness < 0.15f) {
-        scores[0] = 1.0f - brightness / 0.15f;
-    }
-
-    /* --- White: 较高亮度 + 各通道高度均匀 --- */
-    if (brightness > 0.4f && range < 0.3f) {
-        float uniformity = 1.0f - range / 0.3f;          /* range=0 → 1.0, range=0.3 → 0.0 */
-        float bri_factor = fminf(brightness / 0.5f, 1.0f);
-        scores[1] = bri_factor * uniformity;
-    }
-
-    /* --- 彩色: 有效光照下按主导色判断 --- */
-    if (brightness > 0.08f && sum > 0.05f) {
-        float r_ratio = fr / sum;
-        float g_ratio = fg / sum;
-        float b_ratio = fb / sum;
-
-        /* 相对均匀基准 (1/3) 的偏离 × 2.0 */
-        scores[2] = fmaxf(0.0f, (r_ratio - 1.0f / 3.0f) * 2.0f);
-        scores[3] = fmaxf(0.0f, (g_ratio - 1.0f / 3.0f) * 2.0f);
-        scores[4] = fmaxf(0.0f, (b_ratio - 1.0f / 3.0f) * 2.0f);
-
-        /* 亮度惩罚: brightness < 0.25 时线性衰减 */
-        float bp = fminf(brightness / 0.25f, 1.0f);
-        for (int i = 2; i < 5; i++) scores[i] *= bp;
-    }
-
-    /* 选择最高分 */
-    int best = 0;
-    for (int i = 1; i < 5; i++) {
-        if (scores[i] > scores[best]) best = i;
-    }
-
-    /* 评分过低 → Black */
-    if (scores[best] < 0.05f) {
-        result.color_name = "Black";
-        result.confidence = (uint8_t)(scores[best] * 100.0f);
-        return result;
-    }
-
-    result.color_name = names[best];
-    result.confidence = (uint8_t)fminf(scores[best] * 100.0f, 100.0f);
-    return result;
-}
-
 static void SENSOR_Detect_Shell(void) {
     extern osMessageQueueId_t Usart1_Rx_DataHandle;
     uint8_t byte;
@@ -423,7 +554,15 @@ static void SENSOR_Detect_Shell(void) {
 
     for (;;) {
         osDelay(200);
-        SENSOR_ReadAll(&rgbc);
+
+        /* 非阻塞读取 */
+        SENSOR_StartReadAll(NULL);
+        while (!SENSOR_ReadAll_IsComplete()) {
+            SENSOR_Process();
+            osDelay(1);
+        }
+        const TCS230_RGBC_t *p = SENSOR_GetResult();
+        rgbc = *p;
 
         uint8_t cr, cg, cb;
         float bri;
@@ -445,6 +584,74 @@ static void SENSOR_Detect_Shell(void) {
     logPrintln("");
 }
 
+/**
+ * @brief 颜色推理
+ * @param r 红色频率
+ * @param g 绿色频率
+ * @param b 蓝色频率
+ * @param brightness 亮度因子
+ * @return 颜色识别结果
+ */
+SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
+                                        float brightness) {
+    SENSOR_ColorResult_t result = {"Unknown", 0};
+
+    float fr = r / 255.0f;
+    float fg = g / 255.0f;
+    float fb = b / 255.0f;
+
+    float maxC = fmaxf(fr, fmaxf(fg, fb));
+    float minC = fminf(fr, fminf(fg, fb));
+    float range = maxC - minC;
+    float saturation = (maxC > 0.001f) ? (range / maxC) : 0.0f;
+
+    /* 黑色：亮度过低 */
+    if (brightness < 0.15f) {
+        result.color_name = "Black";
+        result.confidence = (uint8_t)((1.0f - brightness / 0.15f) * 100.0f);
+        return result;
+    }
+
+    /* 白色：亮度高且饱和度低 */
+    if (brightness > 0.4f && saturation < 0.25f) {
+        float conf = (1.0f - saturation / 0.25f) * fminf(brightness / 0.6f, 1.0f);
+        result.color_name = "White";
+        result.confidence = (uint8_t)(conf * 100.0f);
+        return result;
+    }
+
+    /* 彩色：基于通道主导性判断 */
+    if (saturation > 0.10f && brightness > 0.08f) {
+        /* 找出次强分量 */
+        float top2;
+        if (maxC == fr)          top2 = fmaxf(fg, fb);
+        else if (maxC == fg)     top2 = fmaxf(fr, fb);
+        else                     top2 = fmaxf(fr, fg);
+
+        /* 主导度 = (最强 - 次强) / 最强，衡量颜色的纯度 */
+        float dominance = (maxC - top2) / maxC;
+        float bf = fminf(brightness / 0.15f, 1.0f);
+        float score = dominance * bf;
+
+        if (score > 0.05f) {
+            if (maxC == fr)          result.color_name = "Red";
+            else if (maxC == fg)     result.color_name = "Green";
+            else                     result.color_name = "Blue";
+
+            result.confidence = (uint8_t)fminf(score * 100.0f, 100.0f);
+            return result;
+        }
+    }
+
+    /* 无法识别的颜色 */
+    result.color_name = "Black";
+    result.confidence = 0;
+    return result;
+}
+
+/**
+ * @brief Shell 命令注册
+ */
 ShellCommand SensorGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, read, SENSOR_Read_Shell, read TCS230 RGBC frequency continuously),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, color, SENSOR_Color_Shell, read TCS230 RGBC frequency and apply white balance),
