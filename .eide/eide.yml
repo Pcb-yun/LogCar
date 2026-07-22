@@ -168,16 +168,19 @@ virtualFolder:
       files:
         - path: Drivers/User/TRACK/track.c
       folders: []
+    - name: lv53l0x
+      files:
+        - path: Drivers/User/VL53L0X/core/vl53l0x_api.c
+        - path: Drivers/User/VL53L0X/core/vl53l0x_api_calibration.c
+        - path: Drivers/User/VL53L0X/core/vl53l0x_api_core.c
+        - path: Drivers/User/VL53L0X/core/vl53l0x_api_ranging.c
+        - path: Drivers/User/VL53L0X/core/vl53l0x_api_strings.c
+        - path: Drivers/User/VL53L0X/core/vl53l0x_platform_log.c
+        - path: Drivers/User/VL53L0X/platform/vl53l0x_platform.c
+        - path: Drivers/User/VL53L0X/vl53l0x_port.c
+      folders: []
     - name: ::CMSIS
       files: []
-      folders: []
-    - name: measure
-      files:
-        - path: Drivers/User/MEASURE/sensor.c
-      folders: []
-    - name: turntable
-      files:
-        - path: Applications/turntable/turntable_ctrl.c
       folders: []
 dependenceList: []
 outDir: build
@@ -225,10 +228,11 @@ targets:
         - Drivers/User/STEP/zdt-v5-driver/core
         - Drivers/User/STEP/zdt-v5-driver/drv
         - Drivers/User/TRACK
+        - Drivers/User/VL53L0X
+        - Drivers/User/VL53L0X/core
+        - Drivers/User/VL53L0X/platform
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
-        - Drivers/User/MEASURE
-        - Applications/turntable
       libList: []
     excludeList: []
     settings:

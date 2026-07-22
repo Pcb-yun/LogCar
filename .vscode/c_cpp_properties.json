@@ -36,6 +36,9 @@
                 "Drivers/User/STEP/zdt-v5-driver/core",
                 "Drivers/User/STEP/zdt-v5-driver/drv",
                 "Drivers/User/TRACK",
+                "Drivers/User/VL53L0X",
+                "Drivers/User/VL53L0X/core",
+                "Drivers/User/VL53L0X/platform",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"
             ],

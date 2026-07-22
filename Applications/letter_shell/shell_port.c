@@ -125,8 +125,7 @@ void Online_Check_Task(void *argument) {
             if (osKernelGetTickCount() - start_time > ONLINE_CHECK_TIMEOUT) {
                 if (retry++ >= ONLINE_CHECK_RETRY) {
                     osEventFlagsClear(System_StatusHandle, SHELL_ONLINE);
-                    retry = 0;
-                    break;
+                    retry = 0; break;
                 }
             }
 
