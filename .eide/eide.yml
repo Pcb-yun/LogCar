@@ -182,6 +182,10 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
+    - name: turntable
+      files:
+        - path: Applications/turntable/turntable_ctrl.c
+      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -233,6 +237,7 @@ targets:
         - Drivers/User/VL53L0X/platform
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
+        - Applications/turntable
       libList: []
     excludeList: []
     settings:
