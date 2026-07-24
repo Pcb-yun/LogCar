@@ -164,6 +164,13 @@ const osThreadAttr_t Dist_Get_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for Oled_Refresh */
+osThreadId_t Oled_RefreshHandle;
+const osThreadAttr_t Oled_Refresh_attributes = {
+  .name = "Oled_Refresh",
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal2,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -209,10 +216,10 @@ osMutexId_t OPS_MutexHandle;
 const osMutexAttr_t OPS_Mutex_attributes = {
   .name = "OPS_Mutex"
 };
-/* Definitions for I2C1_Mutex */
-osMutexId_t I2C1_MutexHandle;
-const osMutexAttr_t I2C1_Mutex_attributes = {
-  .name = "I2C1_Mutex"
+/* Definitions for OLED_Mutex */
+osMutexId_t OLED_MutexHandle;
+const osMutexAttr_t OLED_Mutex_attributes = {
+  .name = "OLED_Mutex"
 };
 /* Definitions for System_Status */
 osEventFlagsId_t System_StatusHandle;
@@ -240,6 +247,7 @@ extern void mission_run(void *argument);
 extern void Scan_Get_Task(void *argument);
 extern void Online_Check_Task(void *argument);
 extern void Dist_Get_Task(void *argument);
+extern void Oled_Refresh_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -370,8 +378,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of OPS_Mutex */
   OPS_MutexHandle = osMutexNew(&OPS_Mutex_attributes);
 
-  /* creation of I2C1_Mutex */
-  I2C1_MutexHandle = osMutexNew(&I2C1_Mutex_attributes);
+  /* creation of OLED_Mutex */
+  OLED_MutexHandle = osMutexNew(&OLED_Mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -450,6 +458,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Dist_Get */
   Dist_GetHandle = osThreadNew(Dist_Get_Task, NULL, &Dist_Get_attributes);
+
+  /* creation of Oled_Refresh */
+  Oled_RefreshHandle = osThreadNew(Oled_Refresh_Task, NULL, &Oled_Refresh_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -548,6 +559,11 @@ void Sys_Init_Task(void *argument)
   if (!Nav_Core_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize OLED Module");
+  extern void OLED_Init(void);
+  OLED_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+
 
   extern Shell shell;
   Shell_New_Convo(&shell);
@@ -560,3 +576,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

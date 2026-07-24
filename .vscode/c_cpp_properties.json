@@ -28,6 +28,8 @@
                 "Applications/nav/utils",
                 "Drivers/User/ADC",
                 "Drivers/User/MISC",
+                "Drivers/User/OLED",
+                "Drivers/User/OLED/ssd1306",
                 "Drivers/User/OPS",
                 "Drivers/User/RTOS",
                 "Drivers/User/SCANNER",

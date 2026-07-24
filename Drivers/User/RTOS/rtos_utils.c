@@ -174,7 +174,7 @@ static void Mutex_Info(void) {
     extern osMutexId_t Track_MutexHandle;
     extern osMutexId_t Motor_MutexHandle;
     extern osMutexId_t OPS_MutexHandle;
-    extern osMutexId_t I2C1_MutexHandle;
+    extern osMutexId_t OLED_MutexHandle;
 
     logPrintln("ID        Name                  Owner         State");
     logPrintln("---------------------------------------------------------");
@@ -211,11 +211,11 @@ static void Mutex_Info(void) {
                   owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
     }
 
-    if (I2C1_MutexHandle != NULL) {
-        osThreadId_t owner = osMutexGetOwner(I2C1_MutexHandle);
+    if (OLED_MutexHandle != NULL) {
+        osThreadId_t owner = osMutexGetOwner(OLED_MutexHandle);
         const char *owner_name = owner ? osThreadGetName(owner) : "none";
         logPrintln("%p  %-20s  %-12s  %s",
-                  I2C1_MutexHandle, "I2C1_Mutex",
+                  OLED_MutexHandle, "OLED_Mutex",
                   owner_name ? owner_name : "<unknown>", owner ? "Locked" : "Unlocked");
     }
 }
@@ -246,6 +246,8 @@ static void Event_Info(void) {
         logPrintln("%-20s  %s", "UART3_RX_IDLE", (flags & 0x40) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "ADC1_CONVCPLT", (flags & 0x80) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "SHELL_ONLINE", (flags & 0x100) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "TRACK_DMA_DONE", (flags & 0x200) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "SPIT1_TX_IDLE", (flags & 0x400) ? "SET" : "RESET");
     }
 }
 
@@ -313,7 +315,7 @@ static void Queue_Info(void) {
 /**
  * @brief 持续显示系统状态信息
  */
-static void OS_Htop(void) {
+static void OS_Top(void) {
     Shell *shell;
     uint8_t byte;
     shell = shellGetCurrent();
@@ -325,21 +327,21 @@ static void OS_Htop(void) {
         logPrintln("\033[?25l\r\033[2J\033[H");
         // Time_Info();
         Task_Info();
-        Queue_Info();
+        // Queue_Info();
         // Memory_Info();
         // Event_Info();
         // Mutex_Info();
         if (shell->read((char*)&byte, 1)) {
             if (byte == 0x03) break;
         }
-        osDelay(50);
+        osDelay(100);
     }
     logPrintln("\033[?25h");
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-htop, OS_Htop, View system status);
+top, OS_Top, View system status);
 
 /**
  * @brief OS命令处理函数

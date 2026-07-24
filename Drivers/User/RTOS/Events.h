@@ -1,6 +1,6 @@
 /**
  * @file Events.h
- * @brief 事件定义
+ * @brief 系统事件定义
  * @author Pcb-yun (pcbyinyun@163.com)
  */
 
@@ -12,6 +12,10 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "cmsis_os2.h"
+
+/**
+ * @note 每个事件标志对象最多可以设置24个成员
+ */
 
 /*                  系统状态                    */
 extern osEventFlagsId_t System_StatusHandle;
@@ -25,6 +29,9 @@ extern osEventFlagsId_t System_StatusHandle;
 #define ADC1_CONVCPLT (1UL << 7)        // ADC1转换完成
 #define SHELL_ONLINE (1UL << 8)         // shell在线
 #define TRACK_DMA_DONE (1UL << 9)       // 巡线模块DMA读取完成
+#define SPIT1_TX_IDLE (1UL << 10)       // SPI1发送空闲
+
+
 
 #ifdef __cplusplus
 }

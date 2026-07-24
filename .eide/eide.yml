@@ -28,6 +28,7 @@ virtualFolder:
                 - path: Core/Src/dma.c
                 - path: Core/Src/i2c.c
                 - path: Core/Src/iwdg.c
+                - path: Core/Src/spi.c
                 - path: Core/Src/tim.c
                 - path: Core/Src/usart.c
                 - path: Core/Src/stm32f4xx_it.c
@@ -59,6 +60,7 @@ virtualFolder:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_iwdg.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
           folders: []
         - name: CMSIS
@@ -140,6 +142,13 @@ virtualFolder:
       files:
         - path: Drivers/User/MISC/message.c
       folders: []
+    - name: oled
+      files:
+        - path: Drivers/User/OLED/ssd1306/ssd1306.c
+        - path: Drivers/User/OLED/ssd1306/ssd1306_fonts.c
+        - path: Drivers/User/OLED/ssd1306/ssd1306_tests.c
+        - path: Drivers/User/OLED/oled_port.c
+      folders: []
     - name: ops
       files:
         - path: Drivers/User/OPS/ops.c
@@ -182,10 +191,6 @@ virtualFolder:
     - name: ::CMSIS
       files: []
       folders: []
-    - name: turntable
-      files:
-        - path: Applications/turntable/turntable_ctrl.c
-      folders: []
 dependenceList: []
 outDir: build
 miscInfo:
@@ -224,6 +229,8 @@ targets:
         - Applications/nav/utils
         - Drivers/User/ADC
         - Drivers/User/MISC
+        - Drivers/User/OLED
+        - Drivers/User/OLED/ssd1306
         - Drivers/User/OPS
         - Drivers/User/RTOS
         - Drivers/User/SCANNER
@@ -237,7 +244,6 @@ targets:
         - Drivers/User/VL53L0X/platform
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
-        - Applications/turntable
       libList: []
     excludeList: []
     settings:
