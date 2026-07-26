@@ -94,6 +94,12 @@ virtualFolder:
         - path: Applications/chassis/kinematics/kinematics.c
         - path: Applications/chassis/motion/motion_control.c
       folders: []
+    - name: display
+      files:
+        - path: Applications/Display/gif_data.c
+        - path: Applications/Display/image_data.c
+        - path: Applications/Display/show_media.c
+      folders: []
     - name: lettershell
       files:
         - path: Applications/letter_shell/shell_port.c
@@ -146,7 +152,6 @@ virtualFolder:
       files:
         - path: Drivers/User/OLED/ssd1306/ssd1306.c
         - path: Drivers/User/OLED/ssd1306/ssd1306_fonts.c
-        - path: Drivers/User/OLED/ssd1306/ssd1306_tests.c
         - path: Drivers/User/OLED/oled_port.c
       folders: []
     - name: ops
@@ -216,6 +221,9 @@ targets:
         - Applications/chassis
         - Applications/chassis/kinematics
         - Applications/chassis/motion
+        - Applications/Display
+        - Applications/Display/gif_data
+        - Applications/Display/image_data
         - Applications/letter_shell
         - Applications/letter_shell/game
         - Applications/letter_shell/game/ASCII_Patrol

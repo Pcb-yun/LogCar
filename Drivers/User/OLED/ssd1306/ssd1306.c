@@ -574,6 +574,51 @@ void ssd1306_DrawBitmap(uint8_t x, uint8_t y, const unsigned char* bitmap, uint8
     return;
 }
 
+void ssd1306_BlitPageData(uint8_t x, uint8_t y, uint8_t width, uint8_t height, const uint8_t* data) {
+    if (x >= SSD1306_WIDTH || y >= SSD1306_HEIGHT) {
+        return;
+    }
+
+    uint8_t y_page = y / 8;
+    uint8_t y_bit = y % 8;
+    uint8_t num_pages = (height + 7) / 8;
+
+    for (uint8_t page = 0; page < num_pages; page++) {
+        uint32_t src_offset = page * width;
+        uint8_t dst_page = y_page + page;
+
+        if (dst_page >= (SSD1306_HEIGHT / 8)) {
+            break;
+        }
+
+        uint32_t dst_offset = dst_page * SSD1306_WIDTH + x;
+
+        if (y_bit == 0) {
+            if (x + width <= SSD1306_WIDTH) {
+                memcpy(&SSD1306_Buffer[dst_offset], &data[src_offset], width);
+            } else {
+                uint8_t copy_width = SSD1306_WIDTH - x;
+                memcpy(&SSD1306_Buffer[dst_offset], &data[src_offset], copy_width);
+            }
+        } else {
+            uint32_t dst_offset_next = (dst_page + 1) * SSD1306_WIDTH + x;
+            uint8_t copy_width = (x + width <= SSD1306_WIDTH) ? width : (SSD1306_WIDTH - x);
+
+            for (uint8_t i = 0; i < copy_width; i++) {
+                uint8_t src_byte = data[src_offset + i];
+                uint8_t upper_bits = src_byte >> y_bit;
+                uint8_t lower_bits = src_byte << (8 - y_bit);
+
+                SSD1306_Buffer[dst_offset + i] |= upper_bits;
+
+                if ((dst_page + 1) < (SSD1306_HEIGHT / 8)) {
+                    SSD1306_Buffer[dst_offset_next + i] |= lower_bits;
+                }
+            }
+        }
+    }
+}
+
 void ssd1306_SetContrast(const uint8_t value) {
     const uint8_t kSetContrastControlRegister = 0x81;
     ssd1306_WriteCommand(kSetContrastControlRegister);

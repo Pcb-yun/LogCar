@@ -18,7 +18,6 @@
  */
 static void Memory_Info(void) {
     HeapStats_t xHeapStats;
-
     vPortGetHeapStats(&xHeapStats);
 
     logPrintln("Free heap: %u bytes\r\n"                /* 当前可用的堆总大小——这是所有空闲块的总和，而不是可以分配的最大块 */
@@ -42,17 +41,14 @@ static void Memory_Info(void) {
  */
 static void Task_Info(void) {
     osThreadId_t task_ids[32];
-    uint32_t task_count = osThreadEnumerate(task_ids, 32);
+    uint8_t task_count = osThreadEnumerate(task_ids, 32);
 
     // 获取总运行时间
     uint32_t ulTotalRunTime;
-    TaskStatus_t *pxTaskStatusArray;
-    uint32_t ulArraySize;
 
     // 获取任务数量
-    ulArraySize = uxTaskGetNumberOfTasks();
-
-    pxTaskStatusArray = pvPortMalloc(ulArraySize * sizeof(TaskStatus_t));
+    uint32_t ulArraySize = uxTaskGetNumberOfTasks();
+    TaskStatus_t *pxTaskStatusArray = pvPortMalloc(ulArraySize * sizeof(TaskStatus_t));
 
     if(pxTaskStatusArray != NULL) {
         ulArraySize = uxTaskGetSystemState(pxTaskStatusArray, ulArraySize, &ulTotalRunTime);
@@ -93,8 +89,8 @@ static void Task_Info(void) {
             }
 
             // 按照CPU占用率从高到低排序（冒泡排序）
-            for(uint32_t i = 0; i < task_count - 1; i++) {
-                for(uint32_t j = 0; j < task_count - 1 - i; j++) {
+            for(uint8_t i = 0; i < task_count - 1; i++) {
+                for(uint8_t j = 0; j < task_count - 1 - i; j++) {
                     if(task_info_array[j].cpu_usage < task_info_array[j + 1].cpu_usage) {
                         TaskInfo_t temp = task_info_array[j];
                         task_info_array[j] = task_info_array[j + 1];
@@ -107,7 +103,7 @@ static void Task_Info(void) {
             logPrintln("ID        Name          State       Priority    Stack Space    High Water    CPU\r\n"
                        "------------------------------------------------------------------------------------");
 
-            for(uint32_t i = 0; i < task_count; i++) {
+            for(uint8_t i = 0; i < task_count; i++) {
                 const char *state_str;
                 switch(task_info_array[i].state) {
                     case osThreadInactive: state_str = "Inactive"; break;
@@ -122,12 +118,10 @@ static void Task_Info(void) {
                           state_str, task_info_array[i].priority, task_info_array[i].stack_space,
                           task_info_array[i].high_water, task_info_array[i].cpu_usage);
             }
-
             vPortFree(task_info_array);
         } else {
             logPrintln("Failed to allocate memory for task info array");
         }
-
         vPortFree(pxTaskStatusArray);
     } else {
         logPrintln("Failed to allocate memory for task status array");
@@ -141,10 +135,10 @@ static void Time_Info(void) {
     uint32_t tick_count = osKernelGetTickCount();
     uint32_t tick_freq = osKernelGetTickFreq();
 
-    uint32_t hours = tick_count / (tick_freq * 3600);
-    uint32_t minutes = (tick_count % (tick_freq * 3600)) / (tick_freq * 60);
-    uint32_t seconds = (tick_count % (tick_freq * 60)) / tick_freq;
-    uint32_t milliseconds = (tick_count % tick_freq) * 1000 / tick_freq;
+    uint8_t hours = tick_count / (tick_freq * 3600);
+    uint8_t minutes = (tick_count % (tick_freq * 3600)) / (tick_freq * 60);
+    uint8_t seconds = (tick_count % (tick_freq * 60)) / tick_freq;
+    uint16_t milliseconds = (tick_count % tick_freq) * 1000 / tick_freq;
 
     logPrintln("Tick Frequency: %lu Hz\r\n"
             "System Tick: %lu\r\n"
@@ -168,16 +162,15 @@ static void Time_Info(void) {
  * @brief 显示互斥锁信息
  */
 static void Mutex_Info(void) {
-    logPrintln("Mutex information:");
+    logPrintln("Mutex information:\r\n"
+        "ID        Name                  Owner         State\r\n"
+        "---------------------------------------------------------");
 
     extern osMutexId_t Pose_MutexHandle;
     extern osMutexId_t Track_MutexHandle;
     extern osMutexId_t Motor_MutexHandle;
     extern osMutexId_t OPS_MutexHandle;
     extern osMutexId_t OLED_MutexHandle;
-
-    logPrintln("ID        Name                  Owner         State");
-    logPrintln("---------------------------------------------------------");
 
     if (Pose_MutexHandle != NULL) {
         osThreadId_t owner = osMutexGetOwner(Pose_MutexHandle);
@@ -224,12 +217,11 @@ static void Mutex_Info(void) {
  * @brief 显示事件标志信息
  */
 static void Event_Info(void) {
-    logPrintln("Event Flags information:");
+    logPrintln("Event Flags information:\r\n"
+        "ID        Name                  Flags\r\n"
+        "------------------------------------------");
 
     extern osEventFlagsId_t System_StatusHandle;
-
-    logPrintln("ID        Name                  Flags");
-    logPrintln("------------------------------------------");
 
     if (System_StatusHandle != NULL) {
         uint32_t flags = osEventFlagsGet(System_StatusHandle);
@@ -255,7 +247,9 @@ static void Event_Info(void) {
  * @brief 显示消息队列信息
  */
 static void Queue_Info(void) {
-    logPrintln("Message Queue information:");
+    logPrintln("Message Queue information:\r\n"
+        "ID        Name                  Count/Max    MsgSize\r\n"
+        "----------------------------------------------------");
 
     extern osMessageQueueId_t Usart1_Rx_DataHandle;
     extern osMessageQueueId_t MotorCmdsHandle;
@@ -263,49 +257,46 @@ static void Queue_Info(void) {
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
     extern osMessageQueueId_t Servo_Tx_DataHandle;
 
-    logPrintln("ID        Name                  Count/Max    MsgSize");
-    logPrintln("----------------------------------------------------");
-
     if (Usart1_Rx_DataHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(Usart1_Rx_DataHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(Usart1_Rx_DataHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(Usart1_Rx_DataHandle);
+        uint8_t count = osMessageQueueGetCount(Usart1_Rx_DataHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(Usart1_Rx_DataHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(Usart1_Rx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Usart1_Rx_DataHandle, "Usart1_Rx_Data",
                   count, capacity, msg_size);
     }
 
     if (MotorCmdsHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(MotorCmdsHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(MotorCmdsHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(MotorCmdsHandle);
+        uint8_t count = osMessageQueueGetCount(MotorCmdsHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(MotorCmdsHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(MotorCmdsHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   MotorCmdsHandle, "MotorCmds",
                   count, capacity, msg_size);
     }
 
     if (Usart6_Rx_DataHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(Usart6_Rx_DataHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(Usart6_Rx_DataHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(Usart6_Rx_DataHandle);
+        uint8_t count = osMessageQueueGetCount(Usart6_Rx_DataHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(Usart6_Rx_DataHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(Usart6_Rx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Usart6_Rx_DataHandle, "Usart6_Rx_Data",
                   count, capacity, msg_size);
     }
 
     if (Uart4_Rx_DataHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(Uart4_Rx_DataHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(Uart4_Rx_DataHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(Uart4_Rx_DataHandle);
+        uint8_t count = osMessageQueueGetCount(Uart4_Rx_DataHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(Uart4_Rx_DataHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(Uart4_Rx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Uart4_Rx_DataHandle, "Uart4_Rx_Data",
                   count, capacity, msg_size);
     }
 
     if (Servo_Tx_DataHandle != NULL) {
-        uint32_t count = osMessageQueueGetCount(Servo_Tx_DataHandle);
-        uint32_t capacity = osMessageQueueGetCapacity(Servo_Tx_DataHandle);
-        uint32_t msg_size = osMessageQueueGetMsgSize(Servo_Tx_DataHandle);
+        uint8_t count = osMessageQueueGetCount(Servo_Tx_DataHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(Servo_Tx_DataHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(Servo_Tx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Servo_Tx_DataHandle, "Servo_Tx_Data",
                   count, capacity, msg_size);
@@ -313,7 +304,7 @@ static void Queue_Info(void) {
 }
 
 /**
- * @brief 持续显示系统状态信息
+ * @brief 持续显示任务信息
  */
 static void OS_Top(void) {
     Shell *shell;
@@ -322,26 +313,23 @@ static void OS_Top(void) {
     if (shell == NULL) return;
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
+    uint8_t line = uxTaskGetNumberOfTasks() + 2;
+    Task_Info();
 
     while(1) {
-        logPrintln("\033[?25l\r\033[2J\033[H");
-        // Time_Info();
+        logPrintln("\033[%dA", line + 1);
         Task_Info();
-        // Queue_Info();
-        // Memory_Info();
-        // Event_Info();
-        // Mutex_Info();
         if (shell->read((char*)&byte, 1)) {
             if (byte == 0x03) break;
         }
         osDelay(100);
     }
-    logPrintln("\033[?25h");
+    logPrintln("\033[%dA\033[J\033[2A", line);
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-top, OS_Top, View system status);
+top, OS_Top, View task information);
 
 /**
  * @brief OS命令处理函数
@@ -350,8 +338,7 @@ top, OS_Top, View system status);
  */
 static void OS_Tool_Shell(int argc, char *argv[]) {
     if(argc < 2) {
-        logPrintln(OS_HELP);
-        return;
+        logPrintln(OS_HELP); return;
     }
 
     if(strcmp(argv[1], "mem") == 0) {
@@ -373,4 +360,4 @@ static void OS_Tool_Shell(int argc, char *argv[]) {
 }
 SHELL_EXPORT_CMD(
 SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-os, OS_Tool_Shell, View system information);
+os, OS_Tool_Shell, System information query tool);

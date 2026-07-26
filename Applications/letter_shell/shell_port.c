@@ -146,6 +146,8 @@ void Online_Check_Task(void *argument) {
 
                     if (!(osEventFlagsGet(System_StatusHandle) & SHELL_ONLINE)) {
                         osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
+                        shell.parser.length = 0;
+                        shell.parser.cursor = 0;
                         Shell_New_Convo(&shell);
                     }
                     break;

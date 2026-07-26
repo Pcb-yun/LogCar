@@ -136,9 +136,9 @@ void Motor_Ctrl_Task(void *argument) {
 }
 
 /**
- * @brief 电机状态获取任务
+ * @brief 电机信息处理任务
  */
-void Motor_Get_Sta_Task(void *argument) {
+void Motor_Receive_Task(void *argument) {
     (void)argument;
     Usart6_RxBuf_t rxBuf;
 

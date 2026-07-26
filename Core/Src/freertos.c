@@ -37,6 +37,7 @@
 #include "servo_port.h"
 #include "nav_common.h"
 #include "scan_driver.h"
+#include "show_media.h"
 
 /* USER CODE END Includes */
 
@@ -71,7 +72,7 @@ osThreadId_t ShellHandle;
 const osThreadAttr_t Shell_attributes = {
   .name = "Shell",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityNormal2,
 };
 /* Definitions for Track_Get */
 osThreadId_t Track_GetHandle;
@@ -80,10 +81,10 @@ const osThreadAttr_t Track_Get_attributes = {
   .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
-/* Definitions for Motor_Get_Sta */
-osThreadId_t Motor_Get_StaHandle;
-const osThreadAttr_t Motor_Get_Sta_attributes = {
-  .name = "Motor_Get_Sta",
+/* Definitions for Motor_Receive */
+osThreadId_t Motor_ReceiveHandle;
+const osThreadAttr_t Motor_Receive_attributes = {
+  .name = "Motor_Receive",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh3,
 };
@@ -99,14 +100,14 @@ osThreadId_t Motor_UpdateHandle;
 const osThreadAttr_t Motor_Update_attributes = {
   .name = "Motor_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal6,
+  .priority = (osPriority_t) osPriorityNormal6,
 };
 /* Definitions for OPS_Update */
 osThreadId_t OPS_UpdateHandle;
 const osThreadAttr_t OPS_Update_attributes = {
   .name = "OPS_Update",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh5,
+  .priority = (osPriority_t) osPriorityRealtime4,
 };
 /* Definitions for Servo_Tx */
 osThreadId_t Servo_TxHandle;
@@ -120,7 +121,7 @@ osThreadId_t Battery_GetHandle;
 const osThreadAttr_t Battery_Get_attributes = {
   .name = "Battery_Get",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow3,
+  .priority = (osPriority_t) osPriorityLow2,
 };
 /* Definitions for Loc_Update */
 osThreadId_t Loc_UpdateHandle;
@@ -140,36 +141,43 @@ const osThreadAttr_t Nav_attributes = {
 osThreadId_t MissionHandle;
 const osThreadAttr_t Mission_attributes = {
   .name = "Mission",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityRealtime1,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityRealtime2,
 };
 /* Definitions for Scan_Get */
 osThreadId_t Scan_GetHandle;
 const osThreadAttr_t Scan_Get_attributes = {
   .name = "Scan_Get",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal1,
+  .priority = (osPriority_t) osPriorityAboveNormal1,
 };
 /* Definitions for Online_Check */
 osThreadId_t Online_CheckHandle;
 const osThreadAttr_t Online_Check_attributes = {
   .name = "Online_Check",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityBelowNormal3,
+  .priority = (osPriority_t) osPriorityLow3,
 };
 /* Definitions for Dist_Get */
 osThreadId_t Dist_GetHandle;
 const osThreadAttr_t Dist_Get_attributes = {
   .name = "Dist_Get",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityAboveNormal1,
 };
 /* Definitions for Oled_Refresh */
 osThreadId_t Oled_RefreshHandle;
 const osThreadAttr_t Oled_Refresh_attributes = {
   .name = "Oled_Refresh",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal2,
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal4,
+};
+/* Definitions for Media_Player */
+osThreadId_t Media_PlayerHandle;
+const osThreadAttr_t Media_Player_attributes = {
+  .name = "Media_Player",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal6,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -195,6 +203,11 @@ const osMessageQueueAttr_t Uart4_Rx_Data_attributes = {
 osMessageQueueId_t Servo_Tx_DataHandle;
 const osMessageQueueAttr_t Servo_Tx_Data_attributes = {
   .name = "Servo_Tx_Data"
+};
+/* Definitions for Media_Data */
+osMessageQueueId_t Media_DataHandle;
+const osMessageQueueAttr_t Media_Data_attributes = {
+  .name = "Media_Data"
 };
 /* Definitions for Pose_Mutex */
 osMutexId_t Pose_MutexHandle;
@@ -235,7 +248,7 @@ const osEventFlagsAttr_t System_Status_attributes = {
 void Sys_Init_Task(void *argument);
 extern void Shell_Task(void *argument);
 extern void Track_Get_Task(void *argument);
-extern void Motor_Get_Sta_Task(void *argument);
+extern void Motor_Receive_Task(void *argument);
 extern void Motor_Ctrl_Task(void *argument);
 extern void Motor_Update_Task(void *argument);
 extern void OPS_Update_Task(void *argument);
@@ -248,6 +261,7 @@ extern void Scan_Get_Task(void *argument);
 extern void Online_Check_Task(void *argument);
 extern void Dist_Get_Task(void *argument);
 extern void Oled_Refresh_Task(void *argument);
+extern void Media_Player_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -409,6 +423,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Servo_Tx_Data */
   Servo_Tx_DataHandle = osMessageQueueNew (4, sizeof(Package_t), &Servo_Tx_Data_attributes);
 
+  /* creation of Media_Data */
+  Media_DataHandle = osMessageQueueNew (1, sizeof(Media_t), &Media_Data_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -423,8 +440,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of Track_Get */
   Track_GetHandle = osThreadNew(Track_Get_Task, NULL, &Track_Get_attributes);
 
-  /* creation of Motor_Get_Sta */
-  Motor_Get_StaHandle = osThreadNew(Motor_Get_Sta_Task, NULL, &Motor_Get_Sta_attributes);
+  /* creation of Motor_Receive */
+  Motor_ReceiveHandle = osThreadNew(Motor_Receive_Task, NULL, &Motor_Receive_attributes);
 
   /* creation of Motor_Ctrl */
   Motor_CtrlHandle = osThreadNew(Motor_Ctrl_Task, NULL, &Motor_Ctrl_attributes);
@@ -461,6 +478,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Oled_Refresh */
   Oled_RefreshHandle = osThreadNew(Oled_Refresh_Task, NULL, &Oled_Refresh_attributes);
+
+  /* creation of Media_Player */
+  Media_PlayerHandle = osThreadNew(Media_Player_Task, NULL, &Media_Player_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

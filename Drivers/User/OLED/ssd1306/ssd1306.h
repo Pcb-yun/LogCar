@@ -188,6 +188,16 @@ SSD1306_Error_t ssd1306_InvertRectangle(uint8_t x1, uint8_t y1, uint8_t x2, uint
 void ssd1306_DrawBitmap(uint8_t x, uint8_t y, const unsigned char* bitmap, uint8_t w, uint8_t h, SSD1306_COLOR color);
 
 /**
+ * @brief Blit page-format image data to screen buffer with offset
+ * @param[in] x X offset in pixels
+ * @param[in] y Y offset in pixels
+ * @param[in] width Image width in pixels
+ * @param[in] height Image height in pixels
+ * @param[in] data Pointer to page-format image data
+ */
+void ssd1306_BlitPageData(uint8_t x, uint8_t y, uint8_t width, uint8_t height, const uint8_t* data);
+
+/**
  * @brief Sets the contrast of the display.
  * @param[in] value contrast to set.
  * @note Contrast increases as the value increases.
