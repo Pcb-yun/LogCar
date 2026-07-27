@@ -186,6 +186,7 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
+            <nBranchProt>0</nBranchProt>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -339,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,STM32_THREAD_SAFE_STRATEGY=4,USE_WG=0</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/ANSI_Art;../Applications/chassis;../Applications/chassis/kinematics;../Applications/chassis/motion;../Applications/letter_shell;../Applications/letter_shell/game;../Applications/letter_shell/game/ASCII_Patrol;../Applications/letter_shell/game/snake;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Applications/letter_shell/src;../Applications/LogCar_mission;../Applications/nav;../Applications/nav/localization;../Applications/nav/utils;../Drivers/User/ADC;../Drivers/User/MISC;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SCANNER;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/zdt-v5-driver/core;../Drivers/User/STEP/zdt-v5-driver/drv;../Drivers/User/TRACK;../Drivers/User/VL53L0X;../Drivers/User/VL53L0X/core;../Drivers/User/VL53L0X/platform;..\Drivers\User\MEASURE;..\Applications\turntable</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Applications/ANSI_Art;../Applications/chassis;../Applications/chassis/kinematics;../Applications/chassis/motion;../Applications/Display;../Applications/Display/gif_data;../Applications/Display/image_data;../Applications/letter_shell;../Applications/letter_shell/game;../Applications/letter_shell/game/ASCII_Patrol;../Applications/letter_shell/game/snake;../Applications/letter_shell/log;../Applications/letter_shell/shell_enhance;../Applications/letter_shell/src;../Applications/LogCar_mission;../Applications/nav;../Applications/nav/localization;../Applications/nav/utils;..\Applications\turntable;../Drivers/User/ADC;..\Drivers\User\MEASURE;../Drivers/User/MISC;../Drivers/User/OLED;../Drivers/User/OLED/ssd1306;../Drivers/User/OPS;../Drivers/User/RTOS;../Drivers/User/SCANNER;../Drivers/User/SERVO;../Drivers/User/STEP;../Drivers/User/STEP/zdt-v5-driver/core;../Drivers/User/STEP/zdt-v5-driver/drv;../Drivers/User/TRACK;../Drivers/User/VL53L0X;../Drivers/User/VL53L0X/core;../Drivers/User/VL53L0X/platform</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -585,6 +586,62 @@
               <FileName>iwdg.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/iwdg.c</FilePath>
+              <FileOption>
+                <CommonProperty>
+                  <UseCPPCompiler>2</UseCPPCompiler>
+                  <RVCTCodeConst>0</RVCTCodeConst>
+                  <RVCTZI>0</RVCTZI>
+                  <RVCTOtherData>0</RVCTOtherData>
+                  <ModuleSelection>0</ModuleSelection>
+                  <IncludeInBuild>1</IncludeInBuild>
+                  <AlwaysBuild>2</AlwaysBuild>
+                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
+                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
+                  <PublicsOnly>2</PublicsOnly>
+                  <StopOnExitCode>11</StopOnExitCode>
+                  <CustomArgument></CustomArgument>
+                  <IncludeLibraryModules></IncludeLibraryModules>
+                  <ComprImg>1</ComprImg>
+                </CommonProperty>
+                <FileArmAds>
+                  <Cads>
+                    <interw>2</interw>
+                    <Optim>0</Optim>
+                    <oTime>2</oTime>
+                    <SplitLS>2</SplitLS>
+                    <OneElfS>2</OneElfS>
+                    <Strict>2</Strict>
+                    <EnumInt>2</EnumInt>
+                    <PlainCh>2</PlainCh>
+                    <Ropi>2</Ropi>
+                    <Rwpi>2</Rwpi>
+                    <wLevel>0</wLevel>
+                    <uThumb>2</uThumb>
+                    <uSurpInc>2</uSurpInc>
+                    <uC99>2</uC99>
+                    <uGnu>2</uGnu>
+                    <useXO>2</useXO>
+                    <v6Lang>0</v6Lang>
+                    <v6LangP>0</v6LangP>
+                    <vShortEn>2</vShortEn>
+                    <vShortWch>2</vShortWch>
+                    <v6Lto>2</v6Lto>
+                    <v6WtE>2</v6WtE>
+                    <v6Rtti>2</v6Rtti>
+                    <VariousControls>
+                      <MiscControls></MiscControls>
+                      <Define></Define>
+                      <Undefine></Undefine>
+                      <IncludePath></IncludePath>
+                    </VariousControls>
+                  </Cads>
+                </FileArmAds>
+              </FileOption>
+            </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Core/Src/spi.c</FilePath>
               <FileOption>
                 <CommonProperty>
                   <UseCPPCompiler>2</UseCPPCompiler>
@@ -1074,6 +1131,62 @@
               </FileOption>
             </File>
             <File>
+              <FileName>stm32f4xx_hal_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c</FilePath>
+              <FileOption>
+                <CommonProperty>
+                  <UseCPPCompiler>2</UseCPPCompiler>
+                  <RVCTCodeConst>0</RVCTCodeConst>
+                  <RVCTZI>0</RVCTZI>
+                  <RVCTOtherData>0</RVCTOtherData>
+                  <ModuleSelection>0</ModuleSelection>
+                  <IncludeInBuild>1</IncludeInBuild>
+                  <AlwaysBuild>2</AlwaysBuild>
+                  <GenerateAssemblyFile>2</GenerateAssemblyFile>
+                  <AssembleAssemblyFile>2</AssembleAssemblyFile>
+                  <PublicsOnly>2</PublicsOnly>
+                  <StopOnExitCode>11</StopOnExitCode>
+                  <CustomArgument></CustomArgument>
+                  <IncludeLibraryModules></IncludeLibraryModules>
+                  <ComprImg>1</ComprImg>
+                </CommonProperty>
+                <FileArmAds>
+                  <Cads>
+                    <interw>2</interw>
+                    <Optim>0</Optim>
+                    <oTime>2</oTime>
+                    <SplitLS>2</SplitLS>
+                    <OneElfS>2</OneElfS>
+                    <Strict>2</Strict>
+                    <EnumInt>2</EnumInt>
+                    <PlainCh>2</PlainCh>
+                    <Ropi>2</Ropi>
+                    <Rwpi>2</Rwpi>
+                    <wLevel>0</wLevel>
+                    <uThumb>2</uThumb>
+                    <uSurpInc>2</uSurpInc>
+                    <uC99>2</uC99>
+                    <uGnu>2</uGnu>
+                    <useXO>2</useXO>
+                    <v6Lang>0</v6Lang>
+                    <v6LangP>0</v6LangP>
+                    <vShortEn>2</vShortEn>
+                    <vShortWch>2</vShortWch>
+                    <v6Lto>2</v6Lto>
+                    <v6WtE>2</v6WtE>
+                    <v6Rtti>2</v6Rtti>
+                    <VariousControls>
+                      <MiscControls></MiscControls>
+                      <Define></Define>
+                      <Undefine></Undefine>
+                      <IncludePath></IncludePath>
+                    </VariousControls>
+                  </Cads>
+                </FileArmAds>
+              </FileOption>
+            </File>
+            <File>
               <FileName>stm32f4xx_hal_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c</FilePath>
@@ -1164,11 +1277,6 @@
           <GroupName>chassis</GroupName>
           <Files>
             <File>
-              <FileName>chassis.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\chassis\chassis.c</FilePath>
-            </File>
-            <File>
               <FileName>kinematics.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Applications\chassis\kinematics\kinematics.c</FilePath>
@@ -1178,50 +1286,30 @@
               <FileType>1</FileType>
               <FilePath>..\Applications\chassis\motion\motion_control.c</FilePath>
             </File>
+            <File>
+              <FileName>chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\chassis\chassis.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>lettershell</GroupName>
+          <GroupName>display</GroupName>
           <Files>
             <File>
-              <FileName>shell_port.c</FileName>
+              <FileName>gif_data.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\shell_port.c</FilePath>
+              <FilePath>..\Applications\Display\gif_data.c</FilePath>
             </File>
             <File>
-              <FileName>shell.c</FileName>
+              <FileName>image_data.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\src\shell.c</FilePath>
+              <FilePath>..\Applications\Display\image_data.c</FilePath>
             </File>
             <File>
-              <FileName>shell_cmd_list.c</FileName>
+              <FileName>show_media.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\src\shell_cmd_list.c</FilePath>
-            </File>
-            <File>
-              <FileName>shell_companion.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\src\shell_companion.c</FilePath>
-            </File>
-            <File>
-              <FileName>shell_ext.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\src\shell_ext.c</FilePath>
-            </File>
-            <File>
-              <FileName>log.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\log\log.c</FilePath>
-            </File>
-            <File>
-              <FileName>shell_cmd_group.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\shell_enhance\shell_cmd_group.c</FilePath>
-            </File>
-            <File>
-              <FileName>game.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\game.c</FilePath>
+              <FilePath>..\Applications\Display\show_media.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1232,16 +1320,6 @@
               <FileName>2048.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Applications\letter_shell\game\2048\2048.c</FilePath>
-            </File>
-            <File>
-              <FileName>snake.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\snake\snake.c</FilePath>
-            </File>
-            <File>
-              <FileName>snake_tiny.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\letter_shell\game\snake\snake_tiny.c</FilePath>
             </File>
             <File>
               <FileName>assets.cpp</FileName>
@@ -1293,6 +1371,61 @@
               <FileType>8</FileType>
               <FilePath>..\Applications\letter_shell\game\ASCII_Patrol\twister.cpp</FilePath>
             </File>
+            <File>
+              <FileName>snake.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\game\snake\snake.c</FilePath>
+            </File>
+            <File>
+              <FileName>snake_tiny.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\game\snake\snake_tiny.c</FilePath>
+            </File>
+            <File>
+              <FileName>game.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\game\game.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>lettershell</GroupName>
+          <Files>
+            <File>
+              <FileName>log.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\log\log.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_cmd_group.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\shell_enhance\shell_cmd_group.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\src\shell.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_cmd_list.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\src\shell_cmd_list.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_companion.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\src\shell_companion.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_ext.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\src\shell_ext.c</FilePath>
+            </File>
+            <File>
+              <FileName>shell_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\letter_shell\shell_port.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1329,14 +1462,24 @@
               <FilePath>..\Applications\nav\nav_core.c</FilePath>
             </File>
             <File>
+              <FileName>nav_map.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\nav\nav_map.c</FilePath>
+            </File>
+            <File>
               <FileName>nav_map_data.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Applications\nav\nav_map_data.c</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>turntable</GroupName>
+          <Files>
             <File>
-              <FileName>nav_map.c</FileName>
+              <FileName>turntable_ctrl.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Applications\nav\nav_map.c</FilePath>
+              <FilePath>..\Applications\turntable\turntable_ctrl.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1351,12 +1494,42 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>measure</GroupName>
+          <Files>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\MEASURE\sensor.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>misc</GroupName>
           <Files>
             <File>
               <FileName>message.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\MISC\message.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>oled</GroupName>
+          <Files>
+            <File>
+              <FileName>ssd1306.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\OLED\ssd1306\ssd1306.c</FilePath>
+            </File>
+            <File>
+              <FileName>ssd1306_fonts.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\OLED\ssd1306\ssd1306_fonts.c</FilePath>
+            </File>
+            <File>
+              <FileName>oled_port.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Drivers\User\OLED\oled_port.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1482,26 +1655,6 @@
               <FileName>vl53l0x_port.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Drivers\User\VL53L0X\vl53l0x_port.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>measure</GroupName>
-          <Files>
-            <File>
-              <FileName>sensor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Drivers\User\MEASURE\sensor.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>turntable</GroupName>
-          <Files>
-            <File>
-              <FileName>turntable_ctrl.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Applications\turntable\turntable_ctrl.c</FilePath>
             </File>
           </Files>
         </Group>

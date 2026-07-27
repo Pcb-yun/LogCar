@@ -30,9 +30,12 @@ bool Art_show(const char *name) {
     return true;
 }
 
+/**
+ * @brief ASCII Art显示命令
+ */
 static void Show_shell(int argc, char *argv[]) {
     if (argc < 2) {
-        logPrintln("Usage: show <name>\r\n"
+        logPrintln("Usage: Art <name>\r\n"
                    "Available names:");
         Art_list();
         return;

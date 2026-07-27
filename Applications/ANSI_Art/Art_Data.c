@@ -33,19 +33,19 @@ static const Artdata_t Art_cfg[] = {
 #endif
 	{
 		.name = "__EMPTY__",
-		.data = "empty"
+		.data = NULL
 	}
 };
 
 /**
  * @brief 查找ASCII Art图片数据
  * @param name 图片名称
- * @param data 图片数据
+ * @param data 图片数据指针
  * @return 是否找到
  */
 bool find_art(const char *name, const char **data) {
 	// 遍历数组查找匹配的名称
-	for (uint8_t i = 0; i < sizeof(Art_cfg) / sizeof(Art_cfg[0]); i++) {
+	for (uint8_t i = 0; i < sizeof(Art_cfg) / sizeof(Artdata_t); i++) {
 		if (strcmp(Art_cfg[i].name, name) == 0) {
 			*data = Art_cfg[i].data;
 			return true;
@@ -60,7 +60,7 @@ bool find_art(const char *name, const char **data) {
  */
 void Art_list(void) {
 	Shell *shell = shellGetCurrent();
-	uint8_t list = sizeof(Art_cfg) / sizeof(Art_cfg[0]);
+	uint8_t list = sizeof(Art_cfg) / sizeof(Artdata_t);
 	if (list == 1) return;
 
 	for (uint8_t i = 0; i < list - 1; i++) {

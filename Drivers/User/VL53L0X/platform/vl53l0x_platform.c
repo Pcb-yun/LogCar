@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "cmsis_os2.h"
-extern osMutexId_t I2C1_MutexHandle;
 
 #define I2C_TIME_OUT_BASE   10
 #define I2C_TIME_OUT_BYTE   1
@@ -20,13 +19,13 @@ extern osMutexId_t I2C1_MutexHandle;
 #ifndef VL53L0X_GetI2cBus
 /** This macro can be overloaded by user to enforce i2c sharing in RTOS context
  */
-#   define VL53L0X_GetI2cBus(...) osMutexAcquire(I2C1_MutexHandle, osWaitForever)
+#   define VL53L0X_GetI2cBus(...) (void)0
 #endif
 
 #ifndef VL53L0X_PutI2cBus
 /** This macro can be overloaded by user to enforce i2c sharing in RTOS context
  */
-#   define VL53L0X_PutI2cBus(...) osMutexRelease(I2C1_MutexHandle)
+#   define VL53L0X_PutI2cBus(...) (void)0
 #endif
 
 #ifndef VL53L0X_OsDelay

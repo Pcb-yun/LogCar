@@ -15,10 +15,10 @@
 #include "Events.h"
 #include "i2c.h"
 
-TrackData_t *g_track = NULL;
-TrackI2CStatus_t track_i2c_status;
+static TrackData_t *g_track = NULL;
 static bool is_init = false;
 static uint8_t track_dma_value = 0;
+TrackI2CStatus_t track_i2c_status;
 
 static void Track_Reset(void);
 static void Track_Key(void);
@@ -52,7 +52,6 @@ void Track_Get_Task(void *argument) {
     (void)argument;
 
     extern osMutexId_t Track_MutexHandle;
-    extern osMutexId_t I2C1_MutexHandle;
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
@@ -60,7 +59,6 @@ void Track_Get_Task(void *argument) {
 
     for(;;) {
         if (g_track->mode == TRACK_DIGITAL) {
-            osMutexAcquire(I2C1_MutexHandle, osWaitForever);
             if (I2C_Start_DMA_Read()) {
                 uint32_t flags = osEventFlagsWait(System_StatusHandle, TRACK_DMA_DONE, osFlagsWaitAny, osWaitForever);
                 if (flags & TRACK_DMA_DONE) {
@@ -71,7 +69,6 @@ void Track_Get_Task(void *argument) {
                     }
                 }
             }
-            osMutexRelease(I2C1_MutexHandle);
         }
 
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(g_track->time));

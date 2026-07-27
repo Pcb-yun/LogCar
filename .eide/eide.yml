@@ -28,6 +28,7 @@ virtualFolder:
                 - path: Core/Src/dma.c
                 - path: Core/Src/i2c.c
                 - path: Core/Src/iwdg.c
+                - path: Core/Src/spi.c
                 - path: Core/Src/tim.c
                 - path: Core/Src/usart.c
                 - path: Core/Src/stm32f4xx_it.c
@@ -59,6 +60,7 @@ virtualFolder:
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c_ex.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_iwdg.c
+            - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.c
             - path: Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
           folders: []
         - name: CMSIS
@@ -88,26 +90,19 @@ virtualFolder:
       folders: []
     - name: chassis
       files:
-        - path: Applications/chassis/chassis.c
         - path: Applications/chassis/kinematics/kinematics.c
         - path: Applications/chassis/motion/motion_control.c
+        - path: Applications/chassis/chassis.c
       folders: []
-    - name: lettershell
+    - name: display
       files:
-        - path: Applications/letter_shell/shell_port.c
-        - path: Applications/letter_shell/src/shell.c
-        - path: Applications/letter_shell/src/shell_cmd_list.c
-        - path: Applications/letter_shell/src/shell_companion.c
-        - path: Applications/letter_shell/src/shell_ext.c
-        - path: Applications/letter_shell/log/log.c
-        - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
-        - path: Applications/letter_shell/game/game.c
+        - path: Applications/Display/gif_data.c
+        - path: Applications/Display/image_data.c
+        - path: Applications/Display/show_media.c
       folders: []
     - name: games
       files:
         - path: Applications/letter_shell/game/2048/2048.c
-        - path: Applications/letter_shell/game/snake/snake.c
-        - path: Applications/letter_shell/game/snake/snake_tiny.c
         - path: Applications/letter_shell/game/ASCII_Patrol/assets.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/conf.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/game_ap.cpp
@@ -118,6 +113,19 @@ virtualFolder:
         - path: Applications/letter_shell/game/ASCII_Patrol/spec_mcu.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/temp.cpp
         - path: Applications/letter_shell/game/ASCII_Patrol/twister.cpp
+        - path: Applications/letter_shell/game/snake/snake.c
+        - path: Applications/letter_shell/game/snake/snake_tiny.c
+        - path: Applications/letter_shell/game/game.c
+      folders: []
+    - name: lettershell
+      files:
+        - path: Applications/letter_shell/log/log.c
+        - path: Applications/letter_shell/shell_enhance/shell_cmd_group.c
+        - path: Applications/letter_shell/src/shell.c
+        - path: Applications/letter_shell/src/shell_cmd_list.c
+        - path: Applications/letter_shell/src/shell_companion.c
+        - path: Applications/letter_shell/src/shell_ext.c
+        - path: Applications/letter_shell/shell_port.c
       folders: []
     - name: mission
       files:
@@ -129,16 +137,30 @@ virtualFolder:
         - path: Applications/nav/tools/nav_tools.c
         - path: Applications/nav/utils/nav_math.c
         - path: Applications/nav/nav_core.c
-        - path: Applications/nav/nav_map_data.c
         - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_map_data.c
+      folders: []
+    - name: turntable
+      files:
+        - path: Applications/turntable/turntable_ctrl.c
       folders: []
     - name: battery
       files:
         - path: Drivers/User/ADC/battery.c
       folders: []
+    - name: measure
+      files:
+        - path: Drivers/User/MEASURE/sensor.c
+      folders: []
     - name: misc
       files:
         - path: Drivers/User/MISC/message.c
+      folders: []
+    - name: oled
+      files:
+        - path: Drivers/User/OLED/ssd1306/ssd1306.c
+        - path: Drivers/User/OLED/ssd1306/ssd1306_fonts.c
+        - path: Drivers/User/OLED/oled_port.c
       folders: []
     - name: ops
       files:
@@ -179,14 +201,6 @@ virtualFolder:
         - path: Drivers/User/VL53L0X/platform/vl53l0x_platform.c
         - path: Drivers/User/VL53L0X/vl53l0x_port.c
       folders: []
-    - name: measure
-      files:
-        - path: Drivers/User/MEASURE/sensor.c
-      folders: []
-    - name: turntable
-      files:
-        - path: Applications/turntable/turntable_ctrl.c
-      folders: []
     - name: ::CMSIS
       files: []
       folders: []
@@ -215,6 +229,9 @@ targets:
         - Applications/chassis
         - Applications/chassis/kinematics
         - Applications/chassis/motion
+        - Applications/Display
+        - Applications/Display/gif_data
+        - Applications/Display/image_data
         - Applications/letter_shell
         - Applications/letter_shell/game
         - Applications/letter_shell/game/ASCII_Patrol
@@ -226,8 +243,12 @@ targets:
         - Applications/nav
         - Applications/nav/localization
         - Applications/nav/utils
+        - Applications/turntable
         - Drivers/User/ADC
+        - Drivers/User/MEASURE
         - Drivers/User/MISC
+        - Drivers/User/OLED
+        - Drivers/User/OLED/ssd1306
         - Drivers/User/OPS
         - Drivers/User/RTOS
         - Drivers/User/SCANNER
@@ -239,8 +260,6 @@ targets:
         - Drivers/User/VL53L0X
         - Drivers/User/VL53L0X/core
         - Drivers/User/VL53L0X/platform
-        - Drivers/User/MEASURE
-        - Applications/turntable
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

@@ -74,6 +74,16 @@ void Error_Handler(void);
 #define BATTERY_GPIO_Port GPIOA
 #define VISION_RX_Pin GPIO_PIN_3
 #define VISION_RX_GPIO_Port GPIOA
+#define OLED_CS_Pin GPIO_PIN_4
+#define OLED_CS_GPIO_Port GPIOA
+#define OLED_SCK_Pin GPIO_PIN_5
+#define OLED_SCK_GPIO_Port GPIOA
+#define OLED_DC_Pin GPIO_PIN_6
+#define OLED_DC_GPIO_Port GPIOA
+#define OLED_MOSI_Pin GPIO_PIN_7
+#define OLED_MOSI_GPIO_Port GPIOA
+#define OLED_RES_Pin GPIO_PIN_4
+#define OLED_RES_GPIO_Port GPIOC
 #define SERVO_TX_Pin GPIO_PIN_10
 #define SERVO_TX_GPIO_Port GPIOB
 #define SERVO_RX_Pin GPIO_PIN_11
@@ -102,10 +112,6 @@ void Error_Handler(void);
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14
 #define Tracking_RST_GPIO_Port GPIOG
-#define Tracking_SCL_Pin GPIO_PIN_6
-#define Tracking_SCL_GPIO_Port GPIOB
-#define Tracking_SDA_Pin GPIO_PIN_7
-#define Tracking_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
