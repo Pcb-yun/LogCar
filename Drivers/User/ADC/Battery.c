@@ -22,7 +22,7 @@
 typedef struct {
     uint16_t voltage;           // 实际电压
     uint16_t interval_ms;       // 任务间隔
-    uint32_t last_warn_tick;  // 上次警告时间戳
+    uint32_t last_warn_tick;    // 上次警告时间戳
 } BatteryData_t;
 
 static BatteryData_t *g_battery = NULL;
@@ -50,7 +50,7 @@ bool Battery_Init(void) {
     float raw_voltage = (float)g_battery->voltage * ADC_VREF_MV / ADC_RESOLUTION;
     g_battery->voltage = (uint16_t)(raw_voltage * BATTERY_DIVIDER_RATIO + BATTERY_OFFSET);
 
-    if (g_battery->voltage >= 3300) {
+    if (g_battery->voltage >= 7000) {
         is_init = true;
     }
     return is_init;

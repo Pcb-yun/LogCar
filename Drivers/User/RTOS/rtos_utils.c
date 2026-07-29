@@ -332,6 +332,14 @@ SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RE
 top, OS_Top, View task information);
 
 /**
+ * @brief 手动触发错误
+ */
+static void OS_Error(void) {
+    logPrintln("Manual error trigger");
+    Error_Handler();
+}
+
+/**
  * @brief OS命令处理函数
  * @param argc 参数数量
  * @param argv 参数列表
@@ -353,6 +361,8 @@ static void OS_Tool_Shell(int argc, char *argv[]) {
         Mutex_Info();
     } else if(strcmp(argv[1], "event") == 0) {
         Event_Info();
+    } else if(strcmp(argv[1], "error") == 0) {
+        OS_Error();
     } else {
         logPrintln("Invalid command: %s\r\n"
                 OS_HELP, argv[1]);
