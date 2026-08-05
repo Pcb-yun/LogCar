@@ -367,13 +367,17 @@ done:
         s_ctx.callback(&s_ctx.result, true);
     }
 }
-
 /**
  * @brief 将原始 RGBC 频率转换为色度 RGB (0-255) + 亮度因子
  */
-static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
+bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
                                 uint8_t *r, uint8_t *g, uint8_t *b,
                                 float *brightness) {
+
+    if (!isWB){
+        logWarning("Using default white balance");
+    }
+
     if (raw->clear == 0 || wb->clear == 0 ||
         wb->red == 0 || wb->green == 0 || wb->blue == 0) {
         *r = *g = *b = 0;

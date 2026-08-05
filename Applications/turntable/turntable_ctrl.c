@@ -12,6 +12,12 @@
 
 float turntable_angle_current = TURNABLE_INIT;
 
+float turntable_id[TURNABLE_ID_MAX] = {TURNABLE_ID_0_ANGLE,
+     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*2,
+     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*4,
+     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*6,
+     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*8};
+
 /**
  * @brief 计算最短路径的目标角度（基于当前位置，在±180°内选择最近路径）
  * @param current 当前角度
@@ -30,7 +36,7 @@ static float turntable_calc_shortest_target(float current, float target) {
  * @param angle 角度值
  */
  
-static void turntable_move_to(float angle){
+void turntable_move_to(float angle){
     turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
     Servo_MTURN(1, turntable_angle_current, 0, 0);
 }
@@ -38,7 +44,7 @@ static void turntable_move_to(float angle){
 /**
  * @brief 转盘模块移动到关闭位置（基于当前位置走最短路径）
  */
-static void turntable_move_to_close(void){
+void turntable_move_to_close(void){
     turntable_move_to(turntable_angle_current - TURNABLE_CLOSE_OFFSET);
 
 }
@@ -48,7 +54,7 @@ static void turntable_move_to_close(void){
  * @param id ID值
  */
  
-static void turntable_move_to_id(uint8_t id){
+void turntable_move_to_id(uint8_t id){
     turntable_move_to(turntable_id[id]);
 }
 
@@ -56,7 +62,7 @@ static void turntable_move_to_id(uint8_t id){
  * @brief 转盘模块初始化到初始角度
  */
  
-static void turntable_move_to_init(void){
+void turntable_move_to_init(void){
     turntable_move_to(TURNABLE_INIT);
 }
 

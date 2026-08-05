@@ -143,6 +143,8 @@ virtualFolder:
     - name: turntable
       files:
         - path: Applications/turntable/turntable_ctrl.c
+        - path: Applications/turntable/turntable_sort.c
+        - path: Applications/turntable/turntable_pop.c
       folders: []
     - name: battery
       files:

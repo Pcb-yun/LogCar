@@ -36,6 +36,11 @@ typedef struct {
 } SENSOR_ColorResult_t;
 
 /**
+ * @brief 白色平衡参数
+ */
+extern TCS230_RGBC_t rgbc_wb;
+
+/**
  * @brief 异步读取完成回调
  * @param result  指向读取结果的指针（仅回调期间有效）
  * @param success true=读取成功, false=超时/失败
@@ -49,20 +54,17 @@ typedef void (*SENSOR_ReadAll_Callback_t)(const TCS230_RGBC_t *result, bool succ
 void SENSOR_Init(void);
 
 /**
+ * @brief 将原始 RGBC 频率转换为色度 RGB (0-255) + 亮度因子
+ */
+bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
+                                uint8_t *r, uint8_t *g, uint8_t *b,
+                                float *brightness);
+
+/**
  * @brief 选择颜色滤波器
  * @param filter 颜色滤波器选择
  */
 void SENSOR_SetFilter(TCS230_Filter_t filter);
-
-/**
- * @brief 读取所有四个 RGBC 通道的频率（阻塞）
- * @param out RGBC 读取结构体指针
- *
- * 依次读取 Clear → Red → Green → Blue，每次阻塞。
- */
-void SENSOR_ReadAll(TCS230_RGBC_t *out);
-
-/* ===================== 非阻塞 API（推荐） ===================== */
 
 /**
  * @brief 启动异步 RGBC 读取
@@ -105,8 +107,6 @@ bool SENSOR_IsBusy(void);
  * 可在定时器中断、RTOS 任务或主循环中调用。
  */
 void SENSOR_Process(void);
-
-/* ===================== 颜色工具 ===================== */
 
 /**
  * @brief 根据色度 RGB + 亮度因子推断当前颜色

@@ -186,7 +186,6 @@
             <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
-            <nBranchProt>0</nBranchProt>
             <hadIRAM2>1</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -1480,6 +1479,16 @@
               <FileName>turntable_ctrl.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Applications\turntable\turntable_ctrl.c</FilePath>
+            </File>
+            <File>
+              <FileName>turntable_sort.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\turntable\turntable_sort.c</FilePath>
+            </File>
+            <File>
+              <FileName>turntable_pop.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Applications\turntable\turntable_pop.c</FilePath>
             </File>
           </Files>
         </Group>
