@@ -14,8 +14,8 @@
 
 // 电机ID定义
 #define MOTOR_FRONT_LEFT   1	// 前左轮
-#define MOTOR_FRONT_RIGHT  2	// 前右轮
-#define MOTOR_BACK_RIGHT   3	// 后右轮
+#define MOTOR_FRONT_RIGHT  3	// 前右轮
+#define MOTOR_BACK_RIGHT   2	// 后右轮
 #define MOTOR_BACK_LEFT    4	// 后左轮
 
 // 电机脉冲参数

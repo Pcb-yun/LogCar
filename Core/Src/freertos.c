@@ -169,7 +169,7 @@ const osThreadAttr_t Dist_Get_attributes = {
 osThreadId_t Oled_RefreshHandle;
 const osThreadAttr_t Oled_Refresh_attributes = {
   .name = "Oled_Refresh",
-  .stack_size = 64 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal4,
 };
 /* Definitions for Media_Player */

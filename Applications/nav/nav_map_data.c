@@ -13,7 +13,7 @@ static const TargetPoint_t g_map_points[] = {
     // 起点/原点
     {
         .id = 0,
-        .name = "Origin",
+        .name = "HOME",
         .type = TARGET_POINT_NORMAL,
         .pose = {
             .x = 0.0f,
@@ -36,12 +36,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 1,
-        .name = "Test_1",
+        .name = "QrCode_1",
         .type = TARGET_POINT_PICKUP,
         .pose = {
-            .x = 0.0f,
-            .y = 50.0f,
-            .yaw = -45.0f
+            .x = 64.00f,
+            .y = -26.50f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -59,11 +59,11 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 2,
-        .name = "Test_2",
+        .name = "a",
         .type = TARGET_POINT_PICKUP,
         .pose = {
-            .x = 50.0f,
-            .y = 50.0f,
+            .x = 65.00f,
+            .y = -94.00f,
             .yaw = -90.0f
         },
         .motion = {
@@ -82,12 +82,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 3,
-        .name = "Test_3",
+        .name = "b",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 100.0f,
-            .y = 50.0f,
-            .yaw = -135.0f
+            .x = 45.00f,
+            .y = -48.70f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -105,12 +105,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 4,
-        .name = "Test_4",
+        .name = "c",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 100.0f,
-            .y = 0.0f,
-            .yaw = -180.0f
+            .x = -18.00f,
+            .y = -94.00f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -128,12 +128,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 5,
-        .name = "Test_5",
+        .name = "d",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 100.0f,
-            .y = -50.0f,
-            .yaw = -225.0f
+            .x = -30.50f,
+            .y = -48.70f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -151,12 +151,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 5,
-        .name = "Test_5",
+        .name = "e",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 50.0f,
-            .y = -50.0f,
-            .yaw = -270.0f
+            .x = -80.50f,
+            .y = -48.70f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -174,12 +174,12 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 6,
-        .name = "Test_6",
+        .name = "QrCode_2",
         .type = TARGET_POINT_DELIVERY,
         .pose = {
-            .x = 0.0f,
-            .y = -50.0f,
-            .yaw = -315.0f
+            .x = -65.00f,
+            .y = -26.50f,
+            .yaw = -90.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -195,168 +195,6 @@ static const TargetPoint_t g_map_points[] = {
         },
         .enable = true
     },
-    {
-        .id = 7,
-        .name = "Test_7",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 50.0f,
-            .y = 0.0f,
-            .yaw = -180.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 8,
-        .name = "Test_8",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 100.0f,
-            .y = 50.0f,
-            .yaw = -180.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 9,
-        .name = "Test_9",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 100.0f,
-            .y = -50.0f,
-            .yaw = -180.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 10,
-        .name = "Test_10",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 100.0f,
-            .y = -50.0f,
-            .yaw = -180.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 11,
-        .name = "Test_11",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 100.0f,
-            .y = -50.0f,
-            .yaw = 0.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 12,
-        .name = "Test_12",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = -100.0f,
-            .y = 50.0f,
-            .yaw = 0.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-    {
-        .id = 13,
-        .name = "Test_13",
-        .type = TARGET_POINT_DELIVERY,
-        .pose = {
-            .x = 100.0f,
-            .y = -50.0f,
-            .yaw = 180.0f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 15000
-        },
-        .enable = true
-    },
-
 };
 
 /**
