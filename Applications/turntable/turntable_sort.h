@@ -21,6 +21,7 @@ typedef struct {
     TurntableItemType_t type;   /**< 种类: 物料/奖杯 */
     char     color[16];         /**< 颜色名称(奖杯为 "-") */
     uint8_t  confidence;        /**< 可信度 0-100 */
+    char     letter;            /**< 奖杯上印制的字母(A/B/C), 物料为 0 */
     bool     valid;             /**< 该槽位是否已存放物品 */
 } TurntableItem_t;
 

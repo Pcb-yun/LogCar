@@ -7,9 +7,6 @@
  *   2. 距离低于 TURNTABLE_DIST_AWARD_THRESHOLD_MM 判定为奖杯, 入栈后不测颜色;
  *      低于 TURNTABLE_DIST_GOODS_THRESHOLD_MM 判定为物料, 入栈后识别颜色
  *   3. 将种类/颜色与槽位 id 存入物料表, 通过 shell 命令查询
- *
- * 说明: 分拣任务 Turntable_Sort_Task 由外部创建(freertos.c),
- *       任务启动后自动运行, 可用 `turntable_sort stop` 暂停。
  */
 
 #include "turntable_sort.h"
@@ -19,11 +16,12 @@
 #include "Events.h"
 #include "cmsis_os2.h"
 #include "sensor.h"
+#include "rpi_sensor_port.h"
 #include "vl53l0x_port.h"
 #include <string.h>
 #include <math.h>
 
-/* TCS230 白平衡参数与状态(定义在 sensor.c, 未通过头文件导出) */
+/* TCS230 白平衡参数与状态*/
 extern bool isWB;
 extern TCS230_RGBC_t rgbc_wb;
 
@@ -37,10 +35,12 @@ static volatile bool s_sort_busy = false;   /* 正在执行入栈动作(转动/�
 static volatile bool s_sort_paused = false; /* 出栈占用转盘, 暂停入栈 */
 
 /**
- * @brief 阻塞读取 TCS230 颜色并推断
+ * @brief 读取颜色并推断
  * @return 颜色识别结果；未设置白平衡或读取无效时 color_name 为 NULL
  */
 static SENSOR_ColorResult_t sort_read_color(void) {
+
+    #if TURNTABLE_SENSOR == TCS230
     /* 非阻塞读取, 任务内驱动状态机直到完成 */
     SENSOR_StartReadAll(NULL);
     while (!SENSOR_ReadAll_IsComplete()) {
@@ -57,6 +57,18 @@ static SENSOR_ColorResult_t sort_read_color(void) {
         return fail;
     }
     return SENSOR_InferColor(r, g, b, brightness);
+    #elif TURNTABLE_SENSOR == PRI
+    /* 树莓派颜色识别 */
+    return RPI_Read_Color();
+    #endif
+}
+
+/**
+ * @brief 读取奖杯上方字母
+ * @return 字母 'A'/'B'/'C'; 读取失败返回 0
+ */
+static char sort_read_letter(void) {
+    return RPI_Read_Letter();
 }
 
 /**
@@ -81,10 +93,17 @@ static void sort_process_one(TurntableItemType_t type) {
     item->valid = true;
 
     if (type == TURNTABLE_ITEM_AWARD) {
-        /* 奖杯不测颜色 */
+        /* 奖杯不测颜色, 读取上方字母 */
         strcpy(item->color, "-");
         item->confidence = 0;
-        logPrintln("Turntable sort: stored id=%u type=Award", item->id);
+        item->letter = sort_read_letter();
+        if (item->letter == 'A' || item->letter == 'B' || item->letter == 'C') {
+            logPrintln("Turntable sort: stored id=%u type=Award letter=%c", item->id, item->letter);
+        } else {
+            /* 树莓派字母识别失败 */
+            item->letter = 0;
+            logWarning("Turntable sort: read letter failed, id=%u", item->id);
+        }
     } else {
         /* 物料识别颜色 */
         SENSOR_ColorResult_t res = sort_read_color();
@@ -240,10 +259,13 @@ static void turntable_sort_list(void) {
     for (uint8_t i = 0; i < s_item_count; i++) {
         const TurntableItem_t *item = &s_items[i];
         if (!item->valid) continue;     /* 已出栈的记录不再显示 */
-        logPrintln("  [%u] id=%u type=%-5s color=%-6s conf=%u%%",
-                   i, item->id,
-                   (item->type == TURNTABLE_ITEM_AWARD) ? "Award" : "Goods",
-                   item->color, item->confidence);
+        if (item->type == TURNTABLE_ITEM_AWARD) {
+            logPrintln("  [%u] id=%u type=Award letter=%c",
+                       i, item->id, (item->letter >= 'A' && item->letter <= 'C') ? item->letter : '?');
+        } else {
+            logPrintln("  [%u] id=%u type=Goods color=%-6s conf=%u%%",
+                       i, item->id, item->color, item->confidence);
+        }
     }
 }
 

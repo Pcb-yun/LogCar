@@ -153,6 +153,7 @@ virtualFolder:
     - name: measure
       files:
         - path: Drivers/User/MEASURE/sensor.c
+        - path: Drivers/User/MEASURE/rpi_sensor_port.c
       folders: []
     - name: misc
       files:

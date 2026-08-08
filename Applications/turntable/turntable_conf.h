@@ -2,6 +2,15 @@
 #define __TURNTABLE_CONF_H__
 
 /**
+ * @brief 转盘传感器类型
+ */
+#define TCS230 0
+#define PRI 1
+
+#define TURNTABLE_SENSOR TCS230
+
+
+/**
  * @brief 转盘模块初始角度
  */
 #define TURNABLE_INIT -10.0f
