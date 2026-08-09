@@ -47,6 +47,8 @@ CompileFlags:
     - -D__OPT_SMALL_ASSERT=1
     - -D__OPTIMISE_LEVEL=2
     - -ferror-limit=0
+    - -isystemD:\devtool\keil\ARM\ARMCC\include
+    - -isystemD:\devtool\keil\ARM\ARMCC\include\rw
   Remove:
     - --cpu
     - --li

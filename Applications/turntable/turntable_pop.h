@@ -48,23 +48,26 @@ bool Turntable_Pop_SetGoodsSequence(uint8_t number);
  *   1 ABC -> C,B,A    2 ACB -> B,C,A
  *   3 BAC -> C,A,B    4 BCA -> A,C,B
  *   5 CAB -> B,A,C    6 CBA -> A,B,C
- * 出栈顺序统一为 CBA。
+ * 出栈顺序由 award_pop_order 表自定义(默认与码值标签一致), 见 turntable_pop.c。
  */
 bool Turntable_Pop_SetAwardSequence(uint8_t number);
 
 /**
- * @brief 出栈一步: 按当前顺序出掉下一个物品
- * @return true 本次出栈执行完成; false 顺序未设置或已全部出完
+ * @brief 指定出栈: 按调用方指定的字母出一个物品
+ * @param letter 指定字母:
+ *               物料模式 'a'~'e' -> pop_order_goods 颜色顺序第 1~5 位;
+ *               奖杯模式 'a'~'c' -> award_pop_order 自定义出栈顺序第 1~3 位
+ * @return true 本次出栈执行完成; false 顺序未设置、参数非法或目标不存在
  *
  * 每次调用只出一个物品:
  *   1. 从分拣存储数据中找到目标槽位(物料按颜色, 奖杯按入栈顺序)
  *   2. 旋转转盘把该槽位转到出料口
  * 取消距离检测, 旋转到位即认为出栈成功。
  */
-bool Turntable_Pop_Step(void);
+bool Turntable_Pop_StepChar(uint8_t letter);
 
 /**
- * @brief 获取当前出栈进度(已完成的步数)
+ * @brief 获取当前已成功出栈的数量
  */
 uint8_t Turntable_Pop_GetStep(void);
 
