@@ -1,6 +1,10 @@
 #ifndef __TURNTABLE_POP_H__
 #define __TURNTABLE_POP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "turntable_conf.h"
@@ -55,5 +59,9 @@ const uint8_t *Turntable_Pop_GetSequence(void);
  * @note 全部出完时自动调用; 需要提前中断时可手动调用
  */
 void Turntable_Pop_End(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __TURNTABLE_POP_H__ */

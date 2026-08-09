@@ -1,9 +1,14 @@
 #ifndef __TURNTABLE_SORT_H__
 #define __TURNTABLE_SORT_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "turntable_conf.h"
+
 
 /**
  * @brief 分拣物品种类
@@ -48,5 +53,9 @@ void Turntable_Sort_Resume(void);
  * @return true 找到并移除
  */
 bool Turntable_Sort_Remove(uint8_t slot_id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __TURNTABLE_SORT_H__ */

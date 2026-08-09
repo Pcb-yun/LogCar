@@ -1,6 +1,9 @@
 #ifndef __TURNTABLE_CTRL_H__
 #define __TURNTABLE_CTRL_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "turntable_conf.h"
 #include "servo_port.h"
@@ -12,5 +15,8 @@ void turntable_move_to_id(uint8_t id);
 void turntable_move_to_close(void);
 void turntable_move_to_init(void);
 
-
+#ifdef __cplusplus
+}
 #endif
+
+#endif  /* __TURNTABLE_CTRL_H__ */

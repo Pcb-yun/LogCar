@@ -56,12 +56,14 @@ static const uint8_t pop_order[16][TURNTABLE_ITEM_MAX] = {
     /*16 */ {TURNTABLE_COLOR_GREEN, TURNTABLE_COLOR_BLUE,  TURNTABLE_COLOR_RED,   TURNTABLE_COLOR_WHITE, TURNTABLE_COLOR_BLACK},
 };
 
-/* 当前出栈状态 */
-static uint8_t s_seq[TURNTABLE_ITEM_MAX];
-static uint8_t s_step = 0;
-static bool    s_seq_set = false;
-static bool    s_pop_active = false;   /* 出栈会话进行中(已占用转盘) */
+static uint8_t s_seq[TURNTABLE_ITEM_MAX];   /* 出栈顺序 */
+static uint8_t s_step = 0;                  /* 当前出栈步骤 */
+static bool    s_seq_set = false;           /* 出栈顺序已设置 */
+static bool    s_pop_active = false;        /* 出栈会话进行中(已占用转盘) */
 
+/**
+ * @brief 获取颜色名称
+ */
 static const char *pop_color_name(uint8_t color) {
     if (color >= TURNTABLE_COLOR_NUM) return "Unknown";
     return color_names[color];

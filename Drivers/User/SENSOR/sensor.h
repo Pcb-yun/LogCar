@@ -1,9 +1,12 @@
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
-
 
 /**
  * TCS230 颜色滤波器选择
@@ -119,5 +122,9 @@ void SENSOR_Process(void);
  * 可识别颜色: Black, White, Red, Green, Blue
  */
 SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b, float brightness);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SENSOR_H__ */

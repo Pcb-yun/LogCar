@@ -1,6 +1,10 @@
 #ifndef __TURNTABLE_CONF_H__
 #define __TURNTABLE_CONF_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief 转盘传感器类型
  */
@@ -88,4 +92,8 @@
 
 extern float turntable_id[TURNABLE_ID_MAX];
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif  /* __TURNTABLE_CONF_H__ */
