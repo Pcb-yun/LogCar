@@ -13,6 +13,10 @@ extern "C" {
 
 #define TURNTABLE_SENSOR TCS230
 
+/**
+ * @brief 转盘模块舵机ID
+ */
+#define TURNTABLE_SERVO_ID 1
 
 /**
  * @brief 转盘模块初始角度

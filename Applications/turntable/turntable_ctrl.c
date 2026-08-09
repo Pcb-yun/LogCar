@@ -41,7 +41,7 @@ static float turntable_calc_shortest_target(float current, float target) {
  
 void turntable_move_to(float angle){
     turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
-    Servo_MTURN(1, turntable_angle_current, 0, 0);
+    Servo_MTURN(TURNTABLE_SERVO_ID, turntable_angle_current, 0, 0);
 }
 
 /**
