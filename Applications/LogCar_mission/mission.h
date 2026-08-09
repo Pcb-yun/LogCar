@@ -13,6 +13,9 @@ extern "C" {
 
 #include <stdbool.h>
 
+#define MISSION_MATL_NAV 0  // 物料导航方式： 0：地图定位 1：巡线
+
+
 
 void mission_set_running(bool running);
 

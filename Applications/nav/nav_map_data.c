@@ -10,11 +10,9 @@
  * @brief 定义所有目标点数据
  */
 static const TargetPoint_t g_map_points[] = {
-    // 起点/原点
     {
         .id = 0,
         .name = "HOME",
-        .type = TARGET_POINT_NORMAL,
         .pose = {
             .x = 0.0f,
             .y = 0.0f,
@@ -36,8 +34,29 @@ static const TargetPoint_t g_map_points[] = {
     },
     {
         .id = 1,
+        .name = "START",
+        .pose = {
+            .x = 0.0f,
+            .y = 0.0f,
+            .yaw = 0.0f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 15000
+        },
+        .enable = true
+    },
+    {
+        .id = 2,
         .name = "QrCode_1",
-        .type = TARGET_POINT_PICKUP,
         .pose = {
             .x = 64.00f,
             .y = -26.50f,
@@ -58,9 +77,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 2,
+        .id = 3,
         .name = "a",
-        .type = TARGET_POINT_PICKUP,
         .pose = {
             .x = 65.00f,
             .y = -94.00f,
@@ -81,9 +99,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 3,
+        .id = 4,
         .name = "b",
-        .type = TARGET_POINT_DELIVERY,
         .pose = {
             .x = 45.00f,
             .y = -48.70f,
@@ -104,9 +121,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 4,
+        .id = 5,
         .name = "c",
-        .type = TARGET_POINT_DELIVERY,
         .pose = {
             .x = -18.00f,
             .y = -94.00f,
@@ -127,9 +143,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 5,
+        .id = 6,
         .name = "d",
-        .type = TARGET_POINT_DELIVERY,
         .pose = {
             .x = -30.50f,
             .y = -48.70f,
@@ -150,9 +165,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 5,
+        .id = 7,
         .name = "e",
-        .type = TARGET_POINT_DELIVERY,
         .pose = {
             .x = -80.50f,
             .y = -48.70f,
@@ -173,9 +187,8 @@ static const TargetPoint_t g_map_points[] = {
         .enable = true
     },
     {
-        .id = 6,
+        .id = 8,
         .name = "QrCode_2",
-        .type = TARGET_POINT_DELIVERY,
         .pose = {
             .x = -65.00f,
             .y = -26.50f,

@@ -82,7 +82,6 @@ static void NavTools_GotoDirect(int argc, char *argv[]) {
     debug_target.id = 0xFF;
     strncpy(debug_target.name, "Manual Point", 15);
     debug_target.name[15] = '\0';
-    debug_target.type = TARGET_POINT_NORMAL;
     debug_target.pose.x = x;
     debug_target.pose.y = y;
     debug_target.pose.yaw = yaw;
@@ -162,29 +161,12 @@ static void NavTools_Pose_View(void) {
 }
 
 /**
- * @brief 获取目标点类型字符串
- * @param type 目标点类型
- * @return 目标点类型字符串
- */
-static const char *NavTools_GetTypeName(TargetPointType_t type) {
-    switch (type) {
-        case TARGET_POINT_NORMAL:  return "Normal";
-        case TARGET_POINT_PICKUP: return "Pickup";
-        case TARGET_POINT_DELIVERY: return "Delivery";
-        case TARGET_POINT_PAUSE:   return "Pause";
-        case TARGET_POINT_WAIT:    return "Wait";
-        default:                   return "Unknown";
-    }
-}
-
-/**
  * @brief 打印目标点信息
  * @param point 目标点指针
  */
 static void NavTools_PrintPoint(TargetPoint_t *point) {
     logPrintln("ID: %u\r\n"
                "  Name:   %s\r\n"
-               "  Type:   %s\r\n"
                "  Pose:   x=%.2f y=%.2f yaw=%.2f\r\n"
                "  Motion: target_speed=%.2f angular_speed=%.2f\r\n"
                "          accel=%.2f decel=%.2f angular_accel=%.2f\r\n"
@@ -192,7 +174,6 @@ static void NavTools_PrintPoint(TargetPoint_t *point) {
                "  Enable: %s",
                point->id,
                point->name,
-               NavTools_GetTypeName(point->type),
                point->pose.x, point->pose.y, point->pose.yaw,
                point->motion.target_speed, point->motion.target_angular_speed,
                point->motion.acceleration, point->motion.deceleration,
@@ -292,17 +273,6 @@ static void NavTools_MapModify(int argc, char *argv[]) {
     if (strlen(buffer) > 0 && strlen(buffer) <= 15) {
         strncpy(new_point.name, buffer, 15);
         new_point.name[15] = '\0';
-    }
-
-    // Type
-    snprintf(default_str, sizeof(default_str), "%d", point->type);
-    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "Point type (0:Normal, 1:Pickup, 2:Delivery, 3:Pause, 4:Wait)", "Type");
-    if (buffer[0] == 0x03) return;
-    if (strlen(buffer) > 0) {
-        int type = atoi(buffer);
-        if (type >= 0 && type <= 4) {
-            new_point.type = (TargetPointType_t)type;
-        }
     }
 
     // X
@@ -597,23 +567,6 @@ static void NavTools_MapAdd(void) {
         }
         strncpy(point.name, buffer, 15);
         point.name[15] = '\0';
-        break;
-    }
-
-    // 3. Type
-    while (true) {
-        shellPrint(shell, "  type (0:Normal, 1:Pickup, 2:Delivery, 3:Pause, 4:Wait): ");
-        shellReadLine(buffer, sizeof(buffer));
-
-        if (strlen(buffer) == 0) continue;
-        if (buffer[0] == 0x03) return;
-
-        int type = atoi(buffer);
-        if (type < 0 || type > 4) {
-            logPrintln("Invalid type (0-4), try again");
-            continue;
-        }
-        point.type = (TargetPointType_t)type;
         break;
     }
 

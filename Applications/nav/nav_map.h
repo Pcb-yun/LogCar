@@ -16,16 +16,6 @@ extern "C" {
 #include "nav_common.h"
 #include "nav_math.h"
 
-/**
- * @brief 目标点类型
- */
-typedef enum {
-    TARGET_POINT_NORMAL = 0,      // 普通目标点
-    TARGET_POINT_PICKUP,          // 取货点
-    TARGET_POINT_DELIVERY,        // 放货点
-    TARGET_POINT_PAUSE,           // 暂停点
-    TARGET_POINT_WAIT             // 等待点
-} TargetPointType_t;
 
 /**
  * @brief 到达检测方式
@@ -63,7 +53,6 @@ typedef struct {
 typedef struct {
     uint8_t id;                 // 目标点ID
     char name[16];              // 目标点名称
-    TargetPointType_t type;     // 目标点类型
     Pose2D_t pose;              // 目标位姿
     MotionParams_t motion;      // 运动参数
     ArriveParams_t arrive;      // 到达检测参数
@@ -85,6 +74,7 @@ bool Map_AddPoint(const TargetPoint_t *point);
 bool Map_RemovePoint(uint8_t id);
 bool Map_UpdatePoint(uint8_t id, TargetPoint_t *point);
 TargetPoint_t *Map_GetPoint(uint8_t id);
+TargetPoint_t *Map_GetPointByName(const char *name);
 bool Map_LoadPoints(const TargetPoint_t *points, uint8_t count);
 
 const TargetPoint_t *Map_GetDataPoints(void);

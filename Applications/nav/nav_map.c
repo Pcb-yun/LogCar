@@ -111,6 +111,20 @@ TargetPoint_t *Map_GetPoint(uint8_t id) {
 }
 
 /**
+ * @brief 根据名称获取目标点
+ * @param name 目标点名称
+ * @return 目标点指针
+ */
+TargetPoint_t *Map_GetPointByName(const char *name) {
+    for (uint8_t i = 0; i < g_map_info->point_count; i++) {
+        if (strcmp(g_points[i].name, name) == 0) {
+            return &g_points[i];
+        }
+    }
+    return NULL;
+}
+
+/**
  * @brief 修改目标点
  * @param id 目标点ID
  * @param point 新的目标点数据

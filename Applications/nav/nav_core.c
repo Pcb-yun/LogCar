@@ -479,7 +479,20 @@ bool Nav_Core_Init(void) {
 bool Nav_GoTo(uint8_t target_id) {
     if (!is_init) return false;
     TargetPoint_t *target = Map_GetPoint(target_id);
-    if (target == NULL) return false;
+    if (target == NULL || !target->enable) return false;
+
+    return Nav_GoToDirect(target);
+}
+
+/**
+ * @brief 导航到指定名称点
+ * @param name 目标点名称
+ * @return 导航状态
+ */
+bool Nav_GoTo_fromName(const char *name) {
+    if (!is_init) return false;
+    TargetPoint_t *target = Map_GetPointByName(name);
+    if (target == NULL || !target->enable) return false;
 
     return Nav_GoToDirect(target);
 }

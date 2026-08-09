@@ -28,6 +28,7 @@ typedef enum {
 
 bool Nav_GoTo(uint8_t target_id);
 bool Nav_GoToDirect(TargetPoint_t *target);
+bool Nav_GoTo_fromName(const char *name);
 void Nav_Stop(void);
 NavState_t Nav_GetState(void);
 

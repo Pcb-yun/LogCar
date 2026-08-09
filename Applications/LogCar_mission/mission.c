@@ -14,6 +14,8 @@
 #include "nav_map.h"
 #include "ops.h"
 
+static bool matl_nav();
+
 static uint8_t current_point = 0;
 static bool mission_running = false;
 
@@ -44,27 +46,58 @@ void mission_run(void *argument) {
     (void)argument;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    TargetPoint_t *target = NULL;
 
-    for(;;) {
+    for (;;) {
         osDelay(1);
-        if (!mission_running) {
-            continue;
-        }
+        if (!mission_running) continue;
 
-        while (1) {
-            if (!mission_running) break;
-            for (uint8_t i = 0; i < Map_GetDataPointCount(); i++) {
-                TargetPoint_t *target = Map_GetPoint(i);
-                if (!target->enable) continue;
-                if (!mission_running) break;
+        // 开始点
+        Nav_GoTo_fromName("START");
+        if (!wait_tracker()) goto done;
 
-                Nav_GoTo(i);
-                if (!wait_tracker()) {
-                    break;
-                }
-            }
+        // 二维码点1（物料顺序）
+        Nav_GoTo_fromName("QrCode_1");
+        if (!wait_tracker()) goto done;
+
+        // 抓取物料
+        if (!matl_nav()) goto done;
+
+
+
+
+
+
+        // home点
+        Nav_GoTo_fromName("HOME");
+        if (!wait_tracker()) goto done;
+
+    done:
+        Nav_Stop();
+        mission_running = false;
+    }
+}
+
+/**
+ * @brief 物料导航
+ */
+static bool matl_nav() {
+#if MISSION_MATL_NAV == 0
+    // 地图定位
+    for(uint8_t i = 0; i < 5; i++) {
+        Nav_GoTo(1 + i);
+        if (!wait_tracker()) {
+            return false;
         }
     }
+#else
+    // 灰度巡线
+
+
+
+
+#endif
+    return true;
 }
 
 /**
