@@ -13,7 +13,7 @@
 static float turntable_angle_current = TURNTABLE_INIT;
 
 /* 槽位 id 对应的物理角度(度) */
-static float turntable_id[TURNTABLE_ID_MAX] = {
+static const float turntable_id[TURNTABLE_ID_MAX] = {
     TURNTABLE_ID_0_ANGLE,
     TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 2,
     TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 4,
@@ -38,7 +38,6 @@ static float turntable_calc_shortest_target(float current, float target) {
  * @brief 转盘模块移动到指定角度（基于当前位置走最短路径）
  * @param angle 角度值
  */
- 
 void turntable_move_to(float angle){
     turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
     Servo_MTURN(TURNTABLE_SERVO_ID, turntable_angle_current, 0, 0);
@@ -55,7 +54,6 @@ void turntable_move_to_close(void){
  * @brief 转盘模块移动到指定ID
  * @param id ID值
  */
- 
 void turntable_move_to_id(uint8_t id){
     if (id >= TURNTABLE_ID_MAX){
         logPrintln("turntable: id %u out of range", id);
@@ -67,7 +65,6 @@ void turntable_move_to_id(uint8_t id){
 /**
  * @brief 转盘模块初始化到初始角度
  */
- 
 void turntable_move_to_init(void){
     turntable_move_to(TURNTABLE_INIT);
 }
@@ -77,7 +74,6 @@ void turntable_move_to_init(void){
  * @param argc 命令参数个数
  * @param argv 命令参数数组
  */
- 
 static void turntable_Shell(int argc, char *argv[]){
     if (argc != 2 && argc != 3){
         logPrintln("Usage: turntable <id> | init | help");
