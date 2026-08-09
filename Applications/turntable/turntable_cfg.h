@@ -28,16 +28,10 @@ extern "C" {
 #define TURNTABLE_COLOR_READ_TIMEOUT_MS 1000                /** 颜色读取超时时间(ms) */
 #define TURNTABLE_ITEM_MAX            TURNTABLE_ID_MAX      /** 自动分拣最大存储物料数量 */
 
-/**
- * @brief 出栈占用转盘时, 等待入栈当前动作结束的超时时间(ms)
- * @note 入栈一个物料约需 2×TURNTABLE_SETTLE_MS + 测色时间
- */
-#define TURNTABLE_PAUSE_TIMEOUT_MS    3000
-
-/**
- * @brief 出栈: 旋转到出料口后的稳定等待时间(ms)
- */
-#define TURNTABLE_POP_SETTLE_MS       300
+#define TURNTABLE_PAUSE_TIMEOUT_MS    3000  // 出栈占用转盘时, 等待入栈当前动作结束的超时时间(ms)
+#define TURNTABLE_POP_SETTLE_MS       300  // 出栈: 旋转到出料口后的稳定等待时间(ms)
+#define TURNTABLE_POP_POLL_MS         50  // 出栈: 检测物料是否离开转盘的轮询间隔(ms)
+#define TURNTABLE_POP_TIMEOUT_MS      3000  // 出栈: 等待物料到达/离开出料口的超时时间(ms)
 
 #ifdef __cplusplus
 }
