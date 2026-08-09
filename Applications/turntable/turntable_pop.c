@@ -135,27 +135,27 @@ static bool pop_find_slot(uint8_t color, uint8_t *slot_id) {
 static bool pop_wait_material_out(void) {
     uint32_t t0;
 
-    /* 阶段1: 等待物料到达出料口(距离变短) */
+    /* 阶段1: 等待物料到达出料口(距离变短), 先检测后延时避免无谓等待 */
     t0 = osKernelGetTickCount();
     while ((osKernelGetTickCount() - t0) < TURNTABLE_POP_TIMEOUT_MS) {
-        osDelay(TURNTABLE_POP_POLL_MS);
         uint16_t d = Dist_Get();
         if (d > 0 && d < TURNTABLE_DIST_GOODS_THRESHOLD_MM) break;
+        osDelay(TURNTABLE_POP_POLL_MS);
     }
     if ((osKernelGetTickCount() - t0) >= TURNTABLE_POP_TIMEOUT_MS) {
         logWarning("Turntable pop: material never reached the port");
         return false;
     }
 
-    /* 阶段2: 等待物料离开出料口(距离恢复) */
+    /* 阶段2: 等待物料离开出料口(距离恢复), 先检测后延时避免无谓等待 */
     t0 = osKernelGetTickCount();
     while ((osKernelGetTickCount() - t0) < TURNTABLE_POP_TIMEOUT_MS) {
-        osDelay(TURNTABLE_POP_POLL_MS);
         uint16_t d = Dist_Get();
         if (d == 0 || d >= TURNTABLE_DIST_GOODS_THRESHOLD_MM) {
             logPrintln("Turntable pop: material left the turntable");
             return true;
         }
+        osDelay(TURNTABLE_POP_POLL_MS);
     }
     logWarning("Turntable pop: timeout waiting material to leave");
     return false;

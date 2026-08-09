@@ -4,20 +4,21 @@
 
 #include "turntable_ctrl.h"
 #include "shell.h"
-#include "stdio.h"
 #include "string.h"
 #include "log.h"
 #include "cmsis_os2.h"
 #include <stdlib.h>
 
-float turntable_angle_current = TURNABLE_INIT;
+/* 当前转盘角度(度), 内部维护 */
+static float turntable_angle_current = TURNTABLE_INIT;
 
-float turntable_id[TURNABLE_ID_MAX] = {
-    TURNABLE_ID_0_ANGLE,
-     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*2,
-     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*4,
-     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*6,
-     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*8
+/* 槽位 id 对应的物理角度(度) */
+static float turntable_id[TURNTABLE_ID_MAX] = {
+    TURNTABLE_ID_0_ANGLE,
+    TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 2,
+    TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 4,
+    TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 6,
+    TURNTABLE_ID_0_ANGLE + TURNTABLE_ANGLE * 8
 };
 
 /**
@@ -47,8 +48,7 @@ void turntable_move_to(float angle){
  * @brief 转盘模块移动到关闭位置（基于当前位置走最短路径）
  */
 void turntable_move_to_close(void){
-    turntable_move_to(turntable_angle_current - TURNABLE_CLOSE_OFFSET);
-
+    turntable_move_to(turntable_angle_current - TURNTABLE_CLOSE_OFFSET);
 }
 
 /**
@@ -57,6 +57,10 @@ void turntable_move_to_close(void){
  */
  
 void turntable_move_to_id(uint8_t id){
+    if (id >= TURNTABLE_ID_MAX){
+        logPrintln("turntable: id %u out of range", id);
+        return;
+    }
     turntable_move_to(turntable_id[id]);
 }
 
@@ -65,7 +69,7 @@ void turntable_move_to_id(uint8_t id){
  */
  
 void turntable_move_to_init(void){
-    turntable_move_to(TURNABLE_INIT);
+    turntable_move_to(TURNTABLE_INIT);
 }
 
 /**
@@ -88,11 +92,16 @@ static void turntable_Shell(int argc, char *argv[]){
         turntable_move_to_init();
         return;
     }else if (strcmp(argv[1], "id") == 0){
-        if(atoi(argv[2]) >= TURNABLE_ID_MAX){
+        if (argc != 3){
+            logPrintln("Usage: turntable id <N>");
+            return;
+        }
+        int val = atoi(argv[2]);
+        if (val < 0 || val >= TURNTABLE_ID_MAX){
             logPrintln("turntable: invalid id");
             return;
         }
-        turntable_move_to_id(atoi(argv[2]));
+        turntable_move_to_id((uint8_t)val);
         return;
     }else if (strcmp(argv[1], "close") == 0){
         turntable_move_to_close();

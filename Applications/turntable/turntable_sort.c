@@ -19,7 +19,6 @@
 #include "rpi_sensor_port.h"
 #include "vl53l0x_port.h"
 #include <string.h>
-#include <math.h>
 
 /* TCS230 白平衡参数与状态*/
 extern bool isWB;
@@ -39,12 +38,19 @@ static volatile bool s_sort_paused = false; /* 出栈占用转盘, 暂停入栈 
  * @return 颜色识别结果；未设置白平衡或读取无效时 color_name 为 NULL
  */
 static SENSOR_ColorResult_t sort_read_color(void) {
+    SENSOR_ColorResult_t fail = {NULL, 0};
 
     #if TURNTABLE_SENSOR == TCS230
-    /* 非阻塞读取, 任务内驱动状态机直到完成 */
+    /* 非阻塞读取, 任务内驱动状态机直到完成(带超时, 防止传感器卡死) */
     SENSOR_StartReadAll(NULL);
+    uint32_t t0 = osKernelGetTickCount();
     while (!SENSOR_ReadAll_IsComplete()) {
         SENSOR_Process();
+        if ((osKernelGetTickCount() - t0) >= TURNTABLE_COLOR_READ_TIMEOUT_MS) {
+            SENSOR_Cancel();
+            logWarning("Turntable sort: color sensor read timeout, canceled");
+            return fail;
+        }
         osDelay(1);
     }
 
@@ -53,13 +59,14 @@ static SENSOR_ColorResult_t sort_read_color(void) {
     float brightness;
 
     if (!sensor_rgbc_to_rgb(raw, &rgbc_wb, &r, &g, &b, &brightness)) {
-        SENSOR_ColorResult_t fail = {NULL, 0};
         return fail;
     }
     return SENSOR_InferColor(r, g, b, brightness);
     #elif TURNTABLE_SENSOR == PRI
     /* 树莓派颜色识别 */
     return RPI_Read_Color();
+    #else
+    #error "Unsupported TURNTABLE_SENSOR value, check turntable_cfg.h"
     #endif
 }
 
@@ -161,6 +168,10 @@ void Turntable_Sort_Pause(void) {
     uint32_t t0 = osKernelGetTickCount();
     while (s_sort_busy && (osKernelGetTickCount() - t0) < TURNTABLE_PAUSE_TIMEOUT_MS) {
         osDelay(10);
+    }
+    if (s_sort_busy) {
+        /* 超时仍忙碌: 出栈强行接管转盘, 打印告警便于排查 */
+        logWarning("Turntable sort: pause timeout, sort still busy, pop takes over");
     }
 }
 

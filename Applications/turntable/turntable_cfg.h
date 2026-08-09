@@ -17,27 +17,27 @@ extern "C" {
 /**
  * @brief 转盘模块初始角度
  */
-#define TURNABLE_INIT -10.0f
+#define TURNTABLE_INIT -10.0f
 
 /**
  * @brief 转盘模块ID0角度
  */
-#define TURNABLE_ID_0_ANGLE 26.0f
+#define TURNTABLE_ID_0_ANGLE 26.0f
 
 /**
  * @brief 转盘模块角度间隔
  */
-#define TURNABLE_ANGLE 36.0f
+#define TURNTABLE_ANGLE 36.0f
 
 /**
  * @brief 转盘模块关闭角度偏移量
  */
-#define TURNABLE_CLOSE_OFFSET 18.0f
+#define TURNTABLE_CLOSE_OFFSET 18.0f
 
 /**
  * @brief 转盘模块ID最大数量
  */
-#define TURNABLE_ID_MAX 5
+#define TURNTABLE_ID_MAX 5
 
 /**
  * @brief 物料检测距离阈值(mm)
@@ -63,9 +63,15 @@ extern "C" {
 #define TURNTABLE_SETTLE_MS           500
 
 /**
+ * @brief 颜色读取超时时间(ms)
+ * @note 防止传感器读取卡死时任务永久阻塞
+ */
+#define TURNTABLE_COLOR_READ_TIMEOUT_MS 1000
+
+/**
  * @brief 自动分拣最大存储物料数量
  */
-#define TURNTABLE_ITEM_MAX            TURNABLE_ID_MAX
+#define TURNTABLE_ITEM_MAX            TURNTABLE_ID_MAX
 
 /* ==================== 出栈配置 ==================== */
 
@@ -90,10 +96,8 @@ extern "C" {
  */
 #define TURNTABLE_POP_TIMEOUT_MS      3000
 
-extern float turntable_id[TURNABLE_ID_MAX];
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* __TURNTABLE_CONF_H__ */
+#endif  /* __TURNTABLE_CFG_H__ */
