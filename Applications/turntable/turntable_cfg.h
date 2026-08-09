@@ -1,5 +1,5 @@
-#ifndef __TURNTABLE_CONF_H__
-#define __TURNTABLE_CONF_H__
+#ifndef __TURNTABLE_CFG_H__
+#define __TURNTABLE_CFG_H__
 
 #ifdef __cplusplus
 extern "C" {

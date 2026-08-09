@@ -1,6 +1,6 @@
 /**
  * @file rpi_sensor_port.h
- * @brief 树莓派通信接口（用户实现）
+ * @brief 树莓派通信接口
  */
 
 #ifndef __RPI_SENSOR_PORT_H__
@@ -18,8 +18,6 @@ extern "C" {
 /**
  * @brief 读取奖杯上印制的字母
  * @return 识别到的字母 ('A'/'B'/'C'); 读取失败返回 0
- *
- * @note 由用户实现树莓派通信, 发送识别请求并解析返回的字母。
  */
 char RPI_Read_Letter(void);
 

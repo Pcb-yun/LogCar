@@ -1,6 +1,6 @@
 /**
  * @file rpi_sensor_port.c
- * @brief 树莓派通信接口（用户实现）
+ * @brief 树莓派通信接口
  */
 
 #include "rpi_sensor_port.h"

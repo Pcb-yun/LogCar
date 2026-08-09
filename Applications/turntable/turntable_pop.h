@@ -7,7 +7,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "turntable_conf.h"
+#include "turntable_cfg.h"
 
 /**
  * @brief 物料颜色(与 TCS230 识别结果名称一致)

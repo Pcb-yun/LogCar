@@ -7,7 +7,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "turntable_conf.h"
+#include "turntable_cfg.h"
 
 
 /**

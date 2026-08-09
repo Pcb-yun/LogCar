@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "turntable_conf.h"
+#include "turntable_cfg.h"
 #include "servo_port.h"
 
 

@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "sensor_cfg.h"
 
 /**
  * TCS230 颜色滤波器选择

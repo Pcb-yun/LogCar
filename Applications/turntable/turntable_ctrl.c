@@ -12,11 +12,13 @@
 
 float turntable_angle_current = TURNABLE_INIT;
 
-float turntable_id[TURNABLE_ID_MAX] = {TURNABLE_ID_0_ANGLE,
+float turntable_id[TURNABLE_ID_MAX] = {
+    TURNABLE_ID_0_ANGLE,
      TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*2,
      TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*4,
      TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*6,
-     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*8};
+     TURNABLE_ID_0_ANGLE + TURNABLE_ANGLE*8
+};
 
 /**
  * @brief 计算最短路径的目标角度（基于当前位置，在±180°内选择最近路径）
