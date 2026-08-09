@@ -16,12 +16,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 /**
- * @brief 读取奖杯上印制的字母
- * @return 识别到的字母 ('A'/'B'/'C'); 读取失败返回 0
- */
-char RPI_Read_Letter(void);
-
-/**
  * @brief 读取物料颜色识别结果
  * @return 颜色识别结果; 失败时 color_name 为 NULL, confidence 为 0
  */

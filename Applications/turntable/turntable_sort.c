@@ -4,13 +4,17 @@
  *
  * 功能流程:
  *   1. 周期性调用 vl53l0x_port 的 Dist_Get() 轮询进料口距离
- *   2. 距离低于 TURNTABLE_DIST_AWARD_THRESHOLD_MM 判定为奖杯, 入栈后不测颜色;
- *      低于 TURNTABLE_DIST_GOODS_THRESHOLD_MM 判定为物料, 入栈后识别颜色
+ *   2. 扫码切换入栈模式:
+ *      - 第1次扫码: 全部按物料处理, 入栈后识别颜色, 出栈顺序取 pop_order_goods
+ *      - 第2次扫码: 清空存储并回初始位, 全部按奖杯处理, 不测颜色也不读字母;
+ *                   奖杯物理入栈顺序由扫码值决定(1 ABC->CBA ... 6 CBA->ABC),
+ *                   出栈统一 CBA
  *   3. 将种类/颜色与槽位 id 存入物料表, 通过 shell 命令查询
  */
 
 #include "turntable_sort.h"
 #include "turntable_ctrl.h"
+#include "turntable_pop.h"
 #include "shell.h"
 #include "log.h"
 #include "Events.h"
@@ -18,7 +22,9 @@
 #include "sensor.h"
 #include "rpi_sensor_port.h"
 #include "vl53l0x_port.h"
+#include "scan_driver.h"
 #include <string.h>
+#include <stdlib.h>
 
 /* TCS230 白平衡参数与状态*/
 extern bool isWB;
@@ -32,6 +38,12 @@ static volatile bool s_sort_running = true; /* 任务创建后默认自动运行
 static volatile bool s_feed_clear = true;   /* 进料口已无物料(检测去抖) */
 static volatile bool s_sort_busy = false;   /* 正在执行入栈动作(转动/测色) */
 static volatile bool s_sort_paused = false; /* 出栈占用转盘, 暂停入栈 */
+
+/* 扫码切换的入栈模式:
+ *   第1次扫码 -> TURNTABLE_ITEM_GOODS(全部按物料)
+ *   第2次扫码 -> TURNTABLE_ITEM_AWARD(全部按奖杯) */
+static TurntableItemType_t s_sort_type = TURNTABLE_ITEM_GOODS;
+static uint8_t s_scan_count = 0;            /* 已扫码次数 0/1/2 */
 
 /**
  * @brief 读取颜色并推断
@@ -71,14 +83,6 @@ static SENSOR_ColorResult_t sort_read_color(void) {
 }
 
 /**
- * @brief 读取奖杯上方字母
- * @return 字母 'A'/'B'/'C'; 读取失败返回 0
- */
-static char sort_read_letter(void) {
-    return RPI_Read_Letter();
-}
-
-/**
  * @brief 处理一个物品: 入栈 -> 旋转 -> (识色) -> 存储
  * @param type 种类: TURNTABLE_ITEM_GOODS 识别颜色, TURNTABLE_ITEM_AWARD 跳过测色
  */
@@ -100,17 +104,11 @@ static void sort_process_one(TurntableItemType_t type) {
     item->valid = true;
 
     if (type == TURNTABLE_ITEM_AWARD) {
-        /* 奖杯不测颜色, 读取上方字母 */
+        /* 奖杯不测颜色, 也不检测字母(文字检测已取消) */
         strcpy(item->color, "-");
         item->confidence = 0;
-        item->letter = sort_read_letter();
-        if (item->letter == 'A' || item->letter == 'B' || item->letter == 'C') {
-            logPrintln("Turntable sort: stored id=%u type=Award letter=%c", item->id, item->letter);
-        } else {
-            /* 树莓派字母识别失败 */
-            item->letter = 0;
-            logWarning("Turntable sort: read letter failed, id=%u", item->id);
-        }
+        item->letter = 0;
+        logPrintln("Turntable sort: stored id=%u type=Award", item->id);
     } else {
         /* 物料识别颜色 */
         SENSOR_ColorResult_t res = sort_read_color();
@@ -212,12 +210,48 @@ const TurntableItem_t *Turntable_Sort_GetItems(void) {
 }
 
 /**
+ * @brief 轮询扫码, 切换入栈模式
+ *
+ * 第1次扫码: 全部按物料, 出栈顺序取 pop_order_goods
+ * 第2次扫码: 清空上一轮存储并回初始位, 全部按奖杯;
+ *            奖杯物理入栈顺序由扫码值决定(1 ABC->CBA ... 6 CBA->ABC), 出栈统一 CBA
+ */
+static void sort_poll_scan(void) {
+    char barcode[SCAN_BARCODE_MAX_LEN + 1];
+    if (!Scan_GetNewBarcode(barcode, sizeof(barcode))) return;
+
+    int code = atoi(barcode);
+    if (s_scan_count == 0) {
+        /* 第一次扫码: 物料模式 */
+        s_scan_count = 1;
+        s_sort_type = TURNTABLE_ITEM_GOODS;
+        if (Turntable_Pop_SetGoodsSequence((uint8_t)code)) {
+            logPrintln("Turntable sort: scan#1 code=%d, all treated as goods", code);
+        } else {
+            logWarning("Turntable sort: scan#1 code=%d out of range (1~16)", code);
+        }
+    } else if (s_scan_count == 1) {
+        /* 第二次扫码: 奖杯模式, 清空上一轮数据 */
+        s_scan_count = 2;
+        s_sort_type = TURNTABLE_ITEM_AWARD;
+        Turntable_Sort_Clear();
+        if (Turntable_Pop_SetAwardSequence((uint8_t)code)) {
+            logPrintln("Turntable sort: scan#2 code=%d, all treated as awards", code);
+        } else {
+            logWarning("Turntable sort: scan#2 code=%d out of range (1~6)", code);
+        }
+    } else {
+        logPrintln("Turntable sort: extra scan ignored: %s", barcode);
+    }
+}
+
+/**
  * @brief 自动分拣任务
  * @param argument 未使用
  *
  * 周期性轮询 VL53L0X 测距结果:
- *   - 距离低于 TURNTABLE_DIST_AWARD_THRESHOLD_MM 判定为奖杯, 跳过测色
- *   - 距离低于 TURNTABLE_DIST_GOODS_THRESHOLD_MM 判定为物料, 识别颜色
+ *   - 距离低于 TURNTABLE_DIST_GOODS_THRESHOLD_MM 判定进料口有物品
+ *   - 物品种类不再由距离区分, 由扫码决定的模式统一处理
  * 每次分拣后等待物品离开进料口, 再接受下一个。
  */
 void Turntable_Sort_Task(void *argument) {
@@ -227,6 +261,8 @@ void Turntable_Sort_Task(void *argument) {
 
     for (;;) {
         osDelay(TURNTABLE_POLL_INTERVAL_MS);
+
+        sort_poll_scan();           /* 扫码切换物料/奖杯模式 */
 
         if (!s_sort_running) continue;
         if (s_sort_paused) continue;    /* 出栈占用转盘, 暂停入栈 */
@@ -246,15 +282,9 @@ void Turntable_Sort_Task(void *argument) {
         }
 
         s_feed_clear = false;
-        if (dist < TURNTABLE_DIST_AWARD_THRESHOLD_MM) {
-            /* 距离更近, 判定为奖杯, 不测颜色 */
-            logPrintln("Turntable sort: award detected, dist=%u mm", dist);
-            sort_process_one(TURNTABLE_ITEM_AWARD);
-        } else {
-            /* 判定为物料, 识别颜色 */
-            logPrintln("Turntable sort: material detected, dist=%u mm", dist);
-            sort_process_one(TURNTABLE_ITEM_GOODS);
-        }
+        logPrintln("Turntable sort: item detected, dist=%u mm, type=%s",
+                   dist, s_sort_type == TURNTABLE_ITEM_AWARD ? "Award" : "Goods");
+        sort_process_one(s_sort_type);
     }
 }
 
@@ -271,8 +301,7 @@ static void turntable_sort_list(void) {
         const TurntableItem_t *item = &s_items[i];
         if (!item->valid) continue;     /* 已出栈的记录不再显示 */
         if (item->type == TURNTABLE_ITEM_AWARD) {
-            logPrintln("  [%u] id=%u type=Award letter=%c",
-                       i, item->id, (item->letter >= 'A' && item->letter <= 'C') ? item->letter : '?');
+            logPrintln("  [%u] id=%u type=Award", i, item->id);
         } else {
             logPrintln("  [%u] id=%u type=Goods color=%-6s conf=%u%%",
                        i, item->id, item->color, item->confidence);

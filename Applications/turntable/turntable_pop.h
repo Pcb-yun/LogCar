@@ -14,45 +14,69 @@ extern "C" {
  *        黑=Black, 白=White, 红=Red, 绿=Green, 蓝=Blue
  */
 typedef enum {
-    TURNTABLE_COLOR_BLACK = 0,
-    TURNTABLE_COLOR_WHITE,
-    TURNTABLE_COLOR_RED,
-    TURNTABLE_COLOR_GREEN,
-    TURNTABLE_COLOR_BLUE,
-    TURNTABLE_COLOR_NUM
+    BLACK = 0,
+    WHITE,
+    RED,
+    GREEN,
+    BLUE,
+    COLOR_NUM
 } TurntableColor_t;
 
+typedef enum {
+    A = 0,
+    B,
+    C,
+    LETTER_NUM
+} TurntableLetter_t;
+
 /**
- * @brief 设置出栈顺序
+ * @brief 设置物料出栈顺序
  * @param number 扫码模块给的二维码数字(1~16)
  * @return true 设置成功; false 数字越界
  *
- * 数字对应的出栈颜色顺序见 turntable_pop.c 中的 pop_order 表,
+ * 数字对应的出栈颜色顺序见 turntable_pop.c 中的 pop_order_goods 表,
  * 调用后出栈进度重置为 0。
  */
-bool Turntable_Pop_SetSequence(uint8_t number);
+bool Turntable_Pop_SetGoodsSequence(uint8_t number);
 
 /**
- * @brief 出栈一步: 按当前顺序出掉下一个颜色的物料
+ * @brief 设置奖杯模式
+ * @param number 第二次扫码值 1~6(决定奖杯入栈顺序)
+ * @return true 设置成功; false 数字越界
+ *
+ * 码值标签对应物理入栈顺序(逆序):
+ *   1 ABC -> C,B,A    2 ACB -> B,C,A
+ *   3 BAC -> C,A,B    4 BCA -> A,C,B
+ *   5 CAB -> B,A,C    6 CBA -> A,B,C
+ * 出栈顺序统一为 CBA。
+ */
+bool Turntable_Pop_SetAwardSequence(uint8_t number);
+
+/**
+ * @brief 出栈一步: 按当前顺序出掉下一个物品
  * @return true 本次出栈执行完成; false 顺序未设置或已全部出完
  *
- * 每次调用只出一个物料:
- *   1. 从分拣存储数据中找到该颜色所在槽位
+ * 每次调用只出一个物品:
+ *   1. 从分拣存储数据中找到目标槽位(物料按颜色, 奖杯按入栈顺序)
  *   2. 旋转转盘把该槽位转到出料口
- *   3. 通过 VL53L0X 检测物料是否已离开转盘
- * 阻塞直到物料离开(或超时)。
+ * 取消距离检测, 旋转到位即认为出栈成功。
  */
 bool Turntable_Pop_Step(void);
 
 /**
- * @brief 获取当前出栈进度(已完成的步数 0~TURNTABLE_ITEM_MAX)
+ * @brief 获取当前出栈进度(已完成的步数)
  */
 uint8_t Turntable_Pop_GetStep(void);
 
 /**
- * @brief 获取当前出栈顺序(长度为 TURNTABLE_ITEM_MAX 的颜色序列)
+ * @brief 获取物料出栈顺序(长度为 TURNTABLE_ITEM_MAX 的颜色序列)
  */
-const uint8_t *Turntable_Pop_GetSequence(void);
+const uint8_t *Turntable_Pop_GetGoodsSequence(void);
+
+/**
+ * @brief 获取奖杯出栈顺序(长度为 LETTER_NUM 的字母序列)
+ */
+const uint8_t *Turntable_Pop_GetAwardSequence(void);
 
 /**
  * @brief 结束出栈会话, 释放转盘并恢复入栈任务
