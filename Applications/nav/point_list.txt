@@ -22,3 +22,123 @@
         },
         .enable = true
     },
+
+    {
+        .id = 0,
+        .name = "A",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = 44.73f,
+            .y = -93.28f,
+            .yaw = -54.15f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },
+
+    {
+        .id = 0,
+        .name = "B",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = 24.58f,
+            .y = -65.52f,
+            .yaw = -54.15f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },
+
+    {
+        .id = 0,
+        .name = "C",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = -31.16f,
+            .y = -89.49f,
+            .yaw = -69.0f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },
+
+    {
+        .id = 0,
+        .name = "D",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = -42.56f,
+            .y = -61.46f,
+            .yaw = -69.0f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },
+
+    {
+        .id = 0,
+        .name = "E",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = -77.93f,
+            .y = -67.06f,
+            .yaw = -90f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },

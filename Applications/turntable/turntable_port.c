@@ -13,8 +13,9 @@
 #include "shell.h"
 #include "shell_cmd_group.h"
 #include "log.h"
+#include <stdlib.h>
 
-static TropLabel_t set_trop();
+static TropLabel_t set_trop(void);
 
 static TurntableSTO_t *g_sto[TURNTABLE_STO_NUM];
 static TurntablePort_t g_port;
@@ -93,15 +94,11 @@ void Turntable_Port_Task(void *argument) {
         osEventFlagsWait(System_StatusHandle, TURNTABLE_RUN, osFlagsNoClear, osWaitForever);
         uint16_t dist = Dist_Get();
         if (dist == 0 || dist > TURNTABLE_DIST_THR) continue;
-        osDelay(TURNTABLE_SETTLE_MS);
 
         g_sto[sto_idx]->id = turntable_get_id();
         turntable_move_to_next(MISSION_COLOR_SENSOR);
 
-        while(dist < TURNTABLE_DIST_THR) {
-            dist = Dist_Get();
-            osDelay(1);
-        }
+        osDelay(TURNTABLE_SETTLE_MS);
 
         if (g_port.type == TURNTABLE_MATL) {
 #if MISSION_COLOR_SENSOR == 0 // 颜色传感器
@@ -117,8 +114,13 @@ void Turntable_Port_Task(void *argument) {
             logWarning("unknown type");
             continue;
         }
+
         sto_idx++;
-        if (sto_idx >= TURNTABLE_STO_NUM) sto_idx = 0;
+        if (sto_idx == 5) {
+            osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
+            turntable_move_to_close();
+            sto_idx = 0;
+        }
     }
 }
 
@@ -134,8 +136,10 @@ bool Turntable_Pop(TurntablePop_t pop) {
 		SENSOR_Color_t target_color = matl_order[g_port.order][pop_idx];
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->color == target_color) {
-				turntable_move_to_id(g_sto[i]->id);
-				osDelay(TURNTABLE_SETTLE_MS);
+				uint8_t out_id = g_sto[i]->id;
+				logPrintln("Pop MATL: sto_idx=%d, id=%d, target_color=%s, order=%d",
+				           i, out_id, matl_str[target_color], g_port.order + 1);
+				turntable_move_to_id(out_id);
 				g_sto[i]->color = COLOR_UNKNOWN;
 				return true;
 			}
@@ -145,14 +149,24 @@ bool Turntable_Pop(TurntablePop_t pop) {
 		TropLabel_t target_label = trop_order[g_port.order][pop_idx - 5];
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->label == target_label) {
-				turntable_move_to_id(g_sto[i]->id);
-				osDelay(TURNTABLE_SETTLE_MS);
+				uint8_t out_id = g_sto[i]->id;
+				logPrintln("Pop TROP: sto_idx=%d, id=%d, target_label=%s, order=%d",
+				           i, out_id, trop_str[target_label], g_port.order + 1);
+				turntable_move_to_id(out_id);
 				g_sto[i]->label = LABEL_NONE;
 				return true;
 			}
 		}
 		return false;
 	}
+}
+
+/**
+ * @brief 设置映射表
+ * @param order 映射表索引
+ */
+void Turntable_SetOrder(uint8_t order) {
+    g_port.order = order;
 }
 
 /**
@@ -175,7 +189,7 @@ TurntableType_t Turntable_Port_GetType(void) {
  * @brief 设置奖杯标签
  * @return 奖杯标签
  */
-static TropLabel_t set_trop() {
+static TropLabel_t set_trop(void) {
     static uint8_t count = 0;
     TropLabel_t label = trop_order[g_port.order][count];
     if (count >= 3) count = 0;
@@ -200,22 +214,72 @@ static void set_run(int argc, char *argv[]) {
         logPrintln("Clear run");
     }
 }
-SHELL_EXPORT_CMD(
-    SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-    setrun, set_run, change automatic inventory entry);
+
+/**
+ * @brief 转盘出库
+ */
+static void pop_test(int argc, char *argv[]) {
+	if (argc != 2) {
+		logPrintln("Usage: %s <pop_idx>", argv[0]);
+		logPrintln("  MATL: 0=A, 1=B, 2=C, 3=D, 4=E  (set order first: 1-16)");
+		logPrintln("  TROP: 5=A, 6=B, 7=C           (set order first: 1-6)");
+		return;
+	}
+
+	uint8_t pop_idx = atoi(argv[1]);
+	if (pop_idx > TROP_C) {
+		logPrintln("Invalid pop_idx: %d (range: 0-7)", pop_idx);
+		return;
+	}
+
+	bool ret = Turntable_Pop((TurntablePop_t)pop_idx);
+	if (!ret) {
+		logPrintln("Pop failed: idx=%d, target not found (check order & sto content)", pop_idx);
+	}
+}
+
+static void set_order(int argc, char *argv[]) {
+    if (argc != 2) {
+        logPrintln("Usage: %s <order>", argv[0]);
+        logPrintln("  MATL type: order=1~16, TROP type: order=1~6");
+        return;
+    }
+
+    uint8_t order = atoi(argv[1]);
+    if (g_port.type == TURNTABLE_MATL) {
+        if (order < 1 || order > 16) {
+            logPrintln("Invalid order: %d (MATL range: 1-16)", order);
+            return;
+        }
+    } else if (g_port.type == TURNTABLE_TROP) {
+        if (order < 1 || order > 6) {
+            logPrintln("Invalid order: %d (TROP range: 1-6)", order);
+            return;
+        }
+    } else {
+        logPrintln("Please set type first (MATL/TROP)");
+        return;
+    }
+
+    Turntable_SetOrder(order - 1);
+    logPrintln("Set order: %d (internal: %d)", order, order - 1);
+}
 
 /**
  * @brief 查看入库物料
  */
-static void view_sto(int argc, char *argv[]) {
-    if (argc != 1) {
-        logPrintln("Usage: %s", argv[0]);
-        return;
-    }
+static void view_sto(void) {
     for (int i = 0; i < TURNTABLE_STO_NUM; i++) {
         logInfo("sto_idx: %d, id: %d, color: %s, label: %s", i, g_sto[i]->id, matl_str[g_sto[i]->color], trop_str[g_sto[i]->label]);
     }
 }
-SHELL_EXPORT_CMD(
-    SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-    stoview, view_sto, view sto);
+
+ShellCommand TURNroup[] = {
+        SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, view, view_sto, view sto),
+        SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pop, pop_test, turntable pop),
+        SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, run, set_run, change automatic inventory entry),
+        SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, order, set_order, set order index),
+        SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+turn, TURNroup, turntable Tool Group);

@@ -624,7 +624,7 @@ SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
 
     /* 无法识别的颜色 */
     result.color_name = "Unknown";
-    result.color = COLOR_UNKNOWN;
+    result.color = COLOR_BLACK; // 默认黑色
     result.confidence = 0;
     return result;
 }

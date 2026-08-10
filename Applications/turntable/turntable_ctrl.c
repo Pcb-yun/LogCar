@@ -12,7 +12,7 @@
 #include <math.h>
 
 /* 当前转盘角度(度), 内部维护 */
-static float turntable_angle_current = 0;
+static float turntable_angle_current = TURNTABLE_ID_0_ANGLE;
 
 /* 槽位 id 对应的物理角度(度) */
 static const float turntable_id[TURNTABLE_ID_MAX] = {
@@ -87,7 +87,7 @@ uint8_t turntable_get_id(void){
  * @brief 转盘模块转动到下一个槽位
  * @param direction 旋转方向: 0：顺时针, 非0：逆时针
  */
-void turntable_move_to_next(uint8_t direction){
+void turntable_move_to_next(uint8_t direction) {
 	uint8_t id = turntable_get_id();
 
 	/* 顺时针: 槽位 id 递增(角度增大); 逆时针: 槽位 id 递减 */

@@ -16,11 +16,11 @@
 #include "turntable_port.h"
 #include "scan_driver.h"
 
-static bool matl_grap();
-static bool matl_pop();
-static bool trop_grap();
-static bool trop_pop();
-static bool Home_Sweet_home();
+static bool matl_grap(void);
+static bool matl_pop(void);
+static bool trop_grap(void);
+static bool trop_pop(void);
+static bool Home_Sweet_home(void);
 
 static uint8_t current_point = 0;
 static bool mission_running = false;
@@ -52,11 +52,13 @@ void mission_run(void *argument) {
     (void)argument;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
-    uint8_t barcode[16];
+    uint8_t barcode[2];
 
     for (;;) {
         osDelay(1);
         if (!mission_running) continue;
+        logInfo("Mission Start");
+        OPS_Zero();
 
         // 出站
         Nav_GoTo_fromName("START");
@@ -68,6 +70,7 @@ void mission_run(void *argument) {
 
         // 读取二维码
         if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto done;
+        Turntable_SetOrder(barcode[0]);
 
         // 设置转盘为物料抓取
         Turntable_Port_SetType(TURNTABLE_MATL);
@@ -75,7 +78,6 @@ void mission_run(void *argument) {
         // 抓取物料
         osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
         if (!matl_grap()) goto done;
-        osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
 
         // 放置物料
         if (!matl_pop()) goto done;
@@ -88,6 +90,7 @@ void mission_run(void *argument) {
 
             if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto done;
         }
+        Turntable_SetOrder(barcode[0]);
 
         // 设置转盘为奖杯抓取
         Turntable_Port_SetType(TURNTABLE_TROP);
@@ -113,7 +116,7 @@ void mission_run(void *argument) {
  * @brief 物料抓取导航
  * @return 抓取状态
  */
-static bool matl_grap() {
+static bool matl_grap(void) {
 #if MISSION_MATL_NAV == 0 // 地图定位
     TargetPoint_t *point = Map_GetPointByName("START");
     if (point == NULL) return false;
@@ -137,7 +140,7 @@ static bool matl_grap() {
  * @brief 物料放置导航
  * @return 放置状态
  */
-static bool matl_pop() {
+static bool matl_pop(void) {
     TargetPoint_t *point = Map_GetPointByName("POP_A");
     if (point == NULL) return false;
 
@@ -162,7 +165,7 @@ static bool matl_pop() {
  * @brief 物料抓取导航
  * @return 抓取状态
  */
-static bool trop_grap() {
+static bool trop_grap(void) {
 
 
     return true;
@@ -172,7 +175,7 @@ static bool trop_grap() {
  * @brief 物料放置导航
  * @return 放置状态
  */
-static bool trop_pop() {
+static bool trop_pop(void) {
 
 
     return true;
@@ -182,7 +185,7 @@ static bool trop_pop() {
  * @brief 回到home点
  * @return 返回状态
  */
-static bool Home_Sweet_home() {
+static bool Home_Sweet_home(void) {
     Nav_GoTo_fromName("HOME");
     if (!wait_tracker()) {
         return false;

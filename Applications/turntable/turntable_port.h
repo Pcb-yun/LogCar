@@ -68,13 +68,11 @@ typedef enum {
     TROP_C          // 奖杯C
 } TurntablePop_t;
 
-#define TURNTABLE_STO_NUM TURNTABLE_ID_MAX  // 转盘入库信息数量最大值
-#define TURNTABLE_DIST_THR 65   // 转盘距离物料阈值(mm)
 
 bool Turntable_Port_Init(void);
 void Turntable_Port_SetType(TurntableType_t type);
 bool Turntable_Pop(TurntablePop_t pop);
-
+void Turntable_SetOrder(uint8_t order);
 
 
 #ifdef __cplusplus
