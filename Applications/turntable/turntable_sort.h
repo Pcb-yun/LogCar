@@ -9,7 +9,6 @@ extern "C" {
 #include <stdint.h>
 #include "turntable_cfg.h"
 
-
 /**
  * @brief 分拣物品种类
  */

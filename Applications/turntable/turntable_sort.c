@@ -5,11 +5,16 @@
  * 功能流程:
  *   1. 周期性调用 vl53l0x_port 的 Dist_Get() 轮询进料口距离
  *   2. 扫码切换入栈模式:
- *      - 第1次扫码: 全部按物料处理, 入栈后识别颜色, 出栈顺序取 pop_order_goods
+ *      - 第1次扫码: 全部按物料处理, 入栈后识别颜色,
+ *                   出栈顺序取 pop_order_goods(扫码值 1~16)
  *      - 第2次扫码: 清空存储并回初始位, 全部按奖杯处理, 不测颜色也不读字母;
- *                   奖杯物理入栈顺序由扫码值决定(1 ABC->CBA ... 6 CBA->ABC),
- *                   出栈统一 CBA
+ *                   奖杯初始位置由扫码值决定(1 ABC ... 6 CBA),
+ *                   出栈时由字母推导槽位(见 turntable_pop.c)
  *   3. 将种类/颜色与槽位 id 存入物料表, 通过 shell 命令查询
+ *
+ * 与出栈的互斥:
+ *   出栈调用 Turntable_Sort_Pause() 暂停入栈并等待当前动作结束,
+ *   出栈结束调用 Turntable_Sort_Resume() 恢复。
  */
 
 #include "turntable_sort.h"
@@ -29,6 +34,9 @@
 /* TCS230 白平衡参数与状态*/
 extern bool isWB;
 extern TCS230_RGBC_t rgbc_wb;
+
+/* 暂停入栈等待超时(出栈抢占转盘时使用) */
+#define TURNTABLE_SORT_PAUSE_TIMEOUT_MS (TURNTABLE_SETTLE_MS * 2)
 
 /* 物品存储表 */
 static TurntableItem_t s_items[TURNTABLE_ITEM_MAX];
@@ -164,7 +172,7 @@ void Turntable_Sort_Pause(void) {
     s_sort_paused = true;
     /* 等待当前入栈动作结束, 避免与出栈同时驱动转盘 */
     uint32_t t0 = osKernelGetTickCount();
-    while (s_sort_busy && (osKernelGetTickCount() - t0) < TURNTABLE_PAUSE_TIMEOUT_MS) {
+    while (s_sort_busy && (osKernelGetTickCount() - t0) < TURNTABLE_SORT_PAUSE_TIMEOUT_MS) {
         osDelay(10);
     }
     if (s_sort_busy) {
@@ -214,7 +222,7 @@ const TurntableItem_t *Turntable_Sort_GetItems(void) {
  *
  * 第1次扫码: 全部按物料, 出栈顺序取 pop_order_goods
  * 第2次扫码: 清空上一轮存储并回初始位, 全部按奖杯;
- *            奖杯物理入栈顺序由扫码值决定(1 ABC->CBA ... 6 CBA->ABC), 出栈统一 CBA
+ *            奖杯初始位置由扫码值决定(1 ABC ... 6 CBA)
  */
 static void sort_poll_scan(void) {
     char barcode[SCAN_BARCODE_MAX_LEN + 1];
