@@ -183,9 +183,14 @@ void Turntable_Sort_Pause(void) {
 
 /**
  * @brief 恢复入栈(出栈结束释放转盘时调用)
+ *
+ * 出料口与进料口是同一开口: 出栈"转到位置"即返回, 物品可能仍停留在
+ * 开口处等待机械手取走。因此恢复后先复位进料去抖标志, 等开口物品
+ * 被取走(测距恢复)后再接收下一个, 避免把出栈遗留物误当新物料入栈。
  */
 void Turntable_Sort_Resume(void) {
     s_sort_paused = false;
+    s_feed_clear = false;   /* 等待开口清空(测距恢复)后再允许入栈 */
 }
 
 /**
