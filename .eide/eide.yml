@@ -141,8 +141,9 @@ virtualFolder:
         - path: Applications/nav/tools/nav_tools.c
         - path: Applications/nav/utils/nav_math.c
         - path: Applications/nav/nav_core.c
-        - path: Applications/nav/nav_map.c
         - path: Applications/nav/nav_map_data.c
+        - path: Applications/nav/nav_map.c
+        - path: Applications/nav/nav_track.c
       folders: []
     - name: turntable
       files:
@@ -175,6 +176,11 @@ virtualFolder:
       files:
         - path: Drivers/User/SCANNER/scan_driver.c
       folders: []
+    - name: sensor
+      files:
+        - path: Drivers/User/SENSOR/rpi_sensor_port.c
+        - path: Drivers/User/SENSOR/sensor.c
+      folders: []
     - name: servo
       files:
         - path: Drivers/User/SERVO/servo_driver.c
@@ -201,11 +207,6 @@ virtualFolder:
         - path: Drivers/User/VL53L0X/core/vl53l0x_platform_log.c
         - path: Drivers/User/VL53L0X/platform/vl53l0x_platform.c
         - path: Drivers/User/VL53L0X/vl53l0x_port.c
-      folders: []
-    - name: sensor
-      files:
-        - path: Drivers/User/SENSOR/rpi_sensor_port.c
-        - path: Drivers/User/SENSOR/sensor.c
       folders: []
     - name: ::CMSIS
       files: []
@@ -258,6 +259,7 @@ targets:
         - Drivers/User/OPS
         - Drivers/User/RTOS
         - Drivers/User/SCANNER
+        - Drivers/User/SENSOR
         - Drivers/User/SERVO
         - Drivers/User/STEP
         - Drivers/User/STEP/zdt-v5-driver/core
@@ -266,7 +268,6 @@ targets:
         - Drivers/User/VL53L0X
         - Drivers/User/VL53L0X/core
         - Drivers/User/VL53L0X/platform
-        - Drivers/User/SENSOR
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

@@ -40,11 +40,11 @@ void Servo_ANGLE(uint8_t id, float angle, uint16_t interval_ms, uint16_t power_m
  * @param power 输出功率，单位mW（0-1000）
  * @note 通过消息队列发送命令
  */
-void Servo_MTURN(uint8_t id, float angle,uint32_t interval, uint16_t power){
+void Servo_MTURN(uint8_t id, float angle,uint32_t interval, uint16_t power_mW){
     if (id == 0 || id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", id);
     }
-    Servo_SetServoAngleMTurn(id,angle,interval,power);
+    Servo_SetServoAngleMTurn(id,angle,interval,power_mW);
 
 }
 
@@ -112,9 +112,15 @@ void Servo_AngleByInterval(uint8_t servo_id, float angle,
                                             uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
+        return;
     }
-    if (angle < -180.0f || angle > 180.0f) {
-        logPrintln("Invalid angle: %.2f (must be -180~180)", angle);
+    if (angle > 180.0f || angle < -180.0f) {
+        logPrintln("Invalid angle: %.2f (must be -180 to 180)", angle);
+        return;
+    }
+    if (interval == 0) {
+        logPrintln("Invalid interval: %u (must be > 0)", interval);
+        return;
     }
     Servo_SetServoAngleByInterval(servo_id, angle, interval, t_acc, t_dec, power);
 
@@ -135,12 +141,15 @@ void Servo_AngleByVelocity(uint8_t servo_id, float angle,
                                             uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
+        return;
     }
-    if (angle < -180.0f || angle > 180.0f) {
-        logPrintln("Invalid angle: %.2f (must be -180~180)", angle);
+    if (angle > 180.0f || angle < -180.0f) {
+        logPrintln("Invalid angle: %.2f (must be -180 to 180)", angle);
+        return;
     }
-    if (velocity <= 0.0f) {
-        logPrintln("Invalid velocity: %.2f (must be > 0)", velocity);
+    if (velocity < 1.0f || velocity > 750.0f) {
+        logPrintln("Invalid velocity: %.2f (must be 1 to 750)", velocity);
+        return;
     }
     Servo_SetServoAngleByVelocity(servo_id, angle, velocity, t_acc, t_dec, power);
 
@@ -161,12 +170,15 @@ void Servo_MTurnByVelocity(uint8_t servo_id, float angle,
                                                  uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
+        return;
     }
-    if (angle < -36000.0f || angle > 36000.0f) {
-        logPrintln("Invalid multi-turn angle: %.2f (must be -36000~36000)", angle);
+    if (angle > 36000.0f || angle < -36000.0f) {
+        logPrintln("Invalid angle: %.2f (must be -36000 to 36000)", angle);
+        return;
     }
-    if (velocity <= 0.0f) {
-        logPrintln("Invalid velocity: %.2f (must be > 0)", velocity);
+    if (velocity < 1.0f || velocity > 750.0f) {
+        logPrintln("Invalid velocity: %.2f (must be 1 to 750)", velocity);
+        return;
     }
     Servo_SetServoAngleMTurnByInterval(servo_id, angle, velocity, t_acc, t_dec, power);
 }
@@ -186,12 +198,15 @@ void Servo_MTurnByInterval(uint8_t servo_id, float angle,
                                                  uint16_t t_dec, uint16_t power) {
     if (servo_id == 0 || servo_id > 254) {
         logPrintln("Invalid servo ID: %d (must be 1-254)", servo_id);
+        return;
     }
-    if (angle < -36000.0f || angle > 36000.0f) {
-        logPrintln("Invalid multi-turn angle: %.2f (must be -36000~36000)", angle);
+    if (angle > 36000.0f || angle < -36000.0f) {
+        logPrintln("Invalid angle: %.2f (must be -36000 to 36000)", angle);
+        return;
     }
     if (interval == 0) {
         logPrintln("Invalid interval: %u (must be > 0)", interval);
+        return;
     }
     Servo_SetServoAngleMTurnByVelocity(servo_id, angle, interval, t_acc, t_dec, power);
 }
@@ -246,15 +261,35 @@ static void Servo_Shell(int argc, char *argv[]){
 
     #if SERVO_ADVANCED_MODE
     else if(strcmp(argv[1], "angle_vel") == 0) {
+        if(argc < 7) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo angle_vel <id> <angle> <velocity> <t_acc> <t_dec>");
+            return;
+        }
         Servo_AngleByVelocity(id, angle, velocity, t_acc, t_dec, 1000);
     }
     else if(strcmp(argv[1], "angle_int") == 0) {
+        if(argc < 7) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo angle_int <id> <angle> <interval> <t_acc> <t_dec>");
+            return;
+        }
         Servo_AngleByInterval(id, angle, interval, t_acc, t_dec, 1000);
     }
     else if(strcmp(argv[1], "mturn_vel") == 0) {
+        if(argc < 7) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo mturn_vel <id> <angle> <velocity> <t_acc> <t_dec>");
+            return;
+        }
         Servo_MTurnByVelocity(id, angle, velocity, t_acc, t_dec, 1000);
     }
     else if(strcmp(argv[1], "mturn_int") == 0) {
+        if(argc < 7) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo mturn_int <id> <angle> <interval> <t_acc> <t_dec>");
+            return;
+        }
         Servo_MTurnByInterval(id, angle, interval, t_acc, t_dec, 1000);
 
     }
