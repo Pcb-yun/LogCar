@@ -1,0 +1,24 @@
+出发点
+    {
+        .id = 0,
+        .name = "HOME",
+        .type = TARGET_POINT_NORMAL,
+        .pose = {
+            .x = 0.0f,
+            .y = 0.0f,
+            .yaw = 0.0f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 1.0f,
+            .yaw_threshold = 1.8f,
+            .timeout_ms = 5000
+        },
+        .enable = true
+    },

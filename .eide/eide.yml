@@ -143,14 +143,12 @@ virtualFolder:
     - name: turntable
       files:
         - path: Applications/turntable/turntable_ctrl.c
+        - path: Applications/turntable/turntable_sort.c
+        - path: Applications/turntable/turntable_pop.c
       folders: []
     - name: battery
       files:
         - path: Drivers/User/ADC/battery.c
-      folders: []
-    - name: measure
-      files:
-        - path: Drivers/User/MEASURE/sensor.c
       folders: []
     - name: misc
       files:
@@ -201,6 +199,15 @@ virtualFolder:
         - path: Drivers/User/VL53L0X/platform/vl53l0x_platform.c
         - path: Drivers/User/VL53L0X/vl53l0x_port.c
       folders: []
+    - name: sensor
+      files:
+        - path: Drivers/User/SENSOR/rpi_sensor_port.c
+        - path: Drivers/User/SENSOR/sensor.c
+      folders: []
+    - name: arm
+      files:
+        - path: Applications/arm/arm_ctrl.c
+      folders: []
     - name: ::CMSIS
       files: []
       folders: []
@@ -245,7 +252,6 @@ targets:
         - Applications/nav/utils
         - Applications/turntable
         - Drivers/User/ADC
-        - Drivers/User/MEASURE
         - Drivers/User/MISC
         - Drivers/User/OLED
         - Drivers/User/OLED/ssd1306
@@ -260,6 +266,8 @@ targets:
         - Drivers/User/VL53L0X
         - Drivers/User/VL53L0X/core
         - Drivers/User/VL53L0X/platform
+        - Drivers/User/SENSOR
+        - Applications/arm
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

@@ -112,6 +112,10 @@ void Error_Handler(void);
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14
 #define Tracking_RST_GPIO_Port GPIOG
+#define Tracking_SCL_Pin GPIO_PIN_6
+#define Tracking_SCL_GPIO_Port GPIOB
+#define Tracking_SDA_Pin GPIO_PIN_7
+#define Tracking_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

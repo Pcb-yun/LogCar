@@ -29,28 +29,6 @@
 #include <math.h>
 
 /**
- * @brief 频率测量超时 (TIM2 ticks, 1 tick = 1us)
- */
-#define TCS230_TIMEOUT_US  1000000UL
-
-/**
- * @brief 滤波器切换后稳定等待时间 (us)
- */
-#define TCS230_SETTLE_US   2000UL
-
-/**
- * @brief TIM4 计数器频率 (6MHz)
- * 预分频器 84MHz/14=6MHz，提高高频测量分辨率。
- */
-#define TCS230_TIM_CLOCK_HZ  6000000UL
-
-/**
- * @brief 频率测量采样数 (取奇数，便于去极值后取中段均值)
- */
-#define FREQ_NSAMPLES  5
-
-
-/**
  * @brief 白色平衡参数
  */
 TCS230_RGBC_t rgbc_wb = {0};
@@ -367,13 +345,17 @@ done:
         s_ctx.callback(&s_ctx.result, true);
     }
 }
-
 /**
  * @brief 将原始 RGBC 频率转换为色度 RGB (0-255) + 亮度因子
  */
-static bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
+bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
                                 uint8_t *r, uint8_t *g, uint8_t *b,
                                 float *brightness) {
+
+    if (!isWB){
+        logWarning("Using default white balance");
+    }
+
     if (raw->clear == 0 || wb->clear == 0 ||
         wb->red == 0 || wb->green == 0 || wb->blue == 0) {
         *r = *g = *b = 0;

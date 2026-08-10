@@ -179,6 +179,13 @@ const osThreadAttr_t Media_Player_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal6,
 };
+/* Definitions for Turntable_Sort */
+osThreadId_t Turntable_SortHandle;
+const osThreadAttr_t Turntable_Sort_attributes = {
+  .name = "Turntable_Sort",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal2,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -262,6 +269,7 @@ extern void Online_Check_Task(void *argument);
 extern void Dist_Get_Task(void *argument);
 extern void Oled_Refresh_Task(void *argument);
 extern void Media_Player_Task(void *argument);
+extern void Turntable_Sort_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -481,6 +489,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Media_Player */
   Media_PlayerHandle = osThreadNew(Media_Player_Task, NULL, &Media_Player_attributes);
+
+  /* creation of Turntable_Sort */
+  Turntable_SortHandle = osThreadNew(Turntable_Sort_Task, NULL, &Turntable_Sort_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
