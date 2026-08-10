@@ -31,7 +31,7 @@ void OLED_Init(void) {
 void Oled_Refresh_Task(void *argument) {
     (void) argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     extern osMutexId_t OLED_MutexHandle;
 
     for (;;) {

@@ -63,7 +63,7 @@ void Battery_Get_Task(void *argument) {
     (void)argument;
     uint16_t voltage = 0;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
     for (;;) {

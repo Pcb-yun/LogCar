@@ -240,6 +240,7 @@ static void Event_Info(void) {
         logPrintln("%-20s  %s", "SHELL_ONLINE", (flags & 0x100) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "TRACK_DMA_DONE", (flags & 0x200) ? "SET" : "RESET");
         logPrintln("%-20s  %s", "SPIT1_TX_IDLE", (flags & 0x400) ? "SET" : "RESET");
+        logPrintln("%-20s  %s", "TURNTABLE_RUN", (flags & 0x800) ? "SET" : "RESET");
     }
 }
 

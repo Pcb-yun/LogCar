@@ -1,25 +1,17 @@
-#ifndef SENSOR_CFG_H
-#define SENSOR_CFG_H
-
 /**
- * @brief 频率测量超时 (TIM2 ticks, 1 tick = 1us)
+ * @file sensor_cfg.h
+ * @brief 颜色传感器配置头文件
  */
-#define TCS230_TIMEOUT_US  1000000UL
 
-/**
- * @brief 滤波器切换后稳定等待时间 (us)
- */
-#define TCS230_SETTLE_US   2000UL
+#ifndef __SENSOR_CFG_H__
+#define __SENSOR_CFG_H__
 
-/**
- * @brief TIM4 计数器频率 (6MHz)
- * 预分频器 84MHz/14=6MHz，提高高频测量分辨率。
- */
-#define TCS230_TIM_CLOCK_HZ  6000000UL
 
-/**
- * @brief 频率测量采样数 (取奇数，便于去极值后取中段均值)
- */
-#define FREQ_NSAMPLES  5
+#define TCS230_TIMEOUT_US  1000000UL    // 频率测量超时
+#define TCS230_SETTLE_US   2000UL        // 滤波器切换后稳定等待时间
+#define TCS230_TIM_CLOCK_HZ  6000000UL    // TIM4 计数器频率
+#define FREQ_NSAMPLES  5            // 频率测量采样数
 
-#endif 
+
+
+#endif /* __SENSOR_CFG_H__ */

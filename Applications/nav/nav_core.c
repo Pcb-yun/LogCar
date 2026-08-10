@@ -576,7 +576,7 @@ NavState_t Nav_GetState(void) {
 void Nav_Task(void *argument) {
     (void)argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
     Pose2D_t current_pose;

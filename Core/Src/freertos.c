@@ -179,12 +179,12 @@ const osThreadAttr_t Media_Player_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal6,
 };
-/* Definitions for Turntable_Sort */
-osThreadId_t Turntable_SortHandle;
-const osThreadAttr_t Turntable_Sort_attributes = {
-  .name = "Turntable_Sort",
+/* Definitions for Turntable_Port */
+osThreadId_t Turntable_PortHandle;
+const osThreadAttr_t Turntable_Port_attributes = {
+  .name = "Turntable_Port",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal2,
+  .priority = (osPriority_t) osPriorityAboveNormal5,
 };
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
@@ -269,7 +269,7 @@ extern void Online_Check_Task(void *argument);
 extern void Dist_Get_Task(void *argument);
 extern void Oled_Refresh_Task(void *argument);
 extern void Media_Player_Task(void *argument);
-extern void Turntable_Sort_Task(void *argument);
+extern void Turntable_Port_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -490,8 +490,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of Media_Player */
   Media_PlayerHandle = osThreadNew(Media_Player_Task, NULL, &Media_Player_attributes);
 
-  /* creation of Turntable_Sort */
-  Turntable_SortHandle = osThreadNew(Turntable_Sort_Task, NULL, &Turntable_Sort_attributes);
+  /* creation of Turntable_Port */
+  Turntable_PortHandle = osThreadNew(Turntable_Port_Task, NULL, &Turntable_Port_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -594,6 +594,17 @@ void Sys_Init_Task(void *argument)
   extern void OLED_Init(void);
   OLED_Init();
   SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Turntable Module");
+  extern bool Turntable_Port_Init(void);
+  if (!Turntable_Port_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize RPI Module");
+  extern void RPI_Init(void);
+  RPI_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+
 
 
   extern Shell shell;

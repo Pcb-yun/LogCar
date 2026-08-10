@@ -125,7 +125,7 @@ clean_up:
 void Dist_Get_Task(void *argument) {
     (void) argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init)  vTaskDelete(NULL);
 
     for (;;) {
@@ -146,7 +146,7 @@ uint16_t Dist_Get(void) {
 }
 
 /**
- * @brief 测距模块工具组
+ * @brief 设置测距间隔
  */
 static void Dist_Time(int argc, char *argv[]) {
     if (!is_init) {

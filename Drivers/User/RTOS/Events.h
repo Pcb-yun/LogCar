@@ -30,7 +30,7 @@ extern osEventFlagsId_t System_StatusHandle;
 #define SHELL_ONLINE (1UL << 8)         // shell在线
 #define TRACK_DMA_DONE (1UL << 9)       // 巡线模块DMA读取完成
 #define SPIT1_TX_IDLE (1UL << 10)       // SPI1发送空闲
-
+#define TURNTABLE_RUN (1UL << 11)       // 转盘模块运行
 
 
 #ifdef __cplusplus

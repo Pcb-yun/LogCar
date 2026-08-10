@@ -121,7 +121,7 @@ void Motor_Ctrl_Task(void *argument) {
     (void)argument;
     MotorCmd_t cmd;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init)  {
         osMessageQueueDelete(MotorCmdsHandle);
         vTaskDelete(NULL);
@@ -142,7 +142,7 @@ void Motor_Receive_Task(void *argument) {
     (void)argument;
     Usart6_RxBuf_t rxBuf;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) {
         osMessageQueueDelete(Usart6_Rx_DataHandle);
         vTaskDelete(NULL);
@@ -164,7 +164,7 @@ void Motor_Receive_Task(void *argument) {
 void Motor_Update_Task(void *argument) {
 	(void)argument;
 
-	osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+	osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
 	if (!is_init) vTaskDelete(NULL);
 
 	extern void Motor_Update(MotorCmd_t *cmd, uint8_t motor_id);

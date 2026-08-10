@@ -36,7 +36,7 @@ extern StreamBufferHandle_t     Scan_Rx_Stream;
 
 bool Scan_Init(void);
 void Scan_Get_Task(void *argument);
-bool Scan_GetLatestBarcode(char *buf, uint16_t size);
+bool Scan_GetLatestBarcode(uint8_t *buf, uint16_t size);
 bool Scan_GetNewBarcode(char *buf, uint16_t size);
 
 #endif /* __SCAN_DRIVER_H */

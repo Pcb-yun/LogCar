@@ -65,7 +65,7 @@ void OPS_Update_Task(void *argument) {
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
     Uart4_RxBuf_t rx_buf;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) {
         osMessageQueueDelete(Uart4_Rx_DataHandle);
         vTaskDelete(NULL);

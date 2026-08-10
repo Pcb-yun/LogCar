@@ -1,3 +1,8 @@
+/**
+ * @file turntable_ctrl.h
+ * @brief 转盘运动控制头文件
+ */
+
 #ifndef __TURNTABLE_CTRL_H__
 #define __TURNTABLE_CTRL_H__
 
@@ -9,9 +14,10 @@ extern "C" {
 #include "servo_port.h"
 
 
-/* 转盘运动控制接口 */
 void turntable_move_to(float angle);
 void turntable_move_to_id(uint8_t id);
+uint8_t turntable_get_id(void);
+void turntable_move_to_next(uint8_t direction);
 void turntable_move_to_close(void);
 void turntable_move_to_init(void);
 

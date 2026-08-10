@@ -81,7 +81,7 @@ void userShellInit(void) {
 void Shell_Task(void *argument) {
     (void)argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
 
     char data;
     for(;;) {
@@ -101,7 +101,7 @@ void Online_Check_Task(void *argument) {
     extern osMessageQueueId_t Usart1_Rx_DataHandle;
     (void)argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     osEventFlagsSet(System_StatusHandle, SHELL_ONLINE);
 
     const uint8_t Response[] = ONLINE_CHECK_RESPONSE;

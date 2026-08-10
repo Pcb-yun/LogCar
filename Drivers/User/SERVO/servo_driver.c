@@ -1261,7 +1261,7 @@ void Servo_Tx_Task(void *argument) {
     static uint8_t txBuffer[256];
     uint16_t len;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
 
     for(;;) {
         if(osMessageQueueGet(Servo_Tx_DataHandle, &pkg, NULL, osWaitForever) == osOK) {

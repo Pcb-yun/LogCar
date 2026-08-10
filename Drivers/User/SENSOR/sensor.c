@@ -59,19 +59,13 @@ typedef struct {
     TCS230_Filter_t channels[4];    // 4 个通道按顺序
     int channel_idx;                // 当前通道 (0~3)
     SENSOR_Phase_t phase;           // 当前阶段
-
     int sample_idx;                 // 当前样本索引
     uint32_t samples[FREQ_NSAMPLES];
-
     uint32_t phase_start;           // 当前阶段开始时的 TIM2->CNT
-
     volatile bool capture_ready;
-
     TCS230_RGBC_t result;
-
     bool busy;
     bool complete;
-
     SENSOR_ReadAll_Callback_t callback;
 } SENSOR_Context_t;
 
@@ -117,7 +111,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
  * @return 频率 Hz，0 表示无效
  */
 static uint32_t compute_frequency(const uint32_t *samples) {
-    /* 冒泡排序 */
+    /* 排序 */
     uint32_t buf[FREQ_NSAMPLES];
     memcpy(buf, samples, sizeof(buf));
     for (int i = 0; i < FREQ_NSAMPLES - 1; i++) {
@@ -203,9 +197,6 @@ void SENSOR_StartReadAll(SENSOR_ReadAll_Callback_t callback) {
 
     /* 启用 TIM4 CC1 中断（PWM 输入模式下捕获完成时触发） */
     TIM4->DIER |= TIM_DIER_CC1IE;
-
-    /* 进入第一阶段 */
-    s_ctx.phase = PHASE_SET_FILTER;
 }
 
 /**
@@ -268,7 +259,7 @@ void SENSOR_Process(void) {
     /* ========== 2. 等待稳定 ========== */
     case PHASE_SETTLE: {
         if ((now - s_ctx.phase_start) >= TCS230_SETTLE_US) {
-            /* 清楚捕获标志，准备丢弃第一个捕获 */
+            /* 清除捕获标志，准备丢弃第一个捕获 */
             TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
             s_ctx.capture_ready = false;
             s_ctx.phase = PHASE_DISCARD;
@@ -289,7 +280,7 @@ void SENSOR_Process(void) {
         }
         if (s_ctx.capture_ready) {
             s_ctx.capture_ready = false;
-            /* 丢弃第一个捕获值，清楚标志开始采样 */
+            /* 丢弃第一个捕获值，清除标志开始采样 */
             TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
             s_ctx.sample_idx = 0;
             s_ctx.phase = PHASE_SAMPLE;
@@ -310,7 +301,7 @@ void SENSOR_Process(void) {
         if (s_ctx.capture_ready) {
             s_ctx.capture_ready = false;
             s_ctx.samples[s_ctx.sample_idx++] = TIM4->CCR1;
-            /* 在最后一次采集中已经清楚标志，不需要再次清除 */
+            /* 在最后一次采集中已经清除标志，不需要再次清除 */
             TIM4->SR = (uint32_t)~TIM_SR_CC1IF;
 
             if (s_ctx.sample_idx >= FREQ_NSAMPLES) {
@@ -345,6 +336,7 @@ done:
         s_ctx.callback(&s_ctx.result, true);
     }
 }
+
 /**
  * @brief 将原始 RGBC 频率转换为色度 RGB (0-255) + 亮度因子
  */
@@ -437,12 +429,9 @@ static void SENSOR_Color_Shell(void) {
     shell = shellGetCurrent();
     if (shell == NULL) return;
 
-    osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     if (!isWB) {
-        logPrintln("White Balance Not Set");
-        osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
-        return;
+        logPrintln("White Balance Not Set"); return;
     }
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
@@ -507,9 +496,9 @@ static void SENSOR_WB_Shell(void) {
 
     logPrintln("R: %u, G: %u, B: %u", rgbc_wb.red, rgbc_wb.green, rgbc_wb.blue);
     logPrintln("Exposure: %u", rgbc_wb.clear);
-    logPrintln("W: %f", (float)rgbc_wb.clear / rgbc_wb.red);
-    logPrintln("W: %f", (float)rgbc_wb.clear / rgbc_wb.green);
-    logPrintln("W: %f", (float)rgbc_wb.clear / rgbc_wb.blue);
+    logPrintln("Wr: %f", (float)rgbc_wb.clear / rgbc_wb.red);
+    logPrintln("Wg: %f", (float)rgbc_wb.clear / rgbc_wb.green);
+    logPrintln("Wb: %f", (float)rgbc_wb.clear / rgbc_wb.blue);
 
     isWB = true;
     logPrintln("White Balance Set");
@@ -576,7 +565,7 @@ static void SENSOR_Detect_Shell(void) {
  */
 SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
                                         float brightness) {
-    SENSOR_ColorResult_t result = {"Unknown", 0};
+    SENSOR_ColorResult_t result = {"Unknown", COLOR_UNKNOWN, 0};
 
     float fr = r / 255.0f;
     float fg = g / 255.0f;
@@ -590,6 +579,7 @@ SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
     /* 黑色：亮度过低 */
     if (brightness < 0.15f) {
         result.color_name = "Black";
+        result.color = COLOR_BLACK;
         result.confidence = (uint8_t)((1.0f - brightness / 0.15f) * 100.0f);
         return result;
     }
@@ -598,6 +588,7 @@ SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
     if (brightness > 0.4f && saturation < 0.25f) {
         float conf = (1.0f - saturation / 0.25f) * fminf(brightness / 0.6f, 1.0f);
         result.color_name = "White";
+        result.color = COLOR_WHITE;
         result.confidence = (uint8_t)(conf * 100.0f);
         return result;
     }
@@ -616,19 +607,53 @@ SENSOR_ColorResult_t SENSOR_InferColor(uint8_t r, uint8_t g, uint8_t b,
         float score = dominance * bf;
 
         if (score > 0.05f) {
-            if (maxC == fr)          result.color_name = "Red";
-            else if (maxC == fg)     result.color_name = "Green";
-            else                     result.color_name = "Blue";
-
+            if (maxC == fr) {
+                result.color_name = "Red";
+                result.color = COLOR_RED;
+            } else if (maxC == fg) {
+                result.color_name = "Green";
+                result.color = COLOR_GREEN;
+            } else {
+                result.color_name = "Blue";
+                result.color = COLOR_BLUE;
+            }
             result.confidence = (uint8_t)fminf(score * 100.0f, 100.0f);
             return result;
         }
     }
 
     /* 无法识别的颜色 */
-    result.color_name = "Black";
+    result.color_name = "Unknown";
+    result.color = COLOR_UNKNOWN;
     result.confidence = 0;
     return result;
+}
+
+/**
+ * @brief 颜色传感器颜色检测
+ * @return 颜色枚举值
+ */
+SENSOR_Color_t SENSOR_DetectColor(void) {
+	if (SENSOR_IsBusy()) {
+		return COLOR_UNKNOWN;
+	}
+
+	SENSOR_StartReadAll(NULL);
+
+	while (!SENSOR_ReadAll_IsComplete()) {
+		SENSOR_Process();
+		osDelay(1);
+	}
+
+	const TCS230_RGBC_t *raw = SENSOR_GetResult();
+	uint8_t r, g, b;
+	float bri;
+	if (!sensor_rgbc_to_rgb(raw, &rgbc_wb, &r, &g, &b, &bri)) {
+		return COLOR_UNKNOWN;
+	}
+
+	SENSOR_ColorResult_t res = SENSOR_InferColor(r, g, b, bri);
+	return res.color;
 }
 
 /**

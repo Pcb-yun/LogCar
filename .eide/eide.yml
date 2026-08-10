@@ -88,6 +88,10 @@ virtualFolder:
         - path: Applications/ANSI_Art/Art_Data.c
         - path: Applications/ANSI_Art/Art_show.c
       folders: []
+    - name: arm
+      files:
+        - path: Applications/arm/arm_ctrl.c
+      folders: []
     - name: chassis
       files:
         - path: Applications/chassis/kinematics/kinematics.c
@@ -143,8 +147,7 @@ virtualFolder:
     - name: turntable
       files:
         - path: Applications/turntable/turntable_ctrl.c
-        - path: Applications/turntable/turntable_sort.c
-        - path: Applications/turntable/turntable_pop.c
+        - path: Applications/turntable/turntable_port.c
       folders: []
     - name: battery
       files:
@@ -204,10 +207,6 @@ virtualFolder:
         - path: Drivers/User/SENSOR/rpi_sensor_port.c
         - path: Drivers/User/SENSOR/sensor.c
       folders: []
-    - name: arm
-      files:
-        - path: Applications/arm/arm_ctrl.c
-      folders: []
     - name: ::CMSIS
       files: []
       folders: []
@@ -233,6 +232,7 @@ targets:
         - Drivers/CMSIS/Device/ST/STM32F4xx/Include
         - Drivers/CMSIS/Include
         - Applications/ANSI_Art
+        - Applications/arm
         - Applications/chassis
         - Applications/chassis/kinematics
         - Applications/chassis/motion
@@ -267,7 +267,6 @@ targets:
         - Drivers/User/VL53L0X/core
         - Drivers/User/VL53L0X/platform
         - Drivers/User/SENSOR
-        - Applications/arm
         - .cmsis/include
         - MDK-ARM/RTE/_LogCar_Code
       libList: []

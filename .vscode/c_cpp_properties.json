@@ -12,6 +12,7 @@
                 "Drivers/CMSIS/Device/ST/STM32F4xx/Include",
                 "Drivers/CMSIS/Include",
                 "Applications/ANSI_Art",
+                "Applications/arm",
                 "Applications/chassis",
                 "Applications/chassis/kinematics",
                 "Applications/chassis/motion",
@@ -31,7 +32,6 @@
                 "Applications/nav/utils",
                 "Applications/turntable",
                 "Drivers/User/ADC",
-                "Drivers/User/MEASURE",
                 "Drivers/User/MISC",
                 "Drivers/User/OLED",
                 "Drivers/User/OLED/ssd1306",
@@ -46,6 +46,7 @@
                 "Drivers/User/VL53L0X",
                 "Drivers/User/VL53L0X/core",
                 "Drivers/User/VL53L0X/platform",
+                "Drivers/User/SENSOR",
                 ".cmsis/include",
                 "MDK-ARM/RTE/_LogCar_Code"
             ],

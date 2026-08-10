@@ -1,5 +1,6 @@
 /**
  * @file rpi_sensor_port.h
+ * @author Pcb-yun (pcbyinyun@163.com)
  * @brief 树莓派通信接口
  */
 
@@ -8,21 +9,27 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-#include "sensor.h"     /* SENSOR_ColorResult_t */
+#include "sensor.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/**
- * @brief 读取物料颜色识别结果
- * @return 颜色识别结果; 失败时 color_name 为 NULL, confidence 为 0
- */
-SENSOR_ColorResult_t RPI_Read_Color(void);
+
+SENSOR_Color_t RPI_DetectColor(void);
+static bool RPI_Calibrate(int32_t *err_x, int32_t *err_y);
+void RPI_Detect_IDE(void);
+void RPI_Calibrate_IDE(void);
+
+
+#define RPI_HELP \
+    "Usage: rpi COMMAND\r\n" \
+    "commands:\r\n" \
+    "  det         Detect color color\r\n" \
+    "  cal         Calibrate offset"
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* __RPI_PORT_H__ */
+#endif /* __RPI_SENSOR_ PORT_H__ */

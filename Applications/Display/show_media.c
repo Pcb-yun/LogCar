@@ -25,7 +25,7 @@ static bool Play = false;
 void Media_Player_Task(void *argument) {
     (void)argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     Media_t media;
 
     for (;;) {

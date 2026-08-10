@@ -68,7 +68,7 @@ bool Loc_Init(void) {
 void Loc_Update_Task(void *argument) {
     (void)argument;
 
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
     for (;;) {

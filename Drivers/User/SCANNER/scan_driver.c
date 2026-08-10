@@ -25,7 +25,6 @@ typedef struct {
     char     data[SCAN_BARCODE_MAX_LEN + 1];
     uint32_t time;        /**< 时间戳 */
     bool     valid;       /**< 是否有效 */
-    bool     consumed;    /**< 是否已被应用层读取(供 Scan_GetNewBarcode) */
 } Scan_Pending_t;
 
 StreamBufferHandle_t Scan_Rx_Stream = NULL;
@@ -97,7 +96,6 @@ static void parse_and_store(void)
         pending.data[SCAN_BARCODE_MAX_LEN] = '\0';
         pending.time   = HAL_GetTick();
         pending.valid  = true;
-        pending.consumed = false;
         pending_output = false;
     }
 
@@ -151,20 +149,20 @@ static void process_byte(uint8_t byte, uint32_t now)
  */
 bool Scan_Init(void)
 {
-    
+
     MX_UART5_Init();
     memset(&rx, 0, sizeof(rx));
     memset(&pending, 0, sizeof(pending));
 
     Scan_Rx_Stream = xStreamBufferCreate(SCAN_STREAM_BUF_SIZE,
                                          SCAN_STREAM_TRIGGER_LVL);
-    
+
     if (Scan_Rx_Stream == NULL) {
         configASSERT(Scan_Rx_Stream != NULL);
     } else {
         is_init = true;
     }
-    
+
     return is_init;
 }
 
@@ -172,35 +170,14 @@ bool Scan_Init(void)
  * @brief 获取最新扫描到的条码
  * @param buf  存储条码的缓冲区
  * @param size 缓冲区大小（包含终止符 '\0'）
- * @return true 成功获取条码
- * @return false 无新条码
+ * @return true 成功获取条码 false 无新条码
  */
-bool Scan_GetLatestBarcode(char *buf, uint16_t size)
+bool Scan_GetLatestBarcode(uint8_t *buf, uint16_t size)
 {
     if (!pending.valid) return false;
 
-    strncpy(buf, pending.data, size - 1);
+    strncpy((char *)buf, pending.data, size - 1);
     buf[size - 1] = '\0';
-    return true;
-}
-
-/**
- * @brief 获取一次新的扫码(每次扫码仅返回一次, 读取后标记为已消费)
- * @param buf  存储条码的缓冲区
- * @param size 缓冲区大小（包含终止符 '\0'）
- * @return true 成功获取一条新条码
- * @return false 无新条码(与上次相同或尚未扫描)
- *
- * 与 Scan_GetLatestBarcode 不同, 本接口消费式读取:
- * 即使连续扫到相同的码, 每次扫码也只返回一次。
- */
-bool Scan_GetNewBarcode(char *buf, uint16_t size)
-{
-    if (!pending.valid || pending.consumed) return false;
-
-    strncpy(buf, pending.data, size - 1);
-    buf[size - 1] = '\0';
-    pending.consumed = true;
     return true;
 }
 
@@ -268,7 +245,7 @@ static void Scan_Shell(int argc, char *argv[])
         logPrintln("Stream : %u bytes available",
                    (unsigned)xStreamBufferBytesAvailable(Scan_Rx_Stream));
     } else if (strcmp(argv[1], "get") == 0) {
-        char buf[SCAN_BARCODE_MAX_LEN + 1];
+        uint8_t buf[SCAN_BARCODE_MAX_LEN + 1];
         if (Scan_GetLatestBarcode(buf, sizeof(buf))) {
             logPrintln("Latest barcode: %s", buf);
         } else {

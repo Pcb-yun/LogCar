@@ -52,7 +52,7 @@ void Track_Get_Task(void *argument) {
     (void)argument;
 
     extern osMutexId_t Track_MutexHandle;
-    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsWaitAny, osWaitForever);
+    osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
     if (!is_init) vTaskDelete(NULL);
 
     TickType_t last_wake_time = xTaskGetTickCount();
@@ -142,7 +142,7 @@ static void Track_Mode_Shell(int argc, char *argv[]) {
         }
         logPrintln("Status: %s , Time: %d ms", mode_str, g_track->time);
     } else {
-        logPrintln("invalid command: %s\n%s", argv[1], TRACK_MODE_HELP);
+        logPrintln("invalid command: %s\r\n%s", argv[1], TRACK_MODE_HELP);
     }
 }
 

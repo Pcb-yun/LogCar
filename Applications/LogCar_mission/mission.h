@@ -13,8 +13,9 @@ extern "C" {
 
 #include <stdbool.h>
 
-#define MISSION_MATL_NAV 0  // 物料导航方式： 0：地图定位 1：巡线
-
+#define MISSION_MATL_NAV 0      // 物料导航方式： 0：地图定位 1：巡线
+#define MISSION_COLOR_SENSOR 0  // 颜色识别方式： 0：颜色传感器 1：树莓派通讯
+#define USE_RPI_CAL 0           // 是否使用树莓派校准： 0：不使用 1：使用
 
 
 void mission_set_running(bool running);
