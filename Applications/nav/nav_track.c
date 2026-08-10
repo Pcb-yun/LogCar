@@ -108,9 +108,14 @@ static float pid_compute(float error, float dt) {
     float derivative = (error - g_nav_track->last_error) / dt;
     g_nav_track->last_error = error;
 
+    /* 微分项限幅：防止误差快速反向时转向猛打（转弯摆头根源） */
+    float d_term = g_nav_track->params.kd * derivative;
+    float d_max = g_nav_track->params.max_yaw_speed * NAV_TRACK_DERIV_LIMIT_RATIO;
+    d_term = clamp(d_term, -d_max, d_max);
+
     float output = g_nav_track->params.kp * error
                  + g_nav_track->params.ki * g_nav_track->integral
-                 + g_nav_track->params.kd * derivative;
+                 + d_term;
     output = clamp(output, -g_nav_track->params.max_yaw_speed, g_nav_track->params.max_yaw_speed);
     return output;
 }
@@ -225,6 +230,7 @@ void Nav_Track_Task(void *argument) {
 
     TickType_t last_wake_time = xTaskGetTickCount();
     TrackData_t track_data;
+    uint32_t last_dbg_tick = 0;
 
     for (;;) {
         vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(NAV_TRACK_UPDATE_MS));
@@ -237,6 +243,10 @@ void Nav_Track_Task(void *argument) {
         uint32_t current_tick = osKernelGetTickCount();
         float dt = (current_tick - g_nav_track->last_tick) / 1000.0f;
         g_nav_track->last_tick = current_tick;
+
+        /* 调试日志节流：每100ms打印一次，避免刷屏 */
+        bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
+        if (dbg_allow) last_dbg_tick = current_tick;
 
         /* 运行时长检测 */
         if (g_nav_track->params.run_time_ms > 0 &&
@@ -278,7 +288,7 @@ void Nav_Track_Task(void *argument) {
             if (fabsf(error) < NAV_TRACK_YAW_DEADBAND) {
                 g_nav_track->last_error = error;
                 MotionControl_SetVelocity(g_nav_track->params.forward_speed, 0.0f, 0.0f);
-                logDebug("ntrack err: %.2f, yaw: 0.0", error);
+                if (dbg_allow) logDebug("ntrack err: %.2f, yaw: 0.0", error);
                 continue;
             }
 
@@ -290,12 +300,12 @@ void Nav_Track_Task(void *argument) {
             float steer_ratio = fabsf(yaw_speed) / g_nav_track->params.max_yaw_speed;
             float vx = g_nav_track->params.forward_speed *
                        (1.0f - NAV_TRACK_SPEED_REDUCE_RATIO * steer_ratio);
-            vx = clamp(vx, g_nav_track->params.forward_speed * 0.4f,
+            vx = clamp(vx, g_nav_track->params.forward_speed * 0.35f,
                        g_nav_track->params.forward_speed);
 
             MotionControl_SetVelocity(vx, 0.0f, yaw_speed);
 
-            logDebug("ntrack err: %.2f, yaw: %.1f, vx: %.1f", error, yaw_speed, vx);
+            if (dbg_allow) logDebug("ntrack err: %.2f, yaw: %.1f, vx: %.1f", error, yaw_speed, vx);
         } else {
             /* 丢线：原地转向搜索 */
             if (!g_nav_track->lost_flag) {
