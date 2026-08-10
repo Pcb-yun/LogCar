@@ -36,6 +36,7 @@
 #include "servo_driver.h"
 #include "servo_port.h"
 #include "nav_common.h"
+#include "nav_track.h"
 #include "scan_driver.h"
 #include "show_media.h"
 
@@ -179,6 +180,13 @@ const osThreadAttr_t Media_Player_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal6,
 };
+/* Definitions for Nav_Track */
+osThreadId_t Nav_TrackHandle;
+const osThreadAttr_t Nav_Track_attributes = {
+  .name = "Nav_Track",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityRealtime3,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -262,6 +270,7 @@ extern void Online_Check_Task(void *argument);
 extern void Dist_Get_Task(void *argument);
 extern void Oled_Refresh_Task(void *argument);
 extern void Media_Player_Task(void *argument);
+extern void Nav_Track_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -482,6 +491,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Media_Player */
   Media_PlayerHandle = osThreadNew(Media_Player_Task, NULL, &Media_Player_attributes);
 
+  /* creation of Nav_Track */
+  Nav_TrackHandle = osThreadNew(Nav_Track_Task, NULL, &Nav_Track_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -577,6 +589,11 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_wait, "Initialize Nav Module");
   extern bool Nav_Core_Init(void);
   if (!Nav_Core_Init()) SHOW_DMESG(dmesg_fail, NULL);
+  else SHOW_DMESG(dmesg_ok, NULL);
+
+  SHOW_DMESG(dmesg_wait, "Initialize Nav Track Module");
+  extern bool Nav_Track_Init(void);
+  if (!Nav_Track_Init()) SHOW_DMESG(dmesg_fail, NULL);
   else SHOW_DMESG(dmesg_ok, NULL);
 
   SHOW_DMESG(dmesg_wait, "Initialize OLED Module");

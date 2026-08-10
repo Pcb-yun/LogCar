@@ -139,6 +139,7 @@ virtualFolder:
         - path: Applications/nav/nav_core.c
         - path: Applications/nav/nav_map.c
         - path: Applications/nav/nav_map_data.c
+        - path: Applications/nav/nav_track.c
       folders: []
     - name: turntable
       files:

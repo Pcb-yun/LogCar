@@ -22,6 +22,7 @@ TrackI2CStatus_t track_i2c_status;
 
 static void Track_Reset(void);
 static void Track_Key(void);
+static void Track_Set_Mode(TrackMode_t mode);
 static bool I2C_Start_DMA_Read(void);
 
 
@@ -43,6 +44,31 @@ bool Track_Init(void) {
     is_init = true;
 
     return is_init;
+}
+
+/**
+ * @brief 获取最新巡线数据
+ * @param data 输出的数据结构体指针
+ * @return 获取状态
+ */
+bool Track_GetData(TrackData_t *data) {
+    if (!is_init || data == NULL) return false;
+
+    extern osMutexId_t Track_MutexHandle;
+    if (osMutexAcquire(Track_MutexHandle, osWaitForever) != osOK) return false;
+    memcpy(data, g_track, sizeof(TrackData_t));
+    osMutexRelease(Track_MutexHandle);
+    return true;
+}
+
+/**
+ * @brief 切换巡线模块为数字量输出模式
+ * @return 设置状态
+ */
+bool Track_SetDigitalMode(void) {
+    if (!is_init) return false;
+    Track_Set_Mode(TRACK_DIGITAL);
+    return true;
 }
 
 /**

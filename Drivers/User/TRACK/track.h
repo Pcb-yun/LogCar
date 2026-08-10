@@ -45,6 +45,8 @@ typedef struct {
 
 extern TrackI2CStatus_t track_i2c_status;
 bool Track_Init(void);
+bool Track_GetData(TrackData_t *data);
+bool Track_SetDigitalMode(void);
 
 
 // GPIO引脚定义
