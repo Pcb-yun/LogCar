@@ -91,6 +91,7 @@ virtualFolder:
     - name: arm
       files:
         - path: Applications/arm/arm_ctrl.c
+        - path: Applications/arm/arm_action.c
       folders: []
     - name: chassis
       files:

@@ -180,7 +180,7 @@ void Servo_MTurnByVelocity(uint8_t servo_id, float angle,
         logPrintln("Invalid velocity: %.2f (must be 1 to 750)", velocity);
         return;
     }
-    Servo_SetServoAngleMTurnByInterval(servo_id, angle, velocity, t_acc, t_dec, power);
+    Servo_SetServoAngleMTurnByVelocity(servo_id, angle, velocity, t_acc, t_dec, power);
 }
 
 /**
@@ -208,7 +208,7 @@ void Servo_MTurnByInterval(uint8_t servo_id, float angle,
         logPrintln("Invalid interval: %u (must be > 0)", interval);
         return;
     }
-    Servo_SetServoAngleMTurnByVelocity(servo_id, angle, interval, t_acc, t_dec, power);
+    Servo_SetServoAngleMTurnByInterval(servo_id, angle, interval, t_acc, t_dec, power);
 }
 
 #endif
@@ -238,16 +238,26 @@ static void Servo_Shell(int argc, char *argv[]){
     float t_acc = (float)atof(argv[5]);
     float t_dec = (float)atof(argv[6]);
 
-    if(id == 0 || id > 254) {
-        logPrintln("Invalid servo ID: %d (must be 1-254)", id);
-        return;
-    }
-
     if(strcmp(argv[1], "angle") == 0) {
-        Servo_ANGLE(id, angle, 0, 1000);
+        if(argc < 4) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo angle <id> <angle>");
+            return;
+        }
+        Servo_ANGLE(id, angle, 0, 0);
     } else if(strcmp(argv[1], "mturn") == 0) {
-        Servo_MTURN(id, angle, 0, 1000);
+        if(argc < 4) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo mturn <id> <angle>");
+            return;
+        }
+        Servo_MTURN(id, angle, 0, 0);
     } else if(strcmp(argv[1], "stop") == 0) {
+        if(argc < 3) {
+            logPrintln("Invalid command: %s", argv[1]);
+            logPrintln("Usage: servo stop <id>");
+            return;
+        }
         Servo_STOP(id);
     } else if(strcmp(argv[1], "stopall") == 0) {
         Servo_STOP_ALL();
@@ -266,7 +276,7 @@ static void Servo_Shell(int argc, char *argv[]){
             logPrintln("Usage: servo angle_vel <id> <angle> <velocity> <t_acc> <t_dec>");
             return;
         }
-        Servo_AngleByVelocity(id, angle, velocity, t_acc, t_dec, 1000);
+        Servo_AngleByVelocity(id, angle, velocity, t_acc, t_dec, 0);
     }
     else if(strcmp(argv[1], "angle_int") == 0) {
         if(argc < 7) {
@@ -274,7 +284,7 @@ static void Servo_Shell(int argc, char *argv[]){
             logPrintln("Usage: servo angle_int <id> <angle> <interval> <t_acc> <t_dec>");
             return;
         }
-        Servo_AngleByInterval(id, angle, interval, t_acc, t_dec, 1000);
+        Servo_AngleByInterval(id, angle, interval, t_acc, t_dec, 0);
     }
     else if(strcmp(argv[1], "mturn_vel") == 0) {
         if(argc < 7) {
@@ -282,7 +292,7 @@ static void Servo_Shell(int argc, char *argv[]){
             logPrintln("Usage: servo mturn_vel <id> <angle> <velocity> <t_acc> <t_dec>");
             return;
         }
-        Servo_MTurnByVelocity(id, angle, velocity, t_acc, t_dec, 1000);
+        Servo_MTurnByVelocity(id, angle, velocity, t_acc, t_dec, 0);
     }
     else if(strcmp(argv[1], "mturn_int") == 0) {
         if(argc < 7) {
@@ -290,7 +300,7 @@ static void Servo_Shell(int argc, char *argv[]){
             logPrintln("Usage: servo mturn_int <id> <angle> <interval> <t_acc> <t_dec>");
             return;
         }
-        Servo_MTurnByInterval(id, angle, interval, t_acc, t_dec, 1000);
+        Servo_MTurnByInterval(id, angle, interval, t_acc, t_dec, 0);
 
     }
     #endif

@@ -10,10 +10,12 @@ extern "C" {
 
 /* 机械臂升降控制接口 */
 void arm_lift_move_to(float angle);
+void arm_lift_move_by_velocity(float angle, float velocity);
 void arm_lift_move_to_init(void);
 
 /* 机械臂翻转控制接口 */
 void arm_flip_move_to(float angle);
+void arm_flip_move_by_velocity(float angle, float velocity);
 void arm_flip_move_to_init(void);
 
 /* 机械臂整体回到初始位 */

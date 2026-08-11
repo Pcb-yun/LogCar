@@ -217,7 +217,7 @@ void MX_GPIO_Init(void)
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   if (GPIO_Pin == START_Pin) {
-    mission_set_running(true);
+    // mission_set_running(true);
   }
 }
 

@@ -9,31 +9,49 @@
 #include "cmsis_os2.h"
 #include <stdlib.h>
 
-/* 当前升降角度(度), 内部维护 */
-static float arm_lift_angle_current = ARM_LIFT_INIT_ANGLE;
-
-/* 当前翻转角度(度), 内部维护 */
-static float arm_flip_angle_current = ARM_FLIP_INIT_ANGLE;
+/**
+ * @brief 角度限幅(自动按数值大小排序边界, 不依赖传入顺序)
+ * @param angle  目标角度
+ * @param bound1 边界1
+ * @param bound2 边界2
+ * @return 限幅后的角度
+ */
+static float arm_clamp_angle(float angle, float bound1, float bound2){
+    float lo = (bound1 < bound2) ? bound1 : bound2;
+    float hi = (bound1 < bound2) ? bound2 : bound1;
+    if (angle < lo){
+        angle = lo;
+    }else if (angle > hi){
+        angle = hi;
+    }
+    return angle;
+}
 
 /**
  * @brief 机械臂升降舵机移动到指定角度(带限幅)
  * @param angle 目标角度
  */
 void arm_lift_move_to(float angle){
-    if (angle < ARM_LIFT_MIN_ANGLE){
-        angle = ARM_LIFT_MIN_ANGLE;
-    }else if (angle > ARM_LIFT_MAX_ANGLE){
-        angle = ARM_LIFT_MAX_ANGLE;
-    }
-    arm_lift_angle_current = angle;
-    Servo_MTURN(ARM_LIFT_SERVO_ID, arm_lift_angle_current, 0, 0);
+    angle = arm_clamp_angle(angle, ARM_LIFT_MIN_ANGLE, ARM_LIFT_MAX_ANGLE);
+    Servo_MTURN(ARM_LIFT_SERVO_ID, angle,ARM_ACTION_INTERVAL_MS, 0);
+}
+
+/**
+ * @brief 机械臂升降舵机移动到指定角度(带限幅)
+ * @param angle 目标角度
+ * @param velocity 运动速度，单位°/s
+ */
+void arm_lift_move_by_velocity(float angle, float velocity){
+    angle = arm_clamp_angle(angle, ARM_LIFT_MIN_ANGLE, ARM_LIFT_MAX_ANGLE);
+
+    Servo_MTurnByVelocity(ARM_LIFT_SERVO_ID, angle, velocity, ARM_LIFT_ACC, ARM_LIFT_DEC, 0);
 }
 
 /**
  * @brief 机械臂升降舵机回到初始角度
  */
 void arm_lift_move_to_init(void){
-    arm_lift_move_to(ARM_LIFT_INIT_ANGLE);
+    arm_lift_move_by_velocity(ARM_LIFT_INIT_ANGLE, 100); 
 }
 
 /**
@@ -41,20 +59,26 @@ void arm_lift_move_to_init(void){
  * @param angle 目标角度
  */
 void arm_flip_move_to(float angle){
-    if (angle < ARM_FLIP_MIN_ANGLE){
-        angle = ARM_FLIP_MIN_ANGLE;
-    }else if (angle > ARM_FLIP_MAX_ANGLE){
-        angle = ARM_FLIP_MAX_ANGLE;
-    }
-    arm_flip_angle_current = angle;
-    Servo_MTURN(ARM_FLIP_SERVO_ID, arm_flip_angle_current, 0, 0);
+    angle = arm_clamp_angle(angle, ARM_FLIP_MIN_ANGLE, ARM_FLIP_MAX_ANGLE);
+    Servo_MTURN(ARM_FLIP_SERVO_ID, angle, ARM_ACTION_INTERVAL_MS, 0);
+}
+
+/**
+ * @brief 机械臂翻转舵机移动到指定角度(带限幅)
+ * @param angle 目标角度
+ * @param velocity 运动速度，单位°/s
+ */
+void arm_flip_move_by_velocity(float angle, float velocity){
+    angle = arm_clamp_angle(angle, ARM_FLIP_MIN_ANGLE, ARM_FLIP_MAX_ANGLE);
+
+    Servo_MTurnByVelocity(ARM_FLIP_SERVO_ID, angle, velocity, ARM_FLIP_ACC, ARM_FLIP_DEC, 0);
 }
 
 /**
  * @brief 机械臂翻转舵机回到初始角度
  */
 void arm_flip_move_to_init(void){
-    arm_flip_move_to(ARM_FLIP_INIT_ANGLE);
+    arm_flip_move_by_velocity(ARM_FLIP_INIT_ANGLE, 100);
 }
 
 /**
@@ -78,17 +102,18 @@ static void arm_Shell(int argc, char *argv[]){
 
     if (strcmp(argv[1], "help") == 0){
         logPrintln("arm: control the mechanical arm lift and flip");
-        logPrintln("  arm lift <angle> | flip <angle> | init | help");
+        logPrintln("  arm lift <angle> <velocity> | flip <angle> <velocity> | init | help");
         return;
     }else if (strcmp(argv[1], "init") == 0){
         arm_move_to_init();
         return;
-    }else if (argc == 3 && (strcmp(argv[1], "lift") == 0 || strcmp(argv[1], "flip") == 0)){
-        float val = (float)atof(argv[2]);
+    }else if (argc == 4 && (strcmp(argv[1], "lift") == 0 || strcmp(argv[1], "flip") == 0)){
+        float angle = (float)atof(argv[2]);
+        float velocity = (float)atof(argv[3]);
         if (strcmp(argv[1], "lift") == 0){
-            arm_lift_move_to(val);
+            arm_lift_move_by_velocity(angle, velocity);
         }else{
-            arm_flip_move_to(val);
+            arm_flip_move_by_velocity(angle, velocity);
         }
         return;
     }else{
