@@ -28,6 +28,6 @@
 #define ARM_FLIP_INIT_ANGLE -88.0f        // 初始角度
 
 #define ARM_FLIP_MIN_ANGLE -88.0f         // 收回角度
-#define ARM_FLIP_MAX_ANGLE -173.0f       // 水平角度
+#define ARM_FLIP_MAX_ANGLE -169.0f       // 水平角度
 
 #endif

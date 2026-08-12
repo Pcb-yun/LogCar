@@ -135,7 +135,7 @@ bool Nav_Track_Init(void) {
     g_nav_track->params.forward_speed = NAV_TRACK_FORWARD_SPEED;      // 前进速度 (cm/s)
     g_nav_track->params.kp = NAV_TRACK_KP;                 // P系数
     g_nav_track->params.ki = NAV_TRACK_KI;                  // I系数
-    g_nav_track->params.kd = NAV_TRACK_KD;                  // D系数    
+    g_nav_track->params.kd = NAV_TRACK_KD;                  // D系数
     g_nav_track->params.max_yaw_speed = NAV_TRACK_MAX_YAW_SPEED;     // 最大转向速度 (deg/s)
     g_nav_track->params.line_polarity = NAV_TRACK_LINE_POLARITY_POSITIVE;         // 线极性 (1:正, 0:负)
     g_nav_track->params.steering_dir = NAV_TRACK_STEERING_DIR_LEFT;                 // 转向方向 (1:左转, -1:右转)

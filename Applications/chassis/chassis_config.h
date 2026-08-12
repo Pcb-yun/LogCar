@@ -9,8 +9,8 @@
 
 // 麦轮小车机械参数
 #define WHEEL_RADIUS       3.65f    // 轮子半径 (cm)
-#define WHEEL_BASE_WIDTH   17.0f    // 轮距宽度 (cm)
-#define WHEEL_BASE_LENGTH  17.85f   // 轴距长度 (cm)
+#define WHEEL_BASE_WIDTH   15.642f    // 轮距宽度 (cm)
+#define WHEEL_BASE_LENGTH  17.170f   // 轴距长度 (cm)
 
 // 电机ID定义
 #define MOTOR_FRONT_LEFT   2	// 前左轮

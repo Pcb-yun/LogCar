@@ -25,10 +25,10 @@ void RPI_Init(void) {
  */
 SENSOR_Color_t RPI_DetectColor(void) {
     uint8_t cmd = 0x0B;
-    uint8_t color[1];
+    uint8_t color[1] = {0};
 
-    HAL_UART_Transmit_IT(&huart2, &cmd, 1);
-    HAL_UART_Receive_IT(&huart2, (uint8_t *)&color, 1);
+    HAL_UART_Transmit(&huart2, &cmd, 1, 200);
+    HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, 200);
 
     RPI_Detect_IDE();
     return (SENSOR_Color_t)color[0];
@@ -36,8 +36,8 @@ SENSOR_Color_t RPI_DetectColor(void) {
 
 /**
  * @brief 树莓派偏移校准
- * @param err_x 校准误差x轴
- * @param err_y 校准误差y轴
+ * @param err_x x轴误差
+ * @param err_y y轴误差
  * @return 校准状态
  */
 bool RPI_Calibrate(int32_t *err_x, int32_t *err_y) {
@@ -46,15 +46,15 @@ bool RPI_Calibrate(int32_t *err_x, int32_t *err_y) {
     }
 
     uint8_t cmd = 0x0A;
-    uint8_t rsp[6];
-    uint16_t abs_dx, abs_dy;
+    uint8_t rsp[4] = {0};
+    uint16_t abs_dx = 0, abs_dy = 0;
 
-    HAL_UART_Transmit_IT(&huart2, &cmd, 1);
-    HAL_UART_Receive_IT(&huart2, rsp, 6);
+    HAL_UART_Transmit(&huart2, &cmd, 1, 200);
+    HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 4, 200);
 
-    /* 解析6字节响应：[dir-x][dir-y][abs-dx高][abs-dx低][abs-dy高][abs-dy低] */
+    /* 解析4字节响应：[dir-x][dir-y][abs-dx][abs-dy] */
     abs_dx = ((uint16_t)rsp[2] << 8) | rsp[3];
-    abs_dy = ((uint16_t)rsp[4] << 8) | rsp[5];
+    abs_dy = rsp[1];
 
     /* 根据方向确定符号：1为正轴，0为负轴 */
     *err_x = (rsp[0] == 1) ? (int32_t)abs_dx : -(int32_t)abs_dx;
@@ -69,7 +69,7 @@ bool RPI_Calibrate(int32_t *err_x, int32_t *err_y) {
  */
 void RPI_Detect_IDE(void) {
     uint8_t cmd = 0x0C;
-    HAL_UART_Transmit_IT(&huart2, &cmd, 1);
+    HAL_UART_Transmit(&huart2, &cmd, 1, 200);
 }
 
 /**
@@ -77,7 +77,7 @@ void RPI_Detect_IDE(void) {
  */
 void RPI_Calibrate_IDE(void) {
     uint8_t cmd = 0x0E;
-    HAL_UART_Transmit_IT(&huart2, &cmd, 1);
+    HAL_UART_Transmit(&huart2, &cmd, 1, 200);
 }
 
 /**

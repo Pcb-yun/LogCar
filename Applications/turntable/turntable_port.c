@@ -117,6 +117,7 @@ void Turntable_Port_Task(void *argument) {
 
         sto_idx++;
         if (sto_idx == 5) {
+            osEventFlagsSet(System_StatusHandle, TURNTABLE_CPLT);
             osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
             turntable_move_to_close();
             sto_idx = 0;

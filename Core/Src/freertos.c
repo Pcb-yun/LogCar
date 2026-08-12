@@ -35,7 +35,6 @@
 #include "ops.h"
 #include "servo_driver.h"
 #include "servo_port.h"
-#include "nav_common.h"
 #include "nav_track.h"
 #include "scan_driver.h"
 #include "show_media.h"
@@ -635,4 +634,3 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
-

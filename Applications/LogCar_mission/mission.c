@@ -15,14 +15,21 @@
 #include "ops.h"
 #include "turntable_port.h"
 #include "scan_driver.h"
+#include "nav_track.h"
+#include "arm_action.h"
+#include "motion_control.h"
+#include "nav_local.h"
+#include "rpi_sensor_port.h"
+#include "turntable_ctrl.h"
+
 
 static bool matl_grap(void);
 static bool matl_pop(void);
 static bool trop_grap(void);
 static bool trop_pop(void);
 static bool Home_Sweet_home(void);
+static void pop_to_back(void);
 
-static uint8_t current_point = 0;
 static bool mission_running = false;
 
 /**
@@ -36,9 +43,9 @@ static bool wait_tracker(void) {
             return false;
         }
         if (state == NAV_STATE_ERROR) {
-            logError("Mission Failed at point: %d", current_point);
+            logError("Mission Failed");
             return false;
-        } else if (state != NAV_STATE_RUNNING) {
+        } else if (state == NAV_STATE_COMPLETE) {
             return true;
         }
         osDelay(1);
@@ -59,56 +66,61 @@ void mission_run(void *argument) {
         if (!mission_running) continue;
         logInfo("Mission Start");
         OPS_Zero();
+        turntable_move_to_id(0);
 
-        // 出站
-        Nav_GoTo_fromName("START");
-        if (!wait_tracker()) goto done;
+        // // 出发点
+        // Nav_GoTo_fromName("HOME");
+        // if (!wait_tracker()) goto fail;
+
+        // 出站避让点
+        Nav_GoTo_fromName("OA1");
+        if (!wait_tracker()) goto fail;
+
+        arm_action(ARM_ACTION_PULL_DOWN);
 
         // 二维码点1（物料顺序）
         Nav_GoTo_fromName("QrCode_1");
-        if (!wait_tracker()) goto done;
+        if (!wait_tracker()) goto fail;
 
-        // 读取二维码
-        if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto done;
-        Turntable_SetOrder(barcode[0]);
-
-        // 设置转盘为物料抓取
-        Turntable_Port_SetType(TURNTABLE_MATL);
+        // // 读取二维码
+        // if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
+        // Turntable_SetOrder(barcode[0]);
+        Turntable_SetOrder(1);
 
         // 抓取物料
-        osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
-        if (!matl_grap()) goto done;
+        if (!matl_grap()) goto fail;
 
         // 放置物料
-        if (!matl_pop()) goto done;
+        if (!matl_pop()) goto fail;
 
-        // 读取二维码
-        if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) {
-            // 二维码点2（奖杯顺序）
-            Nav_GoTo_fromName("QrCode_2");
-            if (!wait_tracker()) goto done;
-
-            if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto done;
-        }
-        Turntable_SetOrder(barcode[0]);
-
-        // 设置转盘为奖杯抓取
-        Turntable_Port_SetType(TURNTABLE_TROP);
+//         // 读取二维码
+//         if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) {
+//             // 二维码点2（奖杯顺序）
+//             Nav_GoTo_fromName("QrCode_2");
+//             if (!wait_tracker()) goto fail;
+//
+//             if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
+//         }
+//         Turntable_SetOrder(barcode[0]);
+        Turntable_SetOrder(1);
 
         // 抓取奖杯
-        osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
-        if (!trop_grap()) goto done;
-        osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
+        if (!trop_grap()) goto fail;
 
         // 放置奖杯
-        if (!trop_pop()) goto done;
+        if (!trop_pop()) goto fail;
 
         // 回到home点
-        if (!Home_Sweet_home()) goto done;
+        if (!Home_Sweet_home()) goto fail;
 
-    done:
         Nav_Stop();
         mission_running = false;
+        continue;
+
+    fail:
+        Nav_Stop();
+        mission_running = false;
+        logError("Mission Failed");
     }
 }
 
@@ -117,23 +129,29 @@ void mission_run(void *argument) {
  * @return 抓取状态
  */
 static bool matl_grap(void) {
-#if MISSION_MATL_NAV == 0 // 地图定位
-    TargetPoint_t *point = Map_GetPointByName("START");
-    if (point == NULL) return false;
+    Turntable_Port_SetType(TURNTABLE_MATL);
+    osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
+
+#if MISSION_MATL_NAV // 灰度巡线
+    if (!Nav_Track_Start()) goto fail;
+    osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
+    Nav_Track_Stop();
+#else // 地图定位
+    TargetPoint_t *point = Map_GetPointByName("MATL_GRAP1");
+    if (point == NULL) goto fail;
 
     for(uint8_t i = 0; i < 5; i++) {
         Nav_GoTo(point->id + i);
-        if (!wait_tracker()) {
-            return false;
-        }
+        if (!wait_tracker()) goto fail;
     }
-#else // 灰度巡线
-
-
-
-
 #endif
+
+    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
     return true;
+
+fail:
+    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
+    return false;
 }
 
 /**
@@ -145,39 +163,115 @@ static bool matl_pop(void) {
     if (point == NULL) return false;
 
     for(uint8_t i = 0; i < 5; i++) {
-        Nav_GoTo(point->id + i);
-        if (!wait_tracker()) {
-            return false;
-        }
         Turntable_Pop((TurntablePop_t)i);
+        turntable_move_to_close();
+        Nav_GoTo(point->id + i);
+        if (!wait_tracker()) return false;
+
+#if USE_RPI_CAL // 树莓派校准
+    int16_t err_x,err_y;
+    RPI_Calibrate(&err_x, &err_y);
+
+    TargetPoint_t cal_pose;
+    memcpy(&cal_pose, point, sizeof(TargetPoint_t));
+
+    PoseTimestamp_t pose;
+    if (!Loc_Get(&pose)) return false;
+    cal_pose.pose.x = point->pose.x + pose.pose.x;
+    cal_pose.pose.y = point->pose.y + pose.pose.y;
+    cal_pose.pose.yaw = point->pose.yaw + pose.pose.yaw;
+
+    Nav_GoToDirect(&cal_pose);
+    if (!wait_tracker()) return false;
+#if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
+#endif
+#endif
 
-
-
-
-
+        pop_to_back();
     }
     return true;
 }
 
 /**
- * @brief 物料抓取导航
+ * @brief 奖杯抓取导航
  * @return 抓取状态
  */
 static bool trop_grap(void) {
+    Turntable_Port_SetType(TURNTABLE_TROP);
+    osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
 
+#if MISSION_TROP_NAV // 灰度巡线
+    if (!Nav_Track_Start()) goto fail;
+    osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
+    Nav_Track_Stop();
+#else // 地图定位
+    TargetPoint_t *point = Map_GetPointByName("TROP_GRAP1");
+    if (point == NULL) goto fail;
 
+    for(uint8_t i = 0; i < 3; i++) {
+        Nav_GoTo(point->id + i);
+        if (!wait_tracker()) goto fail;
+    }
+#endif
+
+    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
     return true;
+
+fail:
+    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
+    return false;
 }
 
 /**
- * @brief 物料放置导航
+ * @brief 奖杯放置导航
  * @return 放置状态
  */
 static bool trop_pop(void) {
+    TargetPoint_t *point = Map_GetPointByName("SECOND");
+    if (point == NULL) return false;
+
+    Nav_GoTo_fromName("OA2");
+    if (!wait_tracker()) return false;
+    arm_action(ARM_ACTION_STAGE_2_PULL_UP);
+
+    for (uint8_t i = 0; i < 3; i++) {
+        if (i == 1) arm_action(ARM_ACTION_STAGE_1_PULL_UP);
+        Turntable_Pop((TurntablePop_t)i);
+
+        Nav_GoTo(point->id + i);
+        if (!wait_tracker()) return false;
+
+#if USE_RPI_CAL // 树莓派校准
+    int16_t err_x,err_y;
+    RPI_Calibrate(&err_x, &err_y);
+
+    TargetPoint_t cal_pose;
+    memcpy(&cal_pose, point, sizeof(TargetPoint_t));
+
+    PoseTimestamp_t pose;
+    if (!Loc_Get(&pose)) return false;
+    cal_pose.pose.x = point->pose.x + pose.pose.x;
+    cal_pose.pose.y = point->pose.y + pose.pose.y;
+    cal_pose.pose.yaw = point->pose.yaw + pose.pose.yaw;
+
+    Nav_GoToDirect(&cal_pose);
+    if (!wait_tracker()) return false;
+#if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
+#endif
+#endif
+
+        switch (i) {
+            case 0: arm_action(ARM_ACTION_STAGE_2_PULL_DOWN); break;
+            case 1: arm_action(ARM_ACTION_STAGE_1_PULL_DOWN); break;
+            default: break;
+        }
+
+        pop_to_back();
+    }
     return true;
 }
 
@@ -186,12 +280,21 @@ static bool trop_pop(void) {
  * @return 返回状态
  */
 static bool Home_Sweet_home(void) {
-    Nav_GoTo_fromName("HOME");
-    if (!wait_tracker()) {
-        return false;
-    }
-
+    arm_action(ARM_ACTION_INIT);
+    Nav_GoTo_fromName("OA3");
+    if (!wait_tracker()) return false;
+    Nav_GoTo_fromName("SWEET_HOME");
+    if (!wait_tracker()) return false;
     return true;
+}
+
+/**
+ * @brief 放置后后退
+ */
+static void pop_to_back(void) {
+    MotionControl_SetMotionParams(400.0f, 0.0f, 450.0f, 450.0f);
+    MotionControl_SetPosition(-MISSION_BACK_DIST, 0.0f, 0.0f);
+    osDelay(MISSION_BACK_TIME);
 }
 
 /**

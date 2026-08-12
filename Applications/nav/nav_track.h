@@ -48,6 +48,9 @@ NavTrackState_t Nav_Track_GetState(void);
 void Nav_Track_GetParams(NavTrackParams_t *params);
 void Nav_Track_SetParams(const NavTrackParams_t *params);
 
+void ntrack_time_shell(int argc, char *argv[]);
+bool Nav_Track_Start(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

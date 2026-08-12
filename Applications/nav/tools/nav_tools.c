@@ -8,17 +8,20 @@
 #include "shell_cmd_group.h"
 #include "log.h"
 #include "cmsis_os.h"
-#include "nav_common.h"
 #include "nav_local.h"
 #include "nav_map.h"
 #include "nav_core.h"
+#include "nav_config.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
 #include "Events.h"
 
+#if NAV_MAP_TOOL
 static void shellReadLine(char *buffer, int maxLen);
 static void shellReadLineWithPrompt(char *buffer, int maxLen, const char *default_val, const char *field,const char *name);
+#endif
+
 static void NavTools_Pose_View(void);
 
 /**
@@ -49,11 +52,6 @@ static void NavTools_GoTo(int argc, char *argv[]) {
 
     if (point == NULL) {
         logPrintln("Point ID:%u not found", id);
-        return;
-    }
-
-    if (!point->enable) {
-        logPrintln("Point ID:%u is disabled", id);
         return;
     }
 
@@ -96,8 +94,6 @@ static void NavTools_GotoDirect(int argc, char *argv[]) {
     debug_target.arrive.distance_threshold = 2.0f;
     debug_target.arrive.yaw_threshold = 3.0f;
     debug_target.arrive.timeout_ms = 5000;
-
-    debug_target.enable = true;
 
     if (!Nav_GoToDirect(&debug_target)) {
         logWarning("Failed to start navigation");
@@ -170,8 +166,7 @@ static void NavTools_PrintPoint(TargetPoint_t *point) {
                "  Pose:   x=%.2f y=%.2f yaw=%.2f\r\n"
                "  Motion: target_speed=%.2f angular_speed=%.2f\r\n"
                "          accel=%.2f decel=%.2f angular_accel=%.2f\r\n"
-               "  Arrive: mode=%d dist=%.2f yaw=%.2f timeout=%dms\r\n"
-               "  Enable: %s",
+               "  Arrive: mode=%d dist=%.2f yaw=%.2f timeout=%dms",
                point->id,
                point->name,
                point->pose.x, point->pose.y, point->pose.yaw,
@@ -179,10 +174,21 @@ static void NavTools_PrintPoint(TargetPoint_t *point) {
                point->motion.acceleration, point->motion.deceleration,
                point->motion.angular_acceleration,
                point->arrive.check_mode,
-               point->arrive.distance_threshold, point->arrive.yaw_threshold, point->arrive.timeout_ms,
-               point->enable ? "true" : "false");
+               point->arrive.distance_threshold, point->arrive.yaw_threshold, point->arrive.timeout_ms);
 }
 
+ShellCommand NavToolsGroup[] = {
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
+    SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+nav, NavToolsGroup, Navigation Tools);
+
+#if NAV_MAP_TOOL
 /**
  * @brief 列出所有目标点
  */
@@ -372,17 +378,6 @@ static void NavTools_MapModify(int argc, char *argv[]) {
     if (buffer[0] == 0x03) return;
     if (strlen(buffer) > 0) {
         new_point.arrive.timeout_ms = (uint16_t)atoi(buffer);
-    }
-
-    // Enable
-    snprintf(default_str, sizeof(default_str), "%d", point->enable ? 1 : 0);
-    shellReadLineWithPrompt(buffer, sizeof(buffer), default_str, "enable (0:false, 1:true)", "Enable");
-    if (buffer[0] == 0x03) return;
-    if (strlen(buffer) > 0) {
-        int enable = atoi(buffer);
-        if (enable == 0 || enable == 1) {
-            new_point.enable = (enable == 1);
-        }
     }
 
     // 确认
@@ -743,7 +738,6 @@ static void NavTools_MapAdd(void) {
             logPrintln("Invalid value (0 or 1), try again");
             continue;
         }
-        point.enable = (enable == 1);
         break;
     }
 
@@ -774,17 +768,6 @@ static void NavTools_MapAdd(void) {
     }
 }
 
-ShellCommand NavToolsGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-nav, NavToolsGroup, Navigation Tools);
-
 ShellCommand MapToolsGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, list, NavTools_MapList, List Map Points),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, get, NavTools_MapGet, Get Point by ID),
@@ -795,3 +778,4 @@ ShellCommand MapToolsGroup[] = {
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
 map, MapToolsGroup, Map Tools);
+#endif

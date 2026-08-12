@@ -12,7 +12,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "stdbool.h"
-#include "nav_common.h"
 #include "nav_map.h"
 
 /**

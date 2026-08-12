@@ -72,8 +72,6 @@ void Error_Handler(void);
 #define START_EXTI_IRQn EXTI1_IRQn
 #define BATTERY_Pin GPIO_PIN_2
 #define BATTERY_GPIO_Port GPIOA
-#define VISION_RX_Pin GPIO_PIN_3
-#define VISION_RX_GPIO_Port GPIOA
 #define OLED_CS_Pin GPIO_PIN_4
 #define OLED_CS_GPIO_Port GPIOA
 #define OLED_SCK_Pin GPIO_PIN_5
@@ -108,6 +106,8 @@ void Error_Handler(void);
 #define SCANER_RX_GPIO_Port GPIOD
 #define VISION_TX_Pin GPIO_PIN_5
 #define VISION_TX_GPIO_Port GPIOD
+#define VISION_RX_Pin GPIO_PIN_6
+#define VISION_RX_GPIO_Port GPIOD
 #define Tracking_KEY_Pin GPIO_PIN_13
 #define Tracking_KEY_GPIO_Port GPIOG
 #define Tracking_RST_Pin GPIO_PIN_14

@@ -70,6 +70,10 @@ typedef struct {
     uint32_t arrive_timeout_tick;   // 到达超时时间戳
     uint8_t arrive_check_count;     // 连续到达检查计数器
     uint32_t stop_start_tick;       // 停止开始时间戳（用于等待车辆静止）
+    bool last_near_target;          // 上一帧是否处于近目标模式
+    uint8_t near_transition_count;  // 近目标过渡剩余帧数
+    float trans_last_ff_vx;         // 过渡起点：远距离前馈+反馈合成的vx
+    float trans_last_ff_vy;         // 过渡起点：远距离前馈+反馈合成的vy
 } NavCore_t;
 
 static NavCore_t *g_nav_core = NULL;
@@ -479,7 +483,7 @@ bool Nav_Core_Init(void) {
 bool Nav_GoTo(uint8_t target_id) {
     if (!is_init) return false;
     TargetPoint_t *target = Map_GetPoint(target_id);
-    if (target == NULL || !target->enable) return false;
+    if (target == NULL) return false;
 
     return Nav_GoToDirect(target);
 }
@@ -492,7 +496,7 @@ bool Nav_GoTo(uint8_t target_id) {
 bool Nav_GoTo_fromName(const char *name) {
     if (!is_init) return false;
     TargetPoint_t *target = Map_GetPointByName(name);
-    if (target == NULL || !target->enable) return false;
+    if (target == NULL) return false;
 
     return Nav_GoToDirect(target);
 }
@@ -680,6 +684,14 @@ void Nav_Task(void *argument) {
                 g_nav_core->integral_x = 0.0f;
                 g_nav_core->integral_y = 0.0f;
 
+                // 检测远→近切换，启动平滑过渡
+                if (!g_nav_core->last_near_target) {
+                    g_nav_core->near_transition_count = NAV_NEAR_TRANSITION_FRAMES;
+                    // 用上一帧已经下发的速度作为过渡起点，保证连续性
+                    g_nav_core->trans_last_ff_vx = g_nav_core->last_vx;
+                    g_nav_core->trans_last_ff_vy = g_nav_core->last_vy;
+                }
+
                 float body_dx, body_dy;
                 world_to_body(dx, dy, current_pose.yaw, &body_dx, &body_dy);
 
@@ -696,11 +708,28 @@ void Nav_Task(void *argument) {
                 }
 
                 if (body_dist < stop_threshold) {
-                    out_vx = 0.0f;
-                    out_vy = 0.0f;
-                    g_nav_core->last_vx = 0.0f;
-                    g_nav_core->last_vy = 0.0f;
-                    g_nav_core->current_speed_magnitude = 0.0f;
+                    // 渐进趋近：保持小比例纯P，不直接硬清零，交给加减速限制缓慢收敛
+                    float feedback_vx = body_dx * NAV_ALIGN_XY_KP * NAV_NEAR_TARGET_GAIN * 0.5f;
+                    float feedback_vy = body_dy * NAV_ALIGN_XY_KP * NAV_NEAR_TARGET_GAIN * 0.5f;
+
+                    float desired_vx = feedback_vx;
+                    float desired_vy = feedback_vy;
+
+                    float near_acceleration = acceleration * NAV_NEAR_ACCEL_MULTIPLIER;
+                    float near_deceleration = deceleration * NAV_NEAR_ACCEL_MULTIPLIER;
+                    apply_accel_limit(desired_vx, desired_vy, &out_vx, &out_vy,
+                                     near_acceleration, near_deceleration, dt);
+
+                    float speed = sqrtf(out_vx * out_vx + out_vy * out_vy);
+                    // 低速时不做强制缩放，允许平滑趋近0；低于启动速度且无有效误差才钳位为0
+                    if (body_dist < deadband && speed < NAV_STARTUP_SPEED) {
+                        out_vx = 0.0f;
+                        out_vy = 0.0f;
+                        g_nav_core->last_vx = 0.0f;
+                        g_nav_core->last_vy = 0.0f;
+                    }
+
+                    g_nav_core->current_speed_magnitude = sqrtf(out_vx * out_vx + out_vy * out_vy);
                 } else {
                     float feedback_vx = body_dx * NAV_ALIGN_XY_KP * NAV_NEAR_TARGET_GAIN;
                     float feedback_vy = body_dy * NAV_ALIGN_XY_KP * NAV_NEAR_TARGET_GAIN;
@@ -708,20 +737,46 @@ void Nav_Task(void *argument) {
                     float desired_vx = feedback_vx;
                     float desired_vy = feedback_vy;
 
-                    float near_acceleration = acceleration * 2.0f;
-                    float near_deceleration = deceleration * 2.0f;
+                    // 远→近过渡阶段，在上一帧远距离速度与当前纯P输出之间线性混合
+                    if (g_nav_core->near_transition_count > 0) {
+                        float alpha = 1.0f - (float)g_nav_core->near_transition_count / (float)NAV_NEAR_TRANSITION_FRAMES;
+                        // 若起点速度为0（刚起步就进入近目标），跳过过渡直接用纯P
+                        float start_speed = sqrtf(g_nav_core->trans_last_ff_vx * g_nav_core->trans_last_ff_vx +
+                                                  g_nav_core->trans_last_ff_vy * g_nav_core->trans_last_ff_vy);
+                        if (start_speed > 0.5f) {
+                            desired_vx = g_nav_core->trans_last_ff_vx * (1.0f - alpha) + feedback_vx * alpha;
+                            desired_vy = g_nav_core->trans_last_ff_vy * (1.0f - alpha) + feedback_vy * alpha;
+                        }
+                        g_nav_core->near_transition_count--;
+                    }
+
+                    float near_acceleration = acceleration * NAV_NEAR_ACCEL_MULTIPLIER;
+                    float near_deceleration = deceleration * NAV_NEAR_ACCEL_MULTIPLIER;
                     apply_accel_limit(desired_vx, desired_vy, &out_vx, &out_vy,
                                      near_acceleration, near_deceleration, dt);
 
                     float speed = sqrtf(out_vx * out_vx + out_vy * out_vy);
 
-                    if (speed > 0.0f && speed < NAV_STARTUP_SPEED) {
-                        float scale = NAV_STARTUP_SPEED / speed;
-                        out_vx *= scale;
-                        out_vy *= scale;
-                        g_nav_core->last_vx = out_vx;
-                        g_nav_core->last_vy = out_vy;
-                        speed = NAV_STARTUP_SPEED;
+                    // 用低速补偿替代强制启动速度缩放：有误差才补一个固定偏移，避免反复跳变
+                    if (speed > 0.0f && speed < NAV_STARTUP_SPEED && body_dist > deadband) {
+                        float sign_x = (out_vx > 0) ? 1.0f : ((out_vx < 0) ? -1.0f : 0.0f);
+                        float sign_y = (out_vy > 0) ? 1.0f : ((out_vy < 0) ? -1.0f : 0.0f);
+                        if (sign_x != 0.0f || sign_y != 0.0f) {
+                            float delta = NAV_STARTUP_SPEED - speed;
+                            if (sign_x != 0.0f && sign_y != 0.0f) {
+                                // 两个方向都有分量，按比例分配补偿量
+                                float ratio_x = fabsf(out_vx) / speed;
+                                float ratio_y = fabsf(out_vy) / speed;
+                                out_vx += sign_x * delta * ratio_x;
+                                out_vy += sign_y * delta * ratio_y;
+                            } else {
+                                out_vx += sign_x * delta;
+                                out_vy += sign_y * delta;
+                            }
+                            g_nav_core->last_vx = out_vx;
+                            g_nav_core->last_vy = out_vy;
+                            speed = NAV_STARTUP_SPEED;
+                        }
                     }
 
                     float max_near_speed = NAV_TRAJ_SPEED_CAP;
@@ -734,6 +789,8 @@ void Nav_Task(void *argument) {
 
                     g_nav_core->current_speed_magnitude = sqrtf(out_vx * out_vx + out_vy * out_vy);
                 }
+
+                g_nav_core->last_near_target = true;
             } else {
                 float body_dx, body_dy;
                 world_to_body(dx, dy, current_pose.yaw, &body_dx, &body_dy);
@@ -754,6 +811,10 @@ void Nav_Task(void *argument) {
                     g_nav_core->last_vx = out_vx;
                     g_nav_core->last_vy = out_vy;
                 }
+
+                // 离开近目标模式，复位过渡状态
+                g_nav_core->last_near_target = false;
+                g_nav_core->near_transition_count = 0;
             }
 
             if (g_nav_core->state != NAV_STATE_RUNNING) {

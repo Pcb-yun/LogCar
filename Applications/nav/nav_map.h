@@ -13,7 +13,6 @@ extern "C" {
 
 #include "stdint.h"
 #include "stdbool.h"
-#include "nav_common.h"
 #include "nav_math.h"
 
 
@@ -56,7 +55,6 @@ typedef struct {
     Pose2D_t pose;              // 目标位姿
     MotionParams_t motion;      // 运动参数
     ArriveParams_t arrive;      // 到达检测参数
-    bool enable;                // 是否启用
 } TargetPoint_t;
 
 /**
