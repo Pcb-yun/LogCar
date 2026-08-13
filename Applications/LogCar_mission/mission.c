@@ -93,15 +93,13 @@ void mission_run(void *argument) {
         // 放置物料
         if (!matl_pop()) goto fail;
 
-//         // 读取二维码
-//         if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) {
-//             // 二维码点2（奖杯顺序）
-//             Nav_GoTo_fromName("QrCode_2");
-//             if (!wait_tracker()) goto fail;
-//
-//             if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
-//         }
-//         Turntable_SetOrder(barcode[0]);
+        // 二维码点2（奖杯顺序）
+        Nav_GoTo_fromName("QrCode_2");
+        if (!wait_tracker()) goto fail;
+
+        // // 读取二维码      
+        // if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
+        // Turntable_SetOrder(barcode[0]);
         Turntable_SetOrder(1);
 
         // 抓取奖杯
@@ -133,6 +131,8 @@ static bool matl_grap(void) {
     osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
 
 #if MISSION_MATL_NAV // 灰度巡线
+    Nav_GoTo_fromName("MATL_TRACK");
+    if (!wait_tracker()) goto fail;
     if (!Nav_Track_Start()) goto fail;
     osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
     Nav_Track_Stop();
@@ -203,6 +203,8 @@ static bool trop_grap(void) {
     osEventFlagsSet(System_StatusHandle, TURNTABLE_RUN);
 
 #if MISSION_TROP_NAV // 灰度巡线
+    Nav_GoTo_fromName("TROP_TRACK");
+    if (!wait_tracker()) goto fail;
     if (!Nav_Track_Start()) goto fail;
     osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
     Nav_Track_Stop();
@@ -232,13 +234,17 @@ static bool trop_pop(void) {
     TargetPoint_t *point = Map_GetPointByName("SECOND");
     if (point == NULL) return false;
 
-    Nav_GoTo_fromName("OA2");
-    if (!wait_tracker()) return false;
     arm_action(ARM_ACTION_STAGE_2_PULL_UP);
 
+    Nav_GoTo_fromName("OA2");
+    if (!wait_tracker()) return false;
+
     for (uint8_t i = 0; i < 3; i++) {
-        if (i == 1) arm_action(ARM_ACTION_STAGE_1_PULL_UP);
-        Turntable_Pop((TurntablePop_t)i);
+        switch (i) {
+            case 1: arm_action(ARM_ACTION_STAGE_1_PULL_UP); break;
+            case 2: arm_action(ARM_ACTION_PULL_DOWN); break;
+            default: break;
+        }
 
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) return false;

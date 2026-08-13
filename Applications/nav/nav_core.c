@@ -822,8 +822,8 @@ void Nav_Task(void *argument) {
                 MotionControl_Stop();
             }
 
-            logDebug("err_x: %.2f, err_y: %.2f, dist: %.2f, err_yaw: %.2f;    vx: %.2f, vy: %.2f, yaw: %.2f",
-                     dx, dy, distance, yaw_error, out_vx, out_vy, yaw_speed);
+            // logDebug("err_x: %.2f, err_y: %.2f, dist: %.2f, err_yaw: %.2f;    vx: %.2f, vy: %.2f, yaw: %.2f",
+            //          dx, dy, distance, yaw_error, out_vx, out_vy, yaw_speed);
             MotionControl_SetVelocity(out_vx, out_vy, yaw_speed);
         }
 

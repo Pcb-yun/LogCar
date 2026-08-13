@@ -107,21 +107,20 @@ void Turntable_Port_Task(void *argument) {
             g_sto[sto_idx]->color = RPI_DetectColor();
 #endif
             logInfo("sto_idx: %d, id: %d, color: %s", sto_idx, g_sto[sto_idx]->id, matl_str[g_sto[sto_idx]->color]);
+            if (sto_idx == 5) goto cplt;
         } else if (g_port.type == TURNTABLE_TROP) {
             g_sto[sto_idx]->label = set_trop();
             logInfo("sto_idx: %d, id: %d, label: %s", sto_idx, g_sto[sto_idx]->id, trop_str[g_sto[sto_idx]->label]);
+            if (sto_idx == 3) goto cplt;
         } else {
-            logWarning("unknown type");
-            continue;
+            logWarning("unknown type"); continue;
         }
+        sto_idx++; continue;
 
-        sto_idx++;
-        if (sto_idx == 5) {
-            osEventFlagsSet(System_StatusHandle, TURNTABLE_CPLT);
-            osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
-            turntable_move_to_close();
-            sto_idx = 0;
-        }
+    cplt:
+        osEventFlagsSet(System_StatusHandle, TURNTABLE_CPLT);
+        osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
+        turntable_move_to_close();
     }
 }
 

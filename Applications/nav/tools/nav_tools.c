@@ -156,6 +156,18 @@ static void NavTools_Pose_View(void) {
     osEventFlagsClear(System_StatusHandle, APP_NEED_USART);
 }
 
+ShellCommand NavToolsGroup[] = {
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
+    SHELL_CMD_GROUP_END()
+};
+SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
+nav, NavToolsGroup, Navigation Tools);
+
+#if NAV_MAP_TOOL
 /**
  * @brief 打印目标点信息
  * @param point 目标点指针
@@ -177,18 +189,6 @@ static void NavTools_PrintPoint(TargetPoint_t *point) {
                point->arrive.distance_threshold, point->arrive.yaw_threshold, point->arrive.timeout_ms);
 }
 
-ShellCommand NavToolsGroup[] = {
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),
-    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, state, NavTools_State, Show Navigation State),
-    SHELL_CMD_GROUP_END()
-};
-SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
-nav, NavToolsGroup, Navigation Tools);
-
-#if NAV_MAP_TOOL
 /**
  * @brief 列出所有目标点
  */

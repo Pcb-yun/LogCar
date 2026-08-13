@@ -13,13 +13,13 @@ extern "C" {
 
 #include <stdbool.h>
 
-#define MISSION_MATL_NAV 0      // 物料导航方式： 0：地图定位 1：巡线
-#define MISSION_TROP_NAV 0      // 奖杯导航方式： 0：地图定位 1：巡线
+#define MISSION_MATL_NAV 1      // 物料导航方式： 0：地图定位 1：巡线
+#define MISSION_TROP_NAV 1      // 奖杯导航方式： 0：地图定位 1：巡线
 #define MISSION_COLOR_SENSOR 0  // 颜色识别方式： 0：颜色传感器 1：树莓派通讯
 #define MISSION_USE_RPI_CAL 0   // 是否使用树莓派校准： 0：不使用 1：使用
 #define MISSION_CAL2OPS 0       // 是否将校准数据回写码盘： 0：不回写 1：回写
 #define MISSION_BACK_DIST 20.0f // 放置后回退的距离 cm
-#define MISSION_BACK_TIME 1000 // 放置后回退等待时间 ms
+#define MISSION_BACK_TIME 2000 // 放置后回退等待时间 ms
 
 void mission_set_running(bool running);
 

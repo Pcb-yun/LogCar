@@ -101,6 +101,7 @@ virtualFolder:
       folders: []
     - name: display
       files:
+        - path: Applications/Display/dsp_tool.c
         - path: Applications/Display/gif_data.c
         - path: Applications/Display/image_data.c
         - path: Applications/Display/show_media.c

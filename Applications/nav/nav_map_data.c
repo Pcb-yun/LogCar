@@ -26,9 +26,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
@@ -36,7 +36,7 @@ static const TargetPoint_t g_map_points[] = {
         .name = "OA1",     // 出站避让点
         .pose = {
             .x = 0.0f,
-            .y = -32.0f,
+            .y = -25.96f,
             .yaw = 0.0f
         },
         .motion = {
@@ -46,18 +46,18 @@ static const TargetPoint_t g_map_points[] = {
             .deceleration = 70.0f,
         },
         .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .check_mode = ARRIVE_CHECK_DISTANCE,
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 2,
         .name = "QrCode_1",     // 扫码点1
         .pose = {
-            .x = 65.0f,
-            .y = -32.0f,
+            .x = 58.34f,
+            .y = -31.79f,
             .yaw = 0.0f
         },
         .motion = {
@@ -69,16 +69,16 @@ static const TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .yaw_threshold = 2.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 3,
         .name = "MATL_TRACK",   // 物料巡线开始点
         .pose = {
-            .x = 83.00f,
-            .y = -14.75f,
+            .x = 59.17f,
+            .y = -12.16f,
             .yaw = 0.00f
         },
         .motion = {
@@ -89,18 +89,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 1.5f,
+            .yaw_threshold = 2.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 4,
         .name = "MATL_GRAP1",   // 物料抓取点1
         .pose = {
-            .x = 83.00f,
-            .y = -14.75f,
-            .yaw = 0.00f
+            .x = 97.59f,
+            .y = -13.07f,
+            .yaw = -8.5f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -110,18 +110,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 5,
         .name = "MATL_GRAP2",   // 物料抓取点2
         .pose = {
-            .x = 128.f,
-            .y = -30.78f,
-            .yaw = -47.00f
+            .x = 131.47f,
+            .y = -12.04f,
+            .yaw = -73.87f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -131,17 +131,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 6,
         .name = "MATL_GRAP3",   // 物料抓取点3
         .pose = {
-            .x = 160.00f,
-            .y = -67.65f,
+            .x = 153.41f,
+            .y = -55.93f,
             .yaw = -90.00f
         },
         .motion = {
@@ -152,17 +152,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 7,
         .name = "MATL_GRAP4",   // 物料抓取点4
         .pose = {
-            .x = 151.77f,
-            .y = -112.00f,
+            .x = 149.96f,
+            .y = -103.10f,
             .yaw = -90.00f
         },
         .motion = {
@@ -173,17 +173,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 8,
         .name = "MATL_GRAP5",   // 物料抓取点5
         .pose = {
-            .x = 114.00f,
-            .y = -151.28f,
+            .x = 119.41f,
+            .y = -141.19f,
             .yaw = -90.00f
         },
         .motion = {
@@ -194,9 +194,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
 #if USE_RPI_CAL // 使用树莓派校准
@@ -204,8 +204,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 9,
         .name = "POP_A",   // A点
         .pose = {
-            .x = 72.00f,
-            .y = -69.00f,
+            .x = 66.01f,
+            .y = -61.15f,
             .yaw = -90.00f
         },
         .motion = {
@@ -216,17 +216,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 10,
         .name = "POP_B",    // B点
         .pose = {
-            .x = 49.00f,
-            .y = -42.00f,
+            .x = 40.20f,
+            .y = -36.76f,
             .yaw = -90.00f
         },
         .motion = {
@@ -237,17 +237,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 11,
         .name = "POP_C",    // C点
         .pose = {
-            .x = -12.00f,
-            .y = -75.00f,
+            .x = -17.50f,
+            .y = -74.81f,
             .yaw = -90.00f
         },
         .motion = {
@@ -258,17 +258,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 12,
         .name = "POP_D",    // D点
         .pose = {
-            .x = -28.00f,
-            .y = -48.80f,
+            .x = -33.37f,
+            .y = -48.84f,
             .yaw = -90.0f
         },
         .motion = {
@@ -279,17 +279,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 13,
         .name = "POP_E",    // E点
         .pose = {
-            .x = -77.00f,
-            .y = -59.00f,
+            .x = -82.86f,
+            .y = -63.81f,
             .yaw = -90.0f
         },
         .motion = {
@@ -300,9 +300,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
 #else // 定位死点
@@ -310,9 +310,9 @@ static const TargetPoint_t g_map_points[] = {
         .id = 9,
         .name = "POP_A",   // A点
         .pose = {
-            .x = 49.00f,
-            .y = -90.00f,
-            .yaw = -52.00f
+            .x = 47.85f,
+            .y = -91.22f,
+            .yaw = -51.71f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -322,18 +322,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 10,
         .name = "POP_B",    // B点
         .pose = {
-            .x = 26.00f,
-            .y = -63.00f,
-            .yaw = -52.00f
+            .x = 26.16f,
+            .y = -65.51f,
+            .yaw = -51.71f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -343,18 +343,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 11,
         .name = "POP_C",    // C点
         .pose = {
-            .x = -30.00f,
-            .y = -92.00f,
-            .yaw = -60.00f
+            .x = -28.22f,
+            .y = -92.98f,
+            .yaw = -64.30f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -364,18 +364,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 12,
         .name = "POP_D",    // D点
         .pose = {
-            .x = -43.00f,
-            .y = -65.00f,
-            .yaw = -60.0f
+            .x = -45.54f,
+            .y = -69.24f,
+            .yaw = -64.30f  // -57.83
         },
         .motion = {
             .target_speed = 90.0f,
@@ -385,18 +385,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 13,
         .name = "POP_E",    // E点
         .pose = {
-            .x = -75.00f,
-            .y = -71.00f,
-            .yaw = -90.0f
+            .x = -94.69f,
+            .y = -80.00f,
+            .yaw = -59.33f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -406,9 +406,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
 #endif /* USE_RPI_CAL */
@@ -416,9 +416,9 @@ static const TargetPoint_t g_map_points[] = {
         .id = 14,
         .name = "QrCode_2", // 扫码点2
         .pose = {
-            .x = -61.00f,
-            .y = -51.50f,
-            .yaw = -90.0f
+            .x = -77.36f,
+            .y = -41.26f,
+            .yaw = 0.0f
         },
         .motion = {
             .target_speed = 90.0f,
@@ -429,7 +429,7 @@ static const TargetPoint_t g_map_points[] = {
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
+            .yaw_threshold = 2.0f,
             .timeout_ms = 15000
         }
     },
@@ -437,8 +437,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 15,
         .name = "TROP_TRACK", // 奖杯巡线开始点
         .pose = {
-            .x = -115.00f,
-            .y = -55.00f,
+            .x = -93.88f,
+            .y = -30.89f,
             .yaw = -140.0f
         },
         .motion = {
@@ -449,17 +449,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
+            .distance_threshold = 1.5f,
+            .yaw_threshold = 2.0f,
             .timeout_ms = 15000
         }
     },
     {
         .id = 16,
-        .name = "TROP_GRAP2", // 奖杯抓取点2
+        .name = "TROP_GRAP1", // 奖杯抓取点1
         .pose = {
-            .x = -147.00f,
-            .y = -90.00f,
+            .x = -144.01f,
+            .y = -36.26f,
             .yaw = -90.0f
         },
         .motion = {
@@ -470,17 +470,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
             .timeout_ms = 15000
         }
     },
     {
         .id = 17,
-        .name = "TROP_GRAP3", // 奖杯抓取点3
+        .name = "TROP_GRAP2", // 奖杯抓取点2
         .pose = {
-            .x = -136.00f,
-            .y = -132.00f,
+            .x = -149.23f,
+            .y = -86.89f,
             .yaw = -90.0f
         },
         .motion = {
@@ -491,81 +491,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
             .timeout_ms = 15000
         }
     },
     {
         .id = 18,
-        .name = "OA2",     // 奖杯放置预备点
+        .name = "TROP_GRAP3", // 奖杯抓取点3
         .pose = {
-            .x = -100.00f,
-            .y = -156.00f,
-            .yaw = -90.00f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
-        }
-    },
-#if USE_RPI_CAL // 使用树莓派校准
-    {
-        .id = 19,
-        .name = "SECOND",     // 亚军
-        .pose = {
-            .x = -11.00f,
-            .y = -156.00f,
-            .yaw = -90.00f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
-        }
-    },
-    {
-        .id = 20,
-        .name = "FIRST",     // 冠军
-        .pose = {
-            .x = 14.00f,
-            .y = -156.00f,
-            .yaw = -90.00f
-        },
-        .motion = {
-            .target_speed = 90.0f,
-            .target_angular_speed = 220.0f,
-            .acceleration = 110.0f,
-            .deceleration = 70.0f,
-        },
-        .arrive = {
-            .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
-        }
-    },
-    {
-        .id = 21,
-        .name = "THRID",     // 季军
-        .pose = {
-            .x = 41.0f,
-            .y = -156.00f,
+            .x = -133.12f,
+            .y = -126.81f,
             .yaw = -90.0f
         },
         .motion = {
@@ -576,18 +512,103 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 15000
+        }
+    },
+    #if USE_RPI_CAL // 使用树莓派校准
+    {
+        .id = 19,
+        .name = "OA2",     // 奖杯放置预备点
+        .pose = {
+            .x = -133.12f,
+            .y = -162.7f,
+            .yaw = -90.00f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 2.5f,
+            .yaw_threshold = 4.0f,
+            .timeout_ms = 10000
+        }
+    },
+    {
+        .id = 20,
+        .name = "SECOND",     // 亚军
+        .pose = {
+            .x = -8.20f,
+            .y = -162.7f,
+            .yaw = -90.00f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
+        }
+    },
+    {
+        .id = 21,
+        .name = "FIRST",     // 冠军
+        .pose = {
+            .x = 17.31f,
+            .y = -18.93f,
+            .yaw = -90.00f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
+        }
+    },
+    {
+        .id = 22,
+        .name = "THRID",     // 季军
+        .pose = {
+            .x = 43.36f,
+            .y = -154.15f,
+            .yaw = -90.0f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
 #else // 定位死点
     {
         .id = 19,
-        .name = "SECOND",     // 亚军
+        .name = "OA2",     // 奖杯放置预备点
         .pose = {
-            .x = -13.00f,
-            .y = -156.00f,
+            .x = -133.12f,
+            .y = -172.75f,
             .yaw = -90.00f
         },
         .motion = {
@@ -598,17 +619,17 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 2.5f,
+            .yaw_threshold = 4.0f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 20,
-        .name = "FIRST",     // 冠军
+        .name = "SECOND",     // 亚军
         .pose = {
-            .x = 13.00f,
-            .y = -156.00f,
+            .x = -8.28f,
+            .y = -172.75f,
             .yaw = -90.00f
         },
         .motion = {
@@ -619,17 +640,38 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
     {
         .id = 21,
+        .name = "FIRST",     // 冠军
+        .pose = {
+            .x = 16.69f,
+            .y = -169.12f,
+            .yaw = -90.00f
+        },
+        .motion = {
+            .target_speed = 90.0f,
+            .target_angular_speed = 220.0f,
+            .acceleration = 110.0f,
+            .deceleration = 70.0f,
+        },
+        .arrive = {
+            .check_mode = ARRIVE_CHECK_BOTH,
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
+        }
+    },
+    {
+        .id = 22,
         .name = "THRID",     // 季军
         .pose = {
-            .x = 40.0f,
-            .y = -156.00f,
+            .x = 44.49f,
+            .y = -194.71f,
             .yaw = -90.0f
         },
         .motion = {
@@ -640,18 +682,18 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 0.5f,
+            .yaw_threshold = 1.5f,
+            .timeout_ms = 10000
         }
     },
 #endif
     {
-        .id = 22,
+        .id = 23,
         .name = "OA3",     // 返回避让点
         .pose = {
-            .x = 18.0f,
-            .y = -100.0f,
+            .x = 12.87f,
+            .y = -89.49f,
             .yaw = -90.0f
         },
         .motion = {
@@ -662,13 +704,13 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 3.0f,
+            .yaw_threshold = 5.0f,
+            .timeout_ms = 10000
         }
     },
     {
-        .id = 23,
+        .id = 24,
         .name = "SWEET_HOME",   // 回家吧孩子
         .pose = {
             .x = 0.0f,
@@ -683,9 +725,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 1.8f,
-            .timeout_ms = 5000
+            .distance_threshold = 1.5f,
+            .yaw_threshold = 2.0f,
+            .timeout_ms = 10000
         }
     },
 };
