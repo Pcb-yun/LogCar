@@ -36,29 +36,24 @@ SENSOR_Color_t RPI_DetectColor(void) {
 
 /**
  * @brief 树莓派偏移校准
- * @param err_x x轴误差
- * @param err_y y轴误差
+ * @param err_x x轴误差 mm
+ * @param err_y y轴误差 mm
  * @return 校准状态
  */
-bool RPI_Calibrate(int32_t *err_x, int32_t *err_y) {
+bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     if (err_x == NULL || err_y == NULL) {
         return false;
     }
 
     uint8_t cmd = 0x0A;
     uint8_t rsp[4] = {0};
-    uint16_t abs_dx = 0, abs_dy = 0;
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
     HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 4, 200);
 
-    /* 解析4字节响应：[dir-x][dir-y][abs-dx][abs-dy] */
-    abs_dx = ((uint16_t)rsp[2] << 8) | rsp[3];
-    abs_dy = rsp[1];
-
     /* 根据方向确定符号：1为正轴，0为负轴 */
-    *err_x = (rsp[0] == 1) ? (int32_t)abs_dx : -(int32_t)abs_dx;
-    *err_y = (rsp[1] == 1) ? (int32_t)abs_dy : -(int32_t)abs_dy;
+    *err_y = (rsp[0] == 1) ? (int16_t)rsp[2] : -(int16_t)rsp[2];
+    *err_x = (rsp[1] == 1) ? (int16_t)rsp[3] : -(int16_t)rsp[3];
 
     RPI_Calibrate_IDE();
     return true;
@@ -92,7 +87,7 @@ void RPI_Shell(int argc, char *argv[]) {
         SENSOR_Color_t c = RPI_DetectColor();
         logPrintln("Color: %s", (c <= COLOR_BLUE) ? matl_str[c] : "Invalid");
     } else if(strcmp(argv[1], "cal") == 0) {
-        int32_t err_x, err_y;
+        int16_t err_x, err_y;
         if(RPI_Calibrate(&err_x, &err_y)) {
             logPrintln("Calibrate: x: %d, y: %d", err_x, err_y);
         } else {

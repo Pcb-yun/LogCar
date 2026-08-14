@@ -14,6 +14,7 @@
 #include <string.h>
 #include "image_data.h"
 #include "gif_data.h"
+#include "dsp_tool.h"
 
 extern osMessageQueueId_t Media_DataHandle;
 static bool Play = false;
@@ -34,7 +35,10 @@ void Media_Player_Task(void *argument) {
             case MEDIA_TYPE_IMAGE: Play_Image(((Image_t *)media.data)->name); break;
             case MEDIA_TYPE_GIF:
                 Play = true;
-                while (Play) Play_Gif(((Gif_t *)media.data)->name); break;
+                while (Play) if (!Play_Gif(((Gif_t *)media.data)->name)) Play = false; break;
+            case MEDIA_TYPE_TOOL:
+                Play = true;
+                while (Play) if (!Tool_KeepAlive()) Play = false;
         }
     }
 }

@@ -38,8 +38,6 @@ TCS230_RGBC_t rgbc_wb = {0};
  */
 TCS230_RGBC_t rgb_color = {0};
 
-bool isWB = false;
-
 /**
  * @brief 单通道测量阶段
  */
@@ -73,6 +71,17 @@ typedef struct {
  * @brief 单通道测量上下文
  */
 static SENSOR_Context_t s_ctx;
+
+/**
+ * @brief 初始化 TCS230 传感器
+ * - 设置默认白色平衡参数
+ */
+void TCS230_Init(void) {
+    rgbc_wb.red = TCS230_WB_R;
+    rgbc_wb.green = TCS230_WB_G;
+    rgbc_wb.blue = TCS230_WB_B;
+    rgbc_wb.clear = TCS230_WB_C;
+}
 
 /**
  * @brief 初始化 TCS230 传感器接口
@@ -344,10 +353,6 @@ bool sensor_rgbc_to_rgb(const TCS230_RGBC_t *raw, const TCS230_RGBC_t *wb,
                                 uint8_t *r, uint8_t *g, uint8_t *b,
                                 float *brightness) {
 
-    if (!isWB){
-        logWarning("Using default white balance");
-    }
-
     if (raw->clear == 0 || wb->clear == 0 ||
         wb->red == 0 || wb->green == 0 || wb->blue == 0) {
         *r = *g = *b = 0;
@@ -429,11 +434,6 @@ static void SENSOR_Color_Shell(void) {
     shell = shellGetCurrent();
     if (shell == NULL) return;
 
-
-    if (!isWB) {
-        logPrintln("White Balance Not Set"); return;
-    }
-
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
 
     for (;;) {
@@ -500,7 +500,6 @@ static void SENSOR_WB_Shell(void) {
     logPrintln("Wg: %f", (float)rgbc_wb.clear / rgbc_wb.green);
     logPrintln("Wb: %f", (float)rgbc_wb.clear / rgbc_wb.blue);
 
-    isWB = true;
     logPrintln("White Balance Set");
 }
 
@@ -514,11 +513,6 @@ static void SENSOR_Detect_Shell(void) {
     extern osMessageQueueId_t Usart1_Rx_DataHandle;
     uint8_t byte;
     TCS230_RGBC_t rgbc;
-
-    if (!isWB) {
-        logPrintln("White Balance Not Set");
-        return;
-    }
 
     osEventFlagsSet(System_StatusHandle, APP_NEED_USART);
     logPrintln("Color Detection - Press ^C to exit");

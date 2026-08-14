@@ -181,7 +181,6 @@ static float calculate_distance(Pose2D_t a, Pose2D_t b) {
 static bool check_arrival(Pose2D_t current, TargetPoint_t *target) {
     bool distance_ok = false;
     bool yaw_ok = false;
-    bool speed_ok = false;
 
     if (target->arrive.check_mode == ARRIVE_CHECK_DISTANCE ||
         target->arrive.check_mode == ARRIVE_CHECK_BOTH) {
@@ -191,9 +190,11 @@ static bool check_arrival(Pose2D_t current, TargetPoint_t *target) {
         distance_ok = true;
     }
 
+    // 速度过大时不判定到达（防止高速穿堂而过直接停车），但允许近目标速度
+    // 因为进入 STOPPING 状态后会先 MotionControl_Stop，再等 500ms 二次确认距离
     float current_speed = sqrtf(g_nav_core->last_vx * g_nav_core->last_vx +
                                 g_nav_core->last_vy * g_nav_core->last_vy);
-    speed_ok = (current_speed < NAV_MIN_SPEED);
+    bool speed_not_too_fast = (current_speed <= NAV_TRAJ_SPEED_CAP);
 
     if (target->arrive.check_mode == ARRIVE_CHECK_YAW ||
         target->arrive.check_mode == ARRIVE_CHECK_BOTH) {
@@ -204,7 +205,9 @@ static bool check_arrival(Pose2D_t current, TargetPoint_t *target) {
         yaw_ok = true;
     }
 
-    if (distance_ok && yaw_ok && speed_ok) {
+    // 只要距离+角度满足，且速度未超过近目标上限，就计数
+    // 低速补偿维持的速度不会阻碍到达判定，由 STOPPING 的二次确认兜底
+    if (distance_ok && yaw_ok && speed_not_too_fast) {
         g_nav_core->arrive_check_count++;
         if (g_nav_core->arrive_check_count >= NAV_ARRIVE_CHECK_COUNT) {
             return true;
@@ -535,8 +538,8 @@ bool Nav_GoToDirect(TargetPoint_t *target) {
     g_nav_core->yaw_zero_cross_lock_start = 0;
     g_nav_core->arrive_check_count = 0;
 
-    logInfo("Direct navigation to: x: %.2f, y: %.2f, yaw: %.2f",
-        target->pose.x, target->pose.y, target->pose.yaw);
+    logInfo("Direct navigation to: x: %.2f, y: %.2f, yaw: %.2f, name: %s",
+        target->pose.x, target->pose.y, target->pose.yaw, target->name);
     pid_reset(&g_nav_core->yaw_pid);
     return true;
 }
@@ -616,7 +619,6 @@ void Nav_Task(void *argument) {
                 g_nav_core->last_vx = 0.0f;
                 g_nav_core->last_vy = 0.0f;
                 g_nav_core->current_speed_magnitude = 0.0f;
-                logInfo("Stopping for arrival confirmation, distance: %.2f", distance);
                 continue;
             }
 
@@ -828,7 +830,7 @@ void Nav_Task(void *argument) {
         }
 
         if (g_nav_core->state == NAV_STATE_STOPPING && g_nav_core->cached_target != NULL) {
-            uint32_t stop_wait_ms = 500;
+            uint32_t stop_wait_ms = 300;
             if (current_tick - g_nav_core->stop_start_tick >= stop_wait_ms) {
                 float final_distance = calculate_distance(current_pose, g_nav_core->cached_target->pose);
 
@@ -840,6 +842,9 @@ void Nav_Task(void *argument) {
                     g_nav_core->state = NAV_STATE_RUNNING;
                     g_nav_core->current_speed_magnitude = 0.0f;
                     g_nav_core->arrive_check_count = 0;
+                    // 恢复运行时重新分配一次超时窗口，防止多次启停累计触发超时
+                    g_nav_core->arrive_timeout_tick = osKernelGetTickCount() +
+                        g_nav_core->cached_target->arrive.timeout_ms;
                     logInfo("Resuming navigation, final distance: %.2f", final_distance);
                 }
             }

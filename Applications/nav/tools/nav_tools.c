@@ -16,6 +16,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "Events.h"
+#include "dsp_tool.h"
 
 #if NAV_MAP_TOOL
 static void shellReadLine(char *buffer, int maxLen);
@@ -158,6 +159,7 @@ static void NavTools_Pose_View(void) {
 
 ShellCommand NavToolsGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pose, NavTools_Pose_View, View Current Pose),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_FUNC|SHELL_CMD_DISABLE_RETURN, oled, nav_show, View Current Pose on screen),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, go, NavTools_GoTo, Navigate to Point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, to, NavTools_GotoDirect, Navigate to specified point),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, NavTools_Stop, Stop Navigation),

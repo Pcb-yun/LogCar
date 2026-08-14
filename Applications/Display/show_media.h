@@ -19,7 +19,8 @@ extern "C" {
  */
 typedef enum {
     MEDIA_TYPE_IMAGE = 0,
-    MEDIA_TYPE_GIF
+    MEDIA_TYPE_GIF,
+    MEDIA_TYPE_TOOL
 } MediaType_type;
 
 /**

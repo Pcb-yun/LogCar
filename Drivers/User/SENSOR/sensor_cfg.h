@@ -12,6 +12,10 @@
 #define TCS230_TIM_CLOCK_HZ  6000000UL    // TIM4 计数器频率
 #define FREQ_NSAMPLES  5            // 频率测量采样数
 
-
+// 默认白色平衡
+#define TCS230_WB_R 673
+#define TCS230_WB_G 651
+#define TCS230_WB_B 750
+#define TCS230_WB_C 2011
 
 #endif /* __SENSOR_CFG_H__ */

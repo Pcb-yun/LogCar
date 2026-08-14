@@ -245,7 +245,8 @@ void Nav_Track_Task(void *argument) {
         g_nav_track->last_tick = current_tick;
 
         /* 调试日志节流：每100ms打印一次，避免刷屏 */
-        bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
+        // bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
+        bool dbg_allow = 0;
         if (dbg_allow) last_dbg_tick = current_tick;
 
         /* 运行时长检测 */

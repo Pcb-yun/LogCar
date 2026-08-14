@@ -621,6 +621,11 @@ void Sys_Init_Task(void *argument)
   RPI_Init();
   SHOW_DMESG(dmesg_ok, NULL);
 
+  SHOW_DMESG(dmesg_wait, "Initialize TCS230 Module");
+  extern void TCS230_Init(void);
+  TCS230_Init();
+  SHOW_DMESG(dmesg_ok, NULL);
+
 
 
   extern Shell shell;

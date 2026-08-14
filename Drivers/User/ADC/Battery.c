@@ -15,12 +15,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include "dsp_tool.h"
 
 /**
  * @brief 电池电压监控数据结构体
  */
 typedef struct {
-    uint16_t voltage;           // 实际电压
+    uint16_t voltage;           // 实际电压 mV
     uint16_t interval_ms;       // 任务间隔
     uint32_t last_warn_tick;    // 上次警告时间戳
 } BatteryData_t;
@@ -88,6 +89,17 @@ void Battery_Get_Task(void *argument) {
 }
 
 /**
+ * @brief 获取电池电压
+ * @param voltage 电池电压指针
+ * @return 是否成功获取
+ */
+bool Battery_GetVoltage(uint16_t *voltage) {
+    if (!is_init) return false;
+    *voltage = g_battery->voltage;
+    return true;
+}
+
+/**
  * @brief 实时刷新显示电池电压
  */
 static void Battery_ViewRealtime(void) {
@@ -138,12 +150,15 @@ static void Battery_Tool(int argc, char *argv[]) {
             } else {
                 logPrintln("Usage: battery time [ms]");
             }
-        }
-        if (strcmp(argv[1], "view") == 0){
+        } else if (strcmp(argv[1], "view") == 0){
             Battery_ViewRealtime();
+        } else if (strcmp(argv[1], "oled") == 0){
+            bat_show();
+        } else {
+            logPrintln("Usage: battery time|view|oled");
         }
     } else {
-        logPrintln("Usage: battery time|view");
+        logPrintln("Usage: battery time|view|oled");
     }
 }
 SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,

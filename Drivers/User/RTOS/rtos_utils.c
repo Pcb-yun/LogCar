@@ -100,8 +100,8 @@ static void Task_Info(void) {
             }
 
             // 打印排序后的任务信息
-            logPrintln("ID        Name          State       Priority    Stack Space    High Water    CPU\r\n"
-                       "------------------------------------------------------------------------------------");
+            logPrintln("ID        Name              State       Priority    Stack Space    High Water    CPU\r\n"
+                       "----------------------------------------------------------------------------------------");
 
             for(uint8_t i = 0; i < task_count; i++) {
                 const char *state_str;
@@ -113,7 +113,7 @@ static void Task_Info(void) {
                     case osThreadTerminated: state_str = "Terminated"; break;
                     default: state_str = "Unknown"; break;
                 }
-                logPrintln("%p  %-12s  %-10s  %-10lu  %-10lu     %-12lu  %-4.2f %%",
+                logPrintln("%p  %-16s  %-10s  %-10lu  %-10lu     %-12lu  %6.2f %%",
                           task_info_array[i].task_id, task_info_array[i].task_name ? task_info_array[i].task_name : "<unknown>",
                           state_str, task_info_array[i].priority, task_info_array[i].stack_space,
                           task_info_array[i].high_water, task_info_array[i].cpu_usage);

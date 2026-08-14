@@ -9,7 +9,7 @@
 #define NAV_TRACK_MAX_YAW_SPEED 100.0f  // 最大转向速度 (deg/s)（150太高，过弯摆头）
 #define NAV_TRACK_LINE_POLARITY_POSITIVE 0  // 线极性 (1:黑线输出1, 0:黑线输出0) ← 必须和模块实际一致
 #define NAV_TRACK_STEERING_DIR_LEFT 1  // 转向方向 (1:线偏右时右转, -1:反向)
-#define NAV_TRACK_RUN_TIME_MS 15000  // 巡线运行时间 (ms)（0表示无限循环）
+#define NAV_TRACK_RUN_TIME_MS 10000  // 巡线运行时间 (ms)（0表示无限循环）
 
 #define NAV_TRACK_SENSOR_NUM       8       // 灰度探头数量
 #define NAV_TRACK_UPDATE_MS        10      // 巡线控制周期 (ms)

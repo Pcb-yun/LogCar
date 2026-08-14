@@ -11,6 +11,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief 电池电压监控模块的配置宏
@@ -18,12 +19,14 @@ extern "C" {
 #define BATTERY_DIVIDER_RATIO   5.0f        // 分压比
 #define ADC_VREF_MV             3300        // ADC 参考电压 (VREF+)，通常为 3300mV
 #define ADC_RESOLUTION          4096.0f     // ADC 分辨率
-#define BATTERY_THRESHOLD       11100       // 电池电压阈值(mV)
+#define BATTERY_THRESHOLD       11300       // 电池电压阈值(mV)
 #define BATTERY_OFFSET          347         // 电压误差修正值(mV)
 #define ADC_SAMPLE_COUNT        10         // ADC 采样次数
 
 
 bool Battery_Init(void);
+bool Battery_GetVoltage(uint16_t *voltage);
+
 
 
 #ifdef __cplusplus

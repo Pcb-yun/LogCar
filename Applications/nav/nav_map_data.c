@@ -5,6 +5,7 @@
  */
 
 #include "nav_map.h"
+#include "mission.h"
 
 /**
  * @brief 定义所有目标点数据
@@ -89,8 +90,8 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.5f,
-            .yaw_threshold = 2.0f,
+            .distance_threshold = 2.0f,
+            .yaw_threshold = 2.5f,
             .timeout_ms = 10000
         }
     },
@@ -199,13 +200,13 @@ static const TargetPoint_t g_map_points[] = {
             .timeout_ms = 10000
         }
     },
-#if USE_RPI_CAL // 使用树莓派校准
+#if MISSION_USE_RPI_CAL // 使用树莓派校准
     {
         .id = 9,
         .name = "POP_A",   // A点
         .pose = {
-            .x = 66.01f,
-            .y = -61.15f,
+            .x = 68.93f,
+            .y = -71.25f,
             .yaw = -90.00f
         },
         .motion = {
@@ -225,8 +226,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 10,
         .name = "POP_B",    // B点
         .pose = {
-            .x = 40.20f,
-            .y = -36.76f,
+            .x = 46.59f,
+            .y = -44.59f,
             .yaw = -90.00f
         },
         .motion = {
@@ -246,8 +247,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 11,
         .name = "POP_C",    // C点
         .pose = {
-            .x = -17.50f,
-            .y = -74.81f,
+            .x = -16.45f,
+            .y = -75.70f,
             .yaw = -90.00f
         },
         .motion = {
@@ -267,8 +268,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 12,
         .name = "POP_D",    // D点
         .pose = {
-            .x = -33.37f,
-            .y = -48.84f,
+            .x = -29.14f,
+            .y = -48.47f,
             .yaw = -90.0f
         },
         .motion = {
@@ -288,8 +289,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 13,
         .name = "POP_E",    // E点
         .pose = {
-            .x = -82.86f,
-            .y = -63.81f,
+            .x = -78.53f,
+            .y = -57.87f,
             .yaw = -90.0f
         },
         .motion = {
@@ -517,7 +518,7 @@ static const TargetPoint_t g_map_points[] = {
             .timeout_ms = 15000
         }
     },
-    #if USE_RPI_CAL // 使用树莓派校准
+    #if MISSION_USE_RPI_CAL // 使用树莓派校准
     {
         .id = 19,
         .name = "OA2",     // 奖杯放置预备点
@@ -543,8 +544,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 20,
         .name = "SECOND",     // 亚军
         .pose = {
-            .x = -8.20f,
-            .y = -162.7f,
+            .x = -16.67f,
+            .y = -164.42f,
             .yaw = -90.00f
         },
         .motion = {
@@ -564,8 +565,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 21,
         .name = "FIRST",     // 冠军
         .pose = {
-            .x = 17.31f,
-            .y = -18.93f,
+            .x = 9.71f,
+            .y = -163.35f,
             .yaw = -90.00f
         },
         .motion = {
@@ -585,8 +586,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 22,
         .name = "THRID",     // 季军
         .pose = {
-            .x = 43.36f,
-            .y = -154.15f,
+            .x = 36.86f,
+            .y = -161.68f,
             .yaw = -90.0f
         },
         .motion = {

@@ -29,6 +29,7 @@ static bool trop_grap(void);
 static bool trop_pop(void);
 static bool Home_Sweet_home(void);
 static void pop_to_back(void);
+static bool RPI_Cal(TargetPoint_t *point);
 
 static bool mission_running = false;
 
@@ -97,7 +98,7 @@ void mission_run(void *argument) {
         Nav_GoTo_fromName("QrCode_2");
         if (!wait_tracker()) goto fail;
 
-        // // 读取二维码      
+        // 读取二维码
         // if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
         // Turntable_SetOrder(barcode[0]);
         Turntable_SetOrder(1);
@@ -163,32 +164,20 @@ static bool matl_pop(void) {
     if (point == NULL) return false;
 
     for(uint8_t i = 0; i < 5; i++) {
-        Turntable_Pop((TurntablePop_t)i);
-        turntable_move_to_close();
+        // Turntable_Pop((TurntablePop_t)i);
+        // turntable_move_to_close();
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) return false;
 
-#if USE_RPI_CAL // 树莓派校准
-    int16_t err_x,err_y;
-    RPI_Calibrate(&err_x, &err_y);
-
-    TargetPoint_t cal_pose;
-    memcpy(&cal_pose, point, sizeof(TargetPoint_t));
-
-    PoseTimestamp_t pose;
-    if (!Loc_Get(&pose)) return false;
-    cal_pose.pose.x = point->pose.x + pose.pose.x;
-    cal_pose.pose.y = point->pose.y + pose.pose.y;
-    cal_pose.pose.yaw = point->pose.yaw + pose.pose.yaw;
-
-    Nav_GoToDirect(&cal_pose);
-    if (!wait_tracker()) return false;
+#if MISSION_USE_RPI_CAL // 树莓派校准
+        if (!RPI_Cal(point)) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
 #endif
 #endif
 
+        Turntable_Pop((TurntablePop_t)i);
         pop_to_back();
     }
     return true;
@@ -249,21 +238,8 @@ static bool trop_pop(void) {
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) return false;
 
-#if USE_RPI_CAL // 树莓派校准
-    int16_t err_x,err_y;
-    RPI_Calibrate(&err_x, &err_y);
-
-    TargetPoint_t cal_pose;
-    memcpy(&cal_pose, point, sizeof(TargetPoint_t));
-
-    PoseTimestamp_t pose;
-    if (!Loc_Get(&pose)) return false;
-    cal_pose.pose.x = point->pose.x + pose.pose.x;
-    cal_pose.pose.y = point->pose.y + pose.pose.y;
-    cal_pose.pose.yaw = point->pose.yaw + pose.pose.yaw;
-
-    Nav_GoToDirect(&cal_pose);
-    if (!wait_tracker()) return false;
+#if MISSION_USE_RPI_CAL // 树莓派校准
+    if (!RPI_Cal(point)) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
@@ -304,11 +280,42 @@ static void pop_to_back(void) {
 }
 
 /**
+ * @brief 树莓派校准
+ * @param point 校准点
+ * @return 校准状态
+ */
+static bool RPI_Cal(TargetPoint_t *point) {
+    int16_t err_x, err_y;
+    RPI_Calibrate(&err_x, &err_y);
+    TargetPoint_t cal_pose;
+    memcpy(&cal_pose, point, sizeof(TargetPoint_t));
+
+    PoseTimestamp_t pose;
+    if (!Loc_Get(&pose)) return false;
+
+    // 将放点偏移（车正前方距离 mm → cm）根据当前航向解算到世界坐标系
+    float offset_cm = (float)MISSION_POP_OFFSET / 10.0f;
+    float yaw_rad = deg2rad(pose.pose.yaw);
+    float offset_x = offset_cm * cosf(yaw_rad);
+    float offset_y = offset_cm * sinf(yaw_rad);
+
+    // 当前位置 + 放点前向偏移 + 树莓派校准修正 = 实际放置位置
+    cal_pose.pose.x = pose.pose.x + offset_x + (float)err_x / 10.0f;
+    cal_pose.pose.y = pose.pose.y + offset_y + (float)err_y / 10.0f;
+    cal_pose.pose.yaw = pose.pose.yaw;
+
+    Nav_GoToDirect(&cal_pose);
+    if (!wait_tracker()) return false;
+    return true;
+}
+
+/**
  * @brief 设置总任务运行状态
  * @param running 运行状态
  */
 void mission_set_running(bool running) {
     mission_running = running;
+    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
 }
 
 /**

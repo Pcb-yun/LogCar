@@ -15,9 +15,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
 SENSOR_Color_t RPI_DetectColor(void);
-static bool RPI_Calibrate(int32_t *err_x, int32_t *err_y);
+bool RPI_Calibrate(int16_t *err_x, int16_t *err_y);
 void RPI_Detect_IDE(void);
 void RPI_Calibrate_IDE(void);
 

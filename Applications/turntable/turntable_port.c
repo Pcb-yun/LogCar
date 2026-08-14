@@ -7,6 +7,7 @@
 #include "turntable_port.h"
 #include "turntable_ctrl.h"
 #include "vl53l0x_port.h"
+#include "rpi_sensor_port.h"
 #include "task.h"
 #include "Events.h"
 #include "mission.h"
@@ -107,11 +108,11 @@ void Turntable_Port_Task(void *argument) {
             g_sto[sto_idx]->color = RPI_DetectColor();
 #endif
             logInfo("sto_idx: %d, id: %d, color: %s", sto_idx, g_sto[sto_idx]->id, matl_str[g_sto[sto_idx]->color]);
-            if (sto_idx == 5) goto cplt;
+            if (sto_idx == 4) goto cplt;
         } else if (g_port.type == TURNTABLE_TROP) {
             g_sto[sto_idx]->label = set_trop();
             logInfo("sto_idx: %d, id: %d, label: %s", sto_idx, g_sto[sto_idx]->id, trop_str[g_sto[sto_idx]->label]);
-            if (sto_idx == 3) goto cplt;
+            if (sto_idx == 2) goto cplt;
         } else {
             logWarning("unknown type"); continue;
         }
@@ -137,7 +138,7 @@ bool Turntable_Pop(TurntablePop_t pop) {
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->color == target_color) {
 				uint8_t out_id = g_sto[i]->id;
-				logPrintln("Pop MATL: sto_idx=%d, id=%d, target_color=%s, order=%d",
+				logInfo("sto_idx=%d, id=%d, target_color=%s, order=%d",
 				           i, out_id, matl_str[target_color], g_port.order + 1);
 				turntable_move_to_id(out_id);
 				g_sto[i]->color = COLOR_UNKNOWN;
@@ -150,7 +151,7 @@ bool Turntable_Pop(TurntablePop_t pop) {
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->label == target_label) {
 				uint8_t out_id = g_sto[i]->id;
-				logPrintln("Pop TROP: sto_idx=%d, id=%d, target_label=%s, order=%d",
+				logInfo("sto_idx=%d, id=%d, target_label=%s, order=%d",
 				           i, out_id, trop_str[target_label], g_port.order + 1);
 				turntable_move_to_id(out_id);
 				g_sto[i]->label = LABEL_NONE;
