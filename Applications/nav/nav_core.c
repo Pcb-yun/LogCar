@@ -837,7 +837,7 @@ void Nav_Task(void *argument) {
                 if (final_distance <= g_nav_core->cached_target->arrive.distance_threshold) {
                     g_nav_core->state = NAV_STATE_COMPLETE;
                     restore_motion_params();
-                    logInfo("Navigation complete after stopping, distance: %.2f", final_distance);
+                    // logInfo("Navigation complete after stopping, distance: %.2f", final_distance);
                 } else {
                     g_nav_core->state = NAV_STATE_RUNNING;
                     g_nav_core->current_speed_magnitude = 0.0f;
@@ -845,7 +845,7 @@ void Nav_Task(void *argument) {
                     // 恢复运行时重新分配一次超时窗口，防止多次启停累计触发超时
                     g_nav_core->arrive_timeout_tick = osKernelGetTickCount() +
                         g_nav_core->cached_target->arrive.timeout_ms;
-                    logInfo("Resuming navigation, final distance: %.2f", final_distance);
+                    // logInfo("Resuming navigation, final distance: %.2f", final_distance);
                 }
             }
         }

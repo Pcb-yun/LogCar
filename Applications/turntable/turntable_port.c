@@ -266,6 +266,24 @@ static void set_order(int argc, char *argv[]) {
     logPrintln("Set order: %d (internal: %d)", order, order - 1);
 }
 
+static void set_type(int argc, char *argv[]) {
+    if (argc != 2) {
+        logPrintln("Usage: %s <type>", argv[0]);
+        logPrintln("  type: MATL/TROP");
+        return;
+    }
+
+    if (strcmp(argv[1], "MATL") == 0) {
+        Turntable_Port_SetType(TURNTABLE_MATL);
+        logPrintln("Set type: MATL");
+    } else if (strcmp(argv[1], "TROP") == 0) {
+        Turntable_Port_SetType(TURNTABLE_TROP);
+        logPrintln("Set type: TROP");
+    } else {
+        logPrintln("Invalid type: %s", argv[1]);
+    }
+}
+
 /**
  * @brief 查看入库物料
  */
@@ -280,6 +298,7 @@ ShellCommand TURNroup[] = {
         SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pop, pop_test, turntable pop),
         SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, run, set_run, change automatic inventory entry),
         SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, order, set_order, set order index),
+        SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, type, set_type, set type),
         SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,

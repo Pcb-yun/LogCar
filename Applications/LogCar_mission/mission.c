@@ -30,6 +30,7 @@ static bool trop_pop(void);
 static bool Home_Sweet_home(void);
 static void pop_to_back(void);
 static bool RPI_Cal(TargetPoint_t *point);
+static bool wait_qr(void);
 
 static bool mission_running = false;
 
@@ -60,7 +61,6 @@ void mission_run(void *argument) {
     (void)argument;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
-    uint8_t barcode[2];
 
     for (;;) {
         osDelay(1);
@@ -83,10 +83,8 @@ void mission_run(void *argument) {
         Nav_GoTo_fromName("QrCode_1");
         if (!wait_tracker()) goto fail;
 
-        // // 读取二维码
-        // if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
-        // Turntable_SetOrder(barcode[0]);
-        Turntable_SetOrder(1);
+        // 等待二维码识别
+        if (!wait_qr()) goto fail;
 
         // 抓取物料
         if (!matl_grap()) goto fail;
@@ -94,23 +92,21 @@ void mission_run(void *argument) {
         // 放置物料
         if (!matl_pop()) goto fail;
 
-        // 二维码点2（奖杯顺序）
-        Nav_GoTo_fromName("QrCode_2");
-        if (!wait_tracker()) goto fail;
-
-        // 读取二维码
-        // if (!Scan_GetLatestBarcode(barcode, sizeof(barcode))) goto fail;
-        // Turntable_SetOrder(barcode[0]);
-        Turntable_SetOrder(1);
-
-        // 抓取奖杯
-        if (!trop_grap()) goto fail;
-
-        // 放置奖杯
-        if (!trop_pop()) goto fail;
-
-        // 回到home点
-        if (!Home_Sweet_home()) goto fail;
+//         // 二维码点2（奖杯顺序）
+//         Nav_GoTo_fromName("QrCode_2");
+//         if (!wait_tracker()) goto fail;
+//
+//         // 等待二维码识别
+//         if (!wait_qr()) goto fail;
+//
+//         // 抓取奖杯
+//         if (!trop_grap()) goto fail;
+//
+//         // 放置奖杯
+//         if (!trop_pop()) goto fail;
+//
+//         // 回到home点
+//         if (!Home_Sweet_home()) goto fail;
 
         Nav_Stop();
         mission_running = false;
@@ -169,15 +165,19 @@ static bool matl_pop(void) {
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) return false;
 
+        if (!Turntable_Pop((TurntablePop_t)i)) {
+            logWarning("pop failed");
+            // return false;
+        }
+
 #if MISSION_USE_RPI_CAL // 树莓派校准
-        if (!RPI_Cal(point)) return false;
+        if (!RPI_Cal(Map_GetPoint(point->id + i))) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
 #endif
 #endif
 
-        Turntable_Pop((TurntablePop_t)i);
         pop_to_back();
     }
     return true;
@@ -307,6 +307,29 @@ static bool RPI_Cal(TargetPoint_t *point) {
     Nav_GoToDirect(&cal_pose);
     if (!wait_tracker()) return false;
     return true;
+}
+
+/**
+ * @brief 等待二维码识别
+ * @return 二维码识别状态
+ */
+static bool wait_qr(void) {
+    uint8_t barcode[2];
+    uint32_t start_tick = osKernelGetTickCount();
+
+    while (1) {
+        if (!mission_running) return false;
+        if (Scan_GetLatestBarcode(barcode, sizeof(barcode))) {
+            Turntable_SetOrder(barcode[0] - 48);
+            logInfo("barcode: %d", barcode[0] - 48);
+            return true;
+        }
+        if (osKernelGetTickCount() - start_tick >= MISSION_QR_TIMEOUT) {
+            logWarning("qr timeout");
+            return false;
+        }
+        osDelay(1);
+    }
 }
 
 /**

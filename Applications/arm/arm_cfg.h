@@ -11,10 +11,10 @@
 #define ARM_LIFT_ACC 0.0f              // 提升舵机加速度
 #define ARM_LIFT_DEC 0.0f              // 提升舵机减速度
 
-#define ARM_LIFT_INIT_ANGLE -90.0f       // 初始角度
+#define ARM_LIFT_INIT_ANGLE 136.0f       // 初始角度
 
-#define ARM_LIFT_MIN_ANGLE 4.0f         // 最低角度
-#define ARM_LIFT_MAX_ANGLE -170.0f       // 最高角度
+#define ARM_LIFT_MIN_ANGLE 227.4f         // 最低角度
+#define ARM_LIFT_MAX_ANGLE 62.1f       // 最高角度
 
 
 /**
@@ -25,9 +25,9 @@
 #define ARM_FLIP_ACC 0.0f              // 翻转舵机加速度
 #define ARM_FLIP_DEC 0.0f              // 翻转舵机减速度
 
-#define ARM_FLIP_INIT_ANGLE -88.0f        // 初始角度
+#define ARM_FLIP_INIT_ANGLE -82.0f        // 初始角度
 
-#define ARM_FLIP_MIN_ANGLE -88.0f         // 收回角度
+#define ARM_FLIP_MIN_ANGLE -82.0f         // 收回角度
 #define ARM_FLIP_MAX_ANGLE -169.0f       // 水平角度
 
 #endif

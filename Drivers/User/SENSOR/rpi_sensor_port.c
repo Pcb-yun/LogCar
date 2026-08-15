@@ -28,7 +28,9 @@ SENSOR_Color_t RPI_DetectColor(void) {
     uint8_t color[1] = {0};
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, 200);
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, 2000) != HAL_OK) {
+        logWarning("receive timeout");
+    }
 
     RPI_Detect_IDE();
     return (SENSOR_Color_t)color[0];
@@ -49,11 +51,12 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     uint8_t rsp[4] = {0};
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 4, 200);
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 4, 2000) != HAL_OK) {
+        logWarning("receive timeout");
+    }
 
-    /* 根据方向确定符号：1为正轴，0为负轴 */
-    *err_y = (rsp[0] == 1) ? (int16_t)rsp[2] : -(int16_t)rsp[2];
-    *err_x = (rsp[1] == 1) ? (int16_t)rsp[3] : -(int16_t)rsp[3];
+    *err_x = (rsp[0] == 0) ? (int16_t)rsp[2] : -(int16_t)rsp[2];
+    *err_y = (rsp[1] == 0) ? (int16_t)rsp[3] : -(int16_t)rsp[3];
 
     RPI_Calibrate_IDE();
     return true;
