@@ -15,6 +15,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define RPI_WAIT_TIME 500 // 校准稳定等待时间 ms
+#define RPI_FRAME_HEAD 0xFE // 帧头
+
 SENSOR_Color_t RPI_DetectColor(void);
 bool RPI_Calibrate(int16_t *err_x, int16_t *err_y);
 void RPI_Detect_IDE(void);

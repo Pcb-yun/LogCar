@@ -34,7 +34,7 @@
 
 #define NAV_NEAR_TARGET_FACTOR       12.0f   // 到达锁定阈值倍数（相对于distance_threshold）
 #define NAV_NEAR_TARGET_MIN_SPEED    NAV_STARTUP_SPEED  // 接近目标时的最小微调速度（cm/s），基于启动速度
-#define NAV_ARRIVE_CHECK_COUNT       3       // 连续到达检查次数（防止惯性/打滑误判）
+#define NAV_ARRIVE_CHECK_COUNT       2       // 连续到达检查次数（防止惯性/打滑误判）
 #define NAV_ALIGN_XY_HYSTERESIS      0.2f    // 位置微调滞回（cm，防止小误差来回震荡）
 
 #define NAV_TRAJ_SPEED_CAP           60.0f   // 梯形规划近目标速度上限（cm/s），提高以减少速度突降

@@ -258,6 +258,7 @@ static void Queue_Info(void) {
     extern osMessageQueueId_t Usart6_Rx_DataHandle;
     extern osMessageQueueId_t Uart4_Rx_DataHandle;
     extern osMessageQueueId_t Servo_Tx_DataHandle;
+    extern osMessageQueueId_t Media_DataHandle;
 
     if (Usart1_Rx_DataHandle != NULL) {
         uint8_t count = osMessageQueueGetCount(Usart1_Rx_DataHandle);
@@ -301,6 +302,15 @@ static void Queue_Info(void) {
         uint16_t msg_size = osMessageQueueGetMsgSize(Servo_Tx_DataHandle);
         logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
                   Servo_Tx_DataHandle, "Servo_Tx_Data",
+                  count, capacity, msg_size);
+    }
+
+    if (Media_DataHandle != NULL) {
+        uint8_t count = osMessageQueueGetCount(Media_DataHandle);
+        uint8_t capacity = osMessageQueueGetCapacity(Media_DataHandle);
+        uint16_t msg_size = osMessageQueueGetMsgSize(Media_DataHandle);
+        logPrintln("%p  %-20s %3lu/%-3lu   %4lu bytes",
+                  Media_DataHandle, "Media_Data",
                   count, capacity, msg_size);
     }
 }

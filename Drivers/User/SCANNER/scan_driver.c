@@ -178,6 +178,8 @@ bool Scan_GetLatestBarcode(uint8_t *buf, uint16_t size)
 
     strncpy((char *)buf, pending.data, size - 1);
     buf[size - 1] = '\0';
+
+    pending.valid = false;
     return true;
 }
 

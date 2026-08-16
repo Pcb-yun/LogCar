@@ -34,6 +34,8 @@ typedef struct {
 
 bool Play_Image(const char *name);
 bool Play_Gif(const char *name);
+void Show_About(void);
+void Media_stop(void);
 
 
 

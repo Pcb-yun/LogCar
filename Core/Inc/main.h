@@ -67,11 +67,11 @@ void Error_Handler(void);
 #define LED_IDLE_GPIO_Port GPIOF
 #define KEY_UP_Pin GPIO_PIN_0
 #define KEY_UP_GPIO_Port GPIOA
-#define START_Pin GPIO_PIN_1
-#define START_GPIO_Port GPIOA
-#define START_EXTI_IRQn EXTI1_IRQn
 #define BATTERY_Pin GPIO_PIN_2
 #define BATTERY_GPIO_Port GPIOA
+#define START_Pin GPIO_PIN_3
+#define START_GPIO_Port GPIOA
+#define START_EXTI_IRQn EXTI3_IRQn
 #define OLED_CS_Pin GPIO_PIN_4
 #define OLED_CS_GPIO_Port GPIOA
 #define OLED_SCK_Pin GPIO_PIN_5

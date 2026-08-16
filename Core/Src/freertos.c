@@ -193,6 +193,13 @@ const osThreadAttr_t Turntable_Port_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal5,
 };
+/* Definitions for AD_Rotation */
+osThreadId_t AD_RotationHandle;
+const osThreadAttr_t AD_Rotation_attributes = {
+  .name = "AD_Rotation",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal4,
+};
 /* Definitions for Usart1_Rx_Data */
 osMessageQueueId_t Usart1_Rx_DataHandle;
 const osMessageQueueAttr_t Usart1_Rx_Data_attributes = {
@@ -278,6 +285,7 @@ extern void Oled_Refresh_Task(void *argument);
 extern void Media_Player_Task(void *argument);
 extern void Nav_Track_Task(void *argument);
 extern void Turntable_Port_Task(void *argument);
+extern void AD_Rotation_Task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -504,6 +512,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of Turntable_Port */
   Turntable_PortHandle = osThreadNew(Turntable_Port_Task, NULL, &Turntable_Port_attributes);
 
+  /* creation of AD_Rotation */
+  AD_RotationHandle = osThreadNew(AD_Rotation_Task, NULL, &AD_Rotation_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -639,3 +650,4 @@ void Sys_Init_Task(void *argument)
 /* USER CODE BEGIN Application */
 
 /* USER CODE END Application */
+

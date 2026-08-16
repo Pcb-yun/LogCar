@@ -83,6 +83,9 @@ void mission_run(void *argument) {
         Nav_GoTo_fromName("QrCode_1");
         if (!wait_tracker()) goto fail;
 
+        int16_t err_x = 0, err_y = 0;
+        RPI_Calibrate(&err_x, &err_y);
+
         // 等待二维码识别
         if (!wait_qr()) goto fail;
 
@@ -92,21 +95,21 @@ void mission_run(void *argument) {
         // 放置物料
         if (!matl_pop()) goto fail;
 
-//         // 二维码点2（奖杯顺序）
-//         Nav_GoTo_fromName("QrCode_2");
-//         if (!wait_tracker()) goto fail;
-//
-//         // 等待二维码识别
-//         if (!wait_qr()) goto fail;
-//
-//         // 抓取奖杯
-//         if (!trop_grap()) goto fail;
-//
-//         // 放置奖杯
-//         if (!trop_pop()) goto fail;
-//
-//         // 回到home点
-//         if (!Home_Sweet_home()) goto fail;
+        // 二维码点2（奖杯顺序）
+        Nav_GoTo_fromName("QrCode_2");
+        if (!wait_tracker()) goto fail;
+
+        // 等待二维码识别
+        if (!wait_qr()) goto fail;
+
+        // 抓取奖杯
+        if (!trop_grap()) goto fail;
+
+        // 放置奖杯
+        if (!trop_pop()) goto fail;
+
+        // 回到home点
+        if (!Home_Sweet_home()) goto fail;
 
         Nav_Stop();
         mission_running = false;
@@ -223,15 +226,15 @@ static bool trop_pop(void) {
     TargetPoint_t *point = Map_GetPointByName("SECOND");
     if (point == NULL) return false;
 
-    arm_action(ARM_ACTION_STAGE_2_PULL_UP);
-
     Nav_GoTo_fromName("OA2");
     if (!wait_tracker()) return false;
+
+    arm_action(ARM_ACTION_STAGE_2_PULL_UP);
 
     for (uint8_t i = 0; i < 3; i++) {
         switch (i) {
             case 1: arm_action(ARM_ACTION_STAGE_1_PULL_UP); break;
-            case 2: arm_action(ARM_ACTION_PULL_DOWN); break;
+            case 2: arm_action(ARM_ACTION_PULL_DOWN); osDelay(MISSION_TROP_DOWN_WAIT); break;
             default: break;
         }
 
@@ -239,7 +242,7 @@ static bool trop_pop(void) {
         if (!wait_tracker()) return false;
 
 #if MISSION_USE_RPI_CAL // 树莓派校准
-    if (!RPI_Cal(point)) return false;
+        if (!RPI_Cal(Map_GetPoint(point->id + i))) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
@@ -247,12 +250,19 @@ static bool trop_pop(void) {
 #endif
 
         switch (i) {
-            case 0: arm_action(ARM_ACTION_STAGE_2_PULL_DOWN); break;
-            case 1: arm_action(ARM_ACTION_STAGE_1_PULL_DOWN); break;
+            case 0: arm_action(ARM_ACTION_STAGE_2_PULL_DOWN); osDelay(MISSION_TROP_DOWN_WAIT); break;
+            case 1: arm_action(ARM_ACTION_STAGE_1_PULL_DOWN); osDelay(MISSION_TROP_DOWN_WAIT); break;
             default: break;
         }
 
+        if (!Turntable_Pop((TurntablePop_t)(i + 1))) {
+            logWarning("pop failed");
+            // return false;
+        }
+
+        osDelay(MISSION_TROP_BACK_WAIT);
         pop_to_back();
+        MotionControl_SetPosition(0.0f, 8.0f, 0.0f);
     }
     return true;
 }
@@ -263,8 +273,8 @@ static bool trop_pop(void) {
  */
 static bool Home_Sweet_home(void) {
     arm_action(ARM_ACTION_INIT);
-    Nav_GoTo_fromName("OA3");
-    if (!wait_tracker()) return false;
+    // Nav_GoTo_fromName("OA3");
+    // if (!wait_tracker()) return false;
     Nav_GoTo_fromName("SWEET_HOME");
     if (!wait_tracker()) return false;
     return true;
@@ -286,7 +296,7 @@ static void pop_to_back(void) {
  */
 static bool RPI_Cal(TargetPoint_t *point) {
     int16_t err_x, err_y;
-    RPI_Calibrate(&err_x, &err_y);
+    if (!RPI_Calibrate(&err_x, &err_y)) return false;
     TargetPoint_t cal_pose;
     memcpy(&cal_pose, point, sizeof(TargetPoint_t));
 
@@ -303,6 +313,8 @@ static bool RPI_Cal(TargetPoint_t *point) {
     cal_pose.pose.x = pose.pose.x + offset_x + (float)err_x / 10.0f;
     cal_pose.pose.y = pose.pose.y + offset_y + (float)err_y / 10.0f;
     cal_pose.pose.yaw = pose.pose.yaw;
+
+    logInfo("err_x: %d err_y: %d perr_x: %f perr_y: %f", err_x, err_y, cal_pose.pose.x  - pose.pose.x, cal_pose.pose.y - pose.pose.y);
 
     Nav_GoToDirect(&cal_pose);
     if (!wait_tracker()) return false;

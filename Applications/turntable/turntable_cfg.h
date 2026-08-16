@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #define TURNTABLE_SERVO_ID 1                // 转盘模块舵机ID
-#define TURNTABLE_ID_0_ANGLE 8.0f          // 转盘模块ID 0 对应的角度
+#define TURNTABLE_ID_0_ANGLE 9.0f          // 转盘模块ID 0 对应的角度
 #define TURNTABLE_ANGLE 36.0f               // 转盘模块入库间隔角度
 #define TURNTABLE_CLOSE_OFFSET 10.0f        // 转盘模块关闭角度偏移
 #define TURNTABLE_ID_MAX 5                  // 转盘模块最大ID

@@ -53,6 +53,8 @@ static const TropLabel_t trop_order[6][3] = {
     /* 6 CBA */ {LABEL_C, LABEL_B, LABEL_A},
 };
 
+static const TropLabel_t trop_pop[4] = {LABEL_NONE, LABEL_B, LABEL_A, LABEL_C};
+
 /**
  * @brief 初始化转盘入库信息
  * @param sto 转盘入库信息指针
@@ -119,6 +121,7 @@ void Turntable_Port_Task(void *argument) {
         sto_idx++; continue;
 
     cplt:
+        sto_idx = 0;
         osEventFlagsSet(System_StatusHandle, TURNTABLE_CPLT);
         osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
         turntable_move_to_close();
@@ -133,7 +136,7 @@ void Turntable_Port_Task(void *argument) {
 bool Turntable_Pop(TurntablePop_t pop) {
 	uint8_t pop_idx = pop;
 
-	if (pop <= MATL_E) {
+	if (g_port.type == TURNTABLE_MATL) {
 		SENSOR_Color_t target_color = matl_order[g_port.order][pop_idx];
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->color == target_color) {
@@ -146,8 +149,8 @@ bool Turntable_Pop(TurntablePop_t pop) {
 			}
 		}
 		return false;
-	} else {
-		TropLabel_t target_label = trop_order[g_port.order][pop_idx - 5];
+	} else if (g_port.type == TURNTABLE_TROP) {
+		TropLabel_t target_label = trop_pop[pop_idx];
 		for (uint8_t i = 0; i < TURNTABLE_STO_NUM; i++) {
 			if (g_sto[i]->label == target_label) {
 				uint8_t out_id = g_sto[i]->id;
@@ -158,6 +161,9 @@ bool Turntable_Pop(TurntablePop_t pop) {
 				return true;
 			}
 		}
+		return false;
+	} else {
+		logWarning("unknown type");
 		return false;
 	}
 }
@@ -191,11 +197,11 @@ TurntableType_t Turntable_Port_GetType(void) {
  * @return 奖杯标签
  */
 static TropLabel_t set_trop(void) {
-    static uint8_t count = 0;
-    TropLabel_t label = trop_order[g_port.order][count];
-    if (count >= 3) count = 0;
-    else count++;
-    return label;
+	static int8_t count = 2;
+	TropLabel_t label = trop_order[g_port.order - 1][count];
+	if (count <= 0) count = 2;
+	else count--;
+	return label;
 }
 
 /**
@@ -223,13 +229,13 @@ static void pop_test(int argc, char *argv[]) {
 	if (argc != 2) {
 		logPrintln("Usage: %s <pop_idx>", argv[0]);
 		logPrintln("  MATL: 0=A, 1=B, 2=C, 3=D, 4=E  (set order first: 1-16)");
-		logPrintln("  TROP: 5=A, 6=B, 7=C           (set order first: 1-6)");
+		logPrintln("  TROP: 2=A, 1=B, 3=C           (set order first: 1-6)");
 		return;
 	}
 
 	uint8_t pop_idx = atoi(argv[1]);
-	if (pop_idx > TROP_C) {
-		logPrintln("Invalid pop_idx: %d (range: 0-7)", pop_idx);
+	if (pop_idx > 4) {
+		logPrintln("Invalid pop_idx: %d (range: 0-4)", pop_idx);
 		return;
 	}
 
@@ -262,8 +268,8 @@ static void set_order(int argc, char *argv[]) {
         return;
     }
 
-    Turntable_SetOrder(order - 1);
-    logPrintln("Set order: %d (internal: %d)", order, order - 1);
+    Turntable_SetOrder(order);
+    logPrintln("Set order: %d", order);
 }
 
 static void set_type(int argc, char *argv[]) {

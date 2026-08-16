@@ -51,7 +51,7 @@ void arm_lift_move_by_velocity(float angle, float velocity){
  * @brief 机械臂升降舵机回到初始角度
  */
 void arm_lift_move_to_init(void){
-    arm_lift_move_by_velocity(ARM_LIFT_INIT_ANGLE, 100); 
+    arm_lift_move_by_velocity(ARM_LIFT_INIT_ANGLE, 200);
 }
 
 /**

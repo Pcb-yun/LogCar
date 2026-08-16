@@ -11,6 +11,7 @@
 #include "shell_cmd_group.h"
 #include "log.h"
 #include <string.h>
+#include "cmsis_os2.h"
 
 /**
  * @brief 初始化树莓派通信
@@ -28,6 +29,7 @@ SENSOR_Color_t RPI_DetectColor(void) {
     uint8_t color[1] = {0};
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
+    osDelay(RPI_WAIT_TIME);
     if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, 2000) != HAL_OK) {
         logWarning("receive timeout");
     }
@@ -48,15 +50,30 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     }
 
     uint8_t cmd = 0x0A;
-    uint8_t rsp[4] = {0};
+    uint8_t rsp[7] = {0};
+    uint8_t *p = NULL;
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 4, 2000) != HAL_OK) {
+    osDelay(RPI_WAIT_TIME);
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, 2000) != HAL_OK) {
         logWarning("receive timeout");
+        return false;
     }
 
-    *err_x = (rsp[0] == 0) ? (int16_t)rsp[2] : -(int16_t)rsp[2];
-    *err_y = (rsp[1] == 0) ? (int16_t)rsp[3] : -(int16_t)rsp[3];
+    // 在字节流中定位帧头 0xAA，剩余字段需至少5字节
+    for (uint8_t i = 0; i + 5 <= 7; i++) {
+        if (rsp[i] == RPI_FRAME_HEAD) {
+            p = &rsp[i];
+            break;
+        }
+    }
+    if (p == NULL) {
+        logWarning("frame head not found");
+        return false;
+    }
+
+    *err_x = (p[1] == 0) ? (int16_t)p[3] : -(int16_t)p[3];
+    *err_y = (p[2] == 0) ? (int16_t)p[4] : -(int16_t)p[4];
 
     RPI_Calibrate_IDE();
     return true;

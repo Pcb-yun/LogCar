@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-#define IMG2C_PICACG                   1	// 是否编译
+#define IMG2C_PICACG                   0	// 是否编译
 #if IMG2C_PICACG
 
 #define PICACG_WIDTH                  64	// 图像宽度(像素)

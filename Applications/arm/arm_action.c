@@ -23,24 +23,24 @@ void arm_action(arm_action_t action){
             arm_action_init();
             break;
         case ARM_ACTION_PULL_DOWN:
-            arm_lift_move_by_velocity(ARM_LIFT_MIN_ANGLE,100);   // 下拉机械臂
-            arm_flip_move_to(ARM_FLIP_MAX_ANGLE);   // 翻转转盘
+            arm_lift_move_by_velocity(ARM_LIFT_MIN_ANGLE,200);
+            arm_flip_move_to(ARM_FLIP_MAX_ANGLE);
             break;
         case ARM_ACTION_STAGE_1_PULL_UP:
-            arm_lift_move_by_velocity(-140,100);
-            arm_flip_move_by_velocity(-163,200);
+            arm_lift_move_by_velocity(ARM_ACTION_STAGE1_DOWN_LIFT - ARM_ACTION_UP_OFFSET,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_DOWN_FLIP,200);
             break;
         case ARM_ACTION_STAGE_1_PULL_DOWN:
-            arm_lift_move_by_velocity(-130,100);
-            arm_flip_move_by_velocity(ARM_FLIP_MAX_ANGLE+5,200);
+            arm_lift_move_by_velocity(ARM_ACTION_STAGE1_DOWN_LIFT,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_DOWN_FLIP,200);
             break;
         case ARM_ACTION_STAGE_2_PULL_UP:
-            arm_lift_move_by_velocity(-120,100);
-            arm_flip_move_by_velocity(-163,200);
+            arm_lift_move_by_velocity(ARM_ACTION_STAGE2_DOWN_LIFT - ARM_ACTION_UP_OFFSET,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE2_DOWN_FLIP,200);
             break;
         case ARM_ACTION_STAGE_2_PULL_DOWN:
-            arm_lift_move_by_velocity(-110,100);
-            arm_flip_move_by_velocity(ARM_FLIP_MAX_ANGLE+5,200);
+            arm_lift_move_by_velocity(ARM_ACTION_STAGE2_DOWN_LIFT,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE2_DOWN_FLIP,200);
             break;
         default:
             break;

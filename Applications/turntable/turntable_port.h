@@ -16,7 +16,7 @@ extern "C" {
 #include "sensor.h"
 
 static const char *matl_str[6] = {"unknown", "black", "white", "red", "green", "blue"};
-static const char *trop_str[3] = {"A", "B", "C"};
+static const char *trop_str[4] = {"unknown", "A", "B", "C"};
 
 /**
  * @brief 转盘存放类型枚举

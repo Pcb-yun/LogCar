@@ -241,14 +241,17 @@ static float trapezoidal_speed_planner(float remaining_dist, float current_speed
     float decel_dist = (current_speed * current_speed) / (2.0f * deceleration);
 
     if (remaining_dist < decel_dist) {
+        // 减速阶段：允许自然减速到0，不钳位min_speed，避免距离跌破0.5cm时速度跳变
         float target_speed = sqrtf(2.0f * deceleration * remaining_dist);
-        if (target_speed < min_speed) target_speed = min_speed;
         if (target_speed > NAV_TRAJ_SPEED_CAP) target_speed = NAV_TRAJ_SPEED_CAP;
         float speed_diff = target_speed - current_speed;
         float max_decel_change = deceleration * dt;
         if (speed_diff < -max_decel_change) speed_diff = -max_decel_change;
-        return current_speed + speed_diff;
+        float result = current_speed + speed_diff;
+        if (result < 0.0f) result = 0.0f;
+        return result;
     } else {
+        // 加速/匀速阶段：保留min_speed钳位保证起步能力
         float target_speed = max_speed;
         float speed_diff = target_speed - current_speed;
         float max_accel_change = acceleration * dt;
@@ -742,14 +745,35 @@ void Nav_Task(void *argument) {
                     // 远→近过渡阶段，在上一帧远距离速度与当前纯P输出之间线性混合
                     if (g_nav_core->near_transition_count > 0) {
                         float alpha = 1.0f - (float)g_nav_core->near_transition_count / (float)NAV_NEAR_TRANSITION_FRAMES;
-                        // 若起点速度为0（刚起步就进入近目标），跳过过渡直接用纯P
+                        // 若起点速度接近0（刚起步就进入近目标），跳过过渡直接用纯P
                         float start_speed = sqrtf(g_nav_core->trans_last_ff_vx * g_nav_core->trans_last_ff_vx +
                                                   g_nav_core->trans_last_ff_vy * g_nav_core->trans_last_ff_vy);
-                        if (start_speed > 0.5f) {
+                        if (start_speed > NAV_STARTUP_SPEED * 0.3f) {
                             desired_vx = g_nav_core->trans_last_ff_vx * (1.0f - alpha) + feedback_vx * alpha;
                             desired_vy = g_nav_core->trans_last_ff_vy * (1.0f - alpha) + feedback_vy * alpha;
                         }
                         g_nav_core->near_transition_count--;
+                    }
+
+                    // 低速起步补偿：放在apply_accel_limit之前，且方向按误差（body_dx/dy）
+                    // 关键：横移刚过目标时，误差反向但apply受last_vx限制还没反向，
+                    // 若按out_vx方向补偿会锁死在推离方向，因此必须按body_dx/dy符号补偿
+                    float desired_speed = sqrtf(desired_vx * desired_vx + desired_vy * desired_vy);
+                    if (desired_speed > 0.0f && desired_speed < NAV_STARTUP_SPEED && body_dist > deadband) {
+                        float sign_x = (body_dx > 0) ? 1.0f : ((body_dx < 0) ? -1.0f : 0.0f);
+                        float sign_y = (body_dy > 0) ? 1.0f : ((body_dy < 0) ? -1.0f : 0.0f);
+                        if (sign_x != 0.0f || sign_y != 0.0f) {
+                            float delta = NAV_STARTUP_SPEED - desired_speed;
+                            if (sign_x != 0.0f && sign_y != 0.0f) {
+                                float ratio_x = fabsf(desired_vx) / desired_speed;
+                                float ratio_y = fabsf(desired_vy) / desired_speed;
+                                desired_vx += sign_x * delta * ratio_x;
+                                desired_vy += sign_y * delta * ratio_y;
+                            } else {
+                                desired_vx += sign_x * delta;
+                                desired_vy += sign_y * delta;
+                            }
+                        }
                     }
 
                     float near_acceleration = acceleration * NAV_NEAR_ACCEL_MULTIPLIER;
@@ -758,28 +782,6 @@ void Nav_Task(void *argument) {
                                      near_acceleration, near_deceleration, dt);
 
                     float speed = sqrtf(out_vx * out_vx + out_vy * out_vy);
-
-                    // 用低速补偿替代强制启动速度缩放：有误差才补一个固定偏移，避免反复跳变
-                    if (speed > 0.0f && speed < NAV_STARTUP_SPEED && body_dist > deadband) {
-                        float sign_x = (out_vx > 0) ? 1.0f : ((out_vx < 0) ? -1.0f : 0.0f);
-                        float sign_y = (out_vy > 0) ? 1.0f : ((out_vy < 0) ? -1.0f : 0.0f);
-                        if (sign_x != 0.0f || sign_y != 0.0f) {
-                            float delta = NAV_STARTUP_SPEED - speed;
-                            if (sign_x != 0.0f && sign_y != 0.0f) {
-                                // 两个方向都有分量，按比例分配补偿量
-                                float ratio_x = fabsf(out_vx) / speed;
-                                float ratio_y = fabsf(out_vy) / speed;
-                                out_vx += sign_x * delta * ratio_x;
-                                out_vy += sign_y * delta * ratio_y;
-                            } else {
-                                out_vx += sign_x * delta;
-                                out_vy += sign_y * delta;
-                            }
-                            g_nav_core->last_vx = out_vx;
-                            g_nav_core->last_vy = out_vy;
-                            speed = NAV_STARTUP_SPEED;
-                        }
-                    }
 
                     float max_near_speed = NAV_TRAJ_SPEED_CAP;
                     if (speed > max_near_speed) {
@@ -837,7 +839,6 @@ void Nav_Task(void *argument) {
                 if (final_distance <= g_nav_core->cached_target->arrive.distance_threshold) {
                     g_nav_core->state = NAV_STATE_COMPLETE;
                     restore_motion_params();
-                    // logInfo("Navigation complete after stopping, distance: %.2f", final_distance);
                 } else {
                     g_nav_core->state = NAV_STATE_RUNNING;
                     g_nav_core->current_speed_magnitude = 0.0f;
@@ -845,7 +846,6 @@ void Nav_Task(void *argument) {
                     // 恢复运行时重新分配一次超时窗口，防止多次启停累计触发超时
                     g_nav_core->arrive_timeout_tick = osKernelGetTickCount() +
                         g_nav_core->cached_target->arrive.timeout_ms;
-                    // logInfo("Resuming navigation, final distance: %.2f", final_distance);
                 }
             }
         }
