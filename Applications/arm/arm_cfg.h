@@ -19,8 +19,9 @@
 
 #define ARM_LIFT_INIT_ANGLE 70.0f       // 初始角度
 
-#define ARM_LIFT_MIN_ANGLE 200.0f         // 最低角度
-#define ARM_LIFT_MAX_ANGLE -5.0f       // 最高角度
+#define ARM_LIFT_MIN_ANGLE 284.5f         // 最低角度
+#define ARM_LIFT_MID_ANGLE 236.5f         // 中间角度
+#define ARM_LIFT_MAX_ANGLE 117.8f       // 最高角度
 
 
 /**

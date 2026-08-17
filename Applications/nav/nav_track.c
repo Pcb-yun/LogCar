@@ -46,6 +46,12 @@ typedef struct {
     uint32_t lost_start_tick;       // 开始丢线时间戳
     bool lost_flag;                 // 丢线标志
     bool smooth_initialized;        // 滤波是否已初始化（首帧直接取原始值，避免微分突变）
+    /* 弯道自动检测状态（跑道形状：直线+半圆交替） */
+    float error_avg;                // error 慢速滤波（用于检测稳态偏置）
+    bool curve_active;              // 是否处于弯道状态
+    int8_t curve_dir;               // 当前弯道逻辑方向：1=需右转(error_avg>0), -1=需左转(error_avg<0)
+    uint32_t curve_enter_tick;      // 进入弯道计时
+    uint32_t curve_exit_tick;       // 退出弯道计时
 } NavTrack_t;
 
 static NavTrack_t *g_nav_track = NULL;
@@ -140,6 +146,7 @@ bool Nav_Track_Init(void) {
     g_nav_track->params.line_polarity = NAV_TRACK_LINE_POLARITY_POSITIVE;         // 线极性 (1:正, 0:负)
     g_nav_track->params.steering_dir = NAV_TRACK_STEERING_DIR_LEFT;                 // 转向方向 (1:左转, -1:右转)
     g_nav_track->params.run_time_ms = NAV_TRACK_RUN_TIME_MS;     // 巡线运行时间 (ms)
+    g_nav_track->params.path_radius_cm = NAV_TRACK_PATH_RADIUS_CM; // 路径半径(cm)，0=禁用前馈
 
     is_init = true;
     return true;
@@ -165,6 +172,11 @@ bool Nav_Track_Start(void) {
     g_nav_track->lost_flag = false;
     g_nav_track->lost_start_tick = 0;
     g_nav_track->smooth_initialized = false;
+    g_nav_track->error_avg = 0.0f;
+    g_nav_track->curve_active = false;
+    g_nav_track->curve_dir = 0;
+    g_nav_track->curve_enter_tick = 0;
+    g_nav_track->curve_exit_tick = 0;
 
     MotionControl_SetMotionParams(g_nav_track->params.forward_speed,
                                    g_nav_track->params.max_yaw_speed,
@@ -245,8 +257,7 @@ void Nav_Track_Task(void *argument) {
         g_nav_track->last_tick = current_tick;
 
         /* 调试日志节流：每100ms打印一次，避免刷屏 */
-        // bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
-        bool dbg_allow = 0;
+        bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
         if (dbg_allow) last_dbg_tick = current_tick;
 
         /* 运行时长检测 */
@@ -285,20 +296,83 @@ void Nav_Track_Task(void *argument) {
             }
             error = g_nav_track->error_smooth;
 
-            /* 转向死区：接近居中时不打方向，防止蛇形（仍更新微分基准） */
+            /* 路径曲率前馈：按 error 稳态偏置自动检测直线/弯道
+             * 直线段 error_avg≈0 → 前馈=0，行为与原版一致；
+             * 半圆段 error_avg 持续偏一侧 → 前馈提供 v/R 稳态转向，PID 仅补小偏差。
+             * 跑道两端半圆方向相反，由 error_avg 符号自动区分。 */
+            float ff_yaw = 0.0f;
+            if (g_nav_track->params.path_radius_cm > 1.0f) {
+                /* error 慢速滤波（首帧直接取原始值，避免从0慢慢爬） */
+                if (!g_nav_track->smooth_initialized ||
+                    fabsf(g_nav_track->error_avg) < 0.001f) {
+                    g_nav_track->error_avg = error;
+                } else {
+                    g_nav_track->error_avg = g_nav_track->error_avg *
+                                              (1.0f - NAV_TRACK_CURVE_DETECT_ALPHA) +
+                                              error * NAV_TRACK_CURVE_DETECT_ALPHA;
+                }
+
+                if (!g_nav_track->curve_active) {
+                    /* 检测进入弯道：|error_avg| 超阈值持续确认时间 */
+                    if (fabsf(g_nav_track->error_avg) > NAV_TRACK_CURVE_ENTER_THRESHOLD) {
+                        if (g_nav_track->curve_enter_tick == 0) {
+                            g_nav_track->curve_enter_tick = current_tick;
+                        } else if ((current_tick - g_nav_track->curve_enter_tick) >=
+                                   NAV_TRACK_CURVE_CONFIRM_MS) {
+                            g_nav_track->curve_active = true;
+                            g_nav_track->curve_dir = (g_nav_track->error_avg > 0) ? 1 : -1;
+                            g_nav_track->curve_exit_tick = 0;
+                            logInfo("Curve entered, dir=%d (1=R, -1=L)", g_nav_track->curve_dir);
+                        }
+                    } else {
+                        g_nav_track->curve_enter_tick = 0;
+                    }
+                } else {
+                    /* 检测退出弯道：|error_avg| 低于阈值持续确认时间 */
+                    if (fabsf(g_nav_track->error_avg) < NAV_TRACK_CURVE_EXIT_THRESHOLD) {
+                        if (g_nav_track->curve_exit_tick == 0) {
+                            g_nav_track->curve_exit_tick = current_tick;
+                        } else if ((current_tick - g_nav_track->curve_exit_tick) >=
+                                   NAV_TRACK_CURVE_CONFIRM_MS) {
+                            g_nav_track->curve_active = false;
+                            g_nav_track->curve_enter_tick = 0;
+                            logInfo("Curve exited");
+                        }
+                    } else {
+                        g_nav_track->curve_exit_tick = 0;
+                    }
+                    /* 弯道中：前馈方向锁死为进入时的方向，不随瞬时 error 翻转
+                     * 半圆是连续转弯，PID 过冲导致 err 短暂反号是正常的，
+                     * 不能据此翻转前馈方向（否则雪上加霜）。
+                     * 跑道两端方向相反由"退出再进入"自动处理：avg 回零→退出→下次进入重新判断 */
+                    float ff_mag = (g_nav_track->params.forward_speed /
+                                    g_nav_track->params.path_radius_cm) * RAD_TO_DEG;
+                    ff_yaw = -(float)g_nav_track->curve_dir * ff_mag *
+                             g_nav_track->params.steering_dir;
+                    ff_yaw = clamp(ff_yaw, -g_nav_track->params.max_yaw_speed,
+                                   g_nav_track->params.max_yaw_speed);
+                }
+            }
+
+            /* 转向死区：接近居中时仅输出前馈，防止蛇形（仍更新微分基准） */
             if (fabsf(error) < NAV_TRACK_YAW_DEADBAND) {
                 g_nav_track->last_error = error;
-                MotionControl_SetVelocity(g_nav_track->params.forward_speed, 0.0f, 0.0f);
-                if (dbg_allow) logDebug("ntrack err: %.2f, yaw: 0.0", error);
+                MotionControl_SetVelocity(g_nav_track->params.forward_speed, 0.0f, ff_yaw);
+                if (dbg_allow) logDebug("ntrack err: %.2f, yaw: %.1f (ff:%.1f), avg:%.2f",
+                                        error, ff_yaw, ff_yaw, g_nav_track->error_avg);
                 continue;
             }
 
             float pid_yaw = pid_compute(error, dt);
             /* 线在右(误差为正)时右转(负角速度)，与丢线搜索方向保持一致 */
-            float yaw_speed = -pid_yaw * g_nav_track->params.steering_dir;
+            float yaw_speed = -pid_yaw * g_nav_track->params.steering_dir + ff_yaw;
+            yaw_speed = clamp(yaw_speed, -g_nav_track->params.max_yaw_speed,
+                              g_nav_track->params.max_yaw_speed);
 
-            /* 速度-转向协调：转向需求大时自动减速，提高弯道转弯能力 */
-            float steer_ratio = fabsf(yaw_speed) / g_nav_track->params.max_yaw_speed;
+            /* 速度-转向协调：转向需求大时自动减速，提高弯道转弯能力
+             * 注意：steer_ratio 只看 PID 部分，前馈不算"过冲"，避免稳态前馈持续减速 */
+            float steer_ratio = fabsf(-pid_yaw * g_nav_track->params.steering_dir) /
+                                g_nav_track->params.max_yaw_speed;
             float vx = g_nav_track->params.forward_speed *
                        (1.0f - NAV_TRACK_SPEED_REDUCE_RATIO * steer_ratio);
             vx = clamp(vx, g_nav_track->params.forward_speed * 0.35f,
@@ -306,7 +380,8 @@ void Nav_Track_Task(void *argument) {
 
             MotionControl_SetVelocity(vx, 0.0f, yaw_speed);
 
-            if (dbg_allow) logDebug("ntrack err: %.2f, yaw: %.1f, vx: %.1f", error, yaw_speed, vx);
+            if (dbg_allow) logDebug("ntrack err: %.2f, yaw: %.1f (ff:%.1f), vx: %.1f, avg:%.2f",
+                                     error, yaw_speed, ff_yaw, vx, g_nav_track->error_avg);
         } else {
             /* 丢线：原地转向搜索 */
             if (!g_nav_track->lost_flag) {
@@ -534,6 +609,19 @@ static void ntrack_time_shell(int argc, char *argv[]) {
     logPrintln("run time = %u ms", g_nav_track->params.run_time_ms);
 }
 
+static void ntrack_info_shell(int argc, char *argv[]) {
+    if (!is_init) { logWarning("Nav track module not initialized"); return; }
+    logPrintln("Nav track module info");
+    logPrintln("  forward speed = %.1f cm/s", g_nav_track->params.forward_speed);
+    logPrintln("  kp = %.2f", g_nav_track->params.kp);
+    logPrintln("  ki = %.3f", g_nav_track->params.ki);
+    logPrintln("  kd = %.2f", g_nav_track->params.kd);
+    logPrintln("  max yaw speed = %.1f deg/s", g_nav_track->params.max_yaw_speed);
+    logPrintln("  line polarity = %d", g_nav_track->params.line_polarity);
+    logPrintln("  steering direction = %d", g_nav_track->params.steering_dir);
+    logPrintln("  run time = %u ms", g_nav_track->params.run_time_ms);
+}
+
 ShellCommand NavTrackGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, start, ntrack_start_shell, start line following),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, stop, ntrack_stop_shell, stop line following),
@@ -547,6 +635,7 @@ ShellCommand NavTrackGroup[] = {
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, pol, ntrack_pol_shell, set line polarity),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, dir, ntrack_dir_shell, set steering direction),
     SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, time, ntrack_time_shell, set run time ms),
+    SHELL_CMD_GROUP_ITEM(SHELL_TYPE_CMD_MAIN|SHELL_CMD_DISABLE_RETURN, info, ntrack_info_shell, show info),
     SHELL_CMD_GROUP_END()
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,

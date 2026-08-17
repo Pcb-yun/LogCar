@@ -36,6 +36,7 @@ typedef struct {
     int8_t line_polarity;    // 传感器极性: 1=bit为1表示检测到黑线; 0=bit为0表示检测到黑线
     int8_t steering_dir;     // 转向方向: 1=线偏右时右转; -1=反向
     uint32_t run_time_ms;    // 巡线运行时长 (ms)，0=持续运行直到调用Stop
+    float path_radius_cm;    // 路径半径(cm)，0=禁用曲率前馈；>0时按 v/R 提供稳态转向偏置
 } NavTrackParams_t;
 
 bool Nav_Track_Init(void);
