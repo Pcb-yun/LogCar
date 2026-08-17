@@ -46,6 +46,16 @@ void turntable_move_to(float angle){
 }
 
 /**
+ * @brief 转盘模块移动到指定角度（基于当前位置走最短路径）
+ * @param angle 角度值
+ * @param interval 旋转间隔（度/秒）
+ */
+void turntable_move_to_int(float angle, int interval){
+    turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
+    Servo_MTURN(TURNTABLE_SERVO_ID, turntable_angle_current, interval, 0);
+}
+
+/**
  * @brief 转盘模块移动到关闭位置（基于当前位置走最短路径）
  */
 void turntable_move_to_close(void){
@@ -62,6 +72,19 @@ void turntable_move_to_id(uint8_t id){
         return;
     }
     turntable_move_to(turntable_id[id]);
+}
+
+/**
+ * @brief 转盘模块移动到指定ID（基于当前位置走最短路径）
+ * @param id ID值
+ * @param interval 旋转间隔（度/秒）
+ */
+void turntable_move_to_id_int(uint8_t id, int interval){
+    if (id >= TURNTABLE_ID_MAX){
+        logPrintln("turntable: id %u out of range", id);
+        return;
+    }
+    turntable_move_to_int(turntable_id[id], interval);
 }
 
 /**
@@ -105,13 +128,13 @@ void turntable_move_to_next(uint8_t direction) {
  */
 static void turntable_Shell(int argc, char *argv[]){
     if (argc != 2 && argc != 3){
-        logPrintln("Usage: turntable <id> | init | help");
+        logPrintln("Usage: turntable id <N> | id <N> <interval> | init | help");
         return;
     }
 
     if (strcmp(argv[1], "help") == 0){
         logPrintln("turntable: move the turntable to a specific angle or id");
-        logPrintln("  turntable <id> | init | help");
+        logPrintln("  turntable id <N> | id <N> <interval> | init | help");
         return;
     }else if (strcmp(argv[1], "id") == 0){
         if (argc != 3){
@@ -123,7 +146,12 @@ static void turntable_Shell(int argc, char *argv[]){
             logPrintln("turntable: invalid id");
             return;
         }
-        turntable_move_to_id((uint8_t)val);
+        if (argc == 3){
+            int interval = atoi(argv[3]);
+            turntable_move_to_id_int((uint8_t)val, interval);
+        }else{
+            turntable_move_to_id((uint8_t)val);
+        }
         return;
     }else if (strcmp(argv[1], "close") == 0){
         turntable_move_to_close();

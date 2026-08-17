@@ -21,6 +21,9 @@ void turntable_move_to_next(uint8_t direction);
 void turntable_move_to_close(void);
 void turntable_move_to_init(void);
 
+void turntable_move_to_int(float angle, int interval);
+void turntable_move_to_id_int(uint8_t id, int interval);
+
 #ifdef __cplusplus
 }
 #endif

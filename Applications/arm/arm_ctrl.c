@@ -48,13 +48,6 @@ void arm_lift_move_by_velocity(float angle, float velocity){
 }
 
 /**
- * @brief 机械臂升降舵机回到初始角度
- */
-void arm_lift_move_to_init(void){
-    arm_lift_move_by_velocity(ARM_LIFT_INIT_ANGLE, 200);
-}
-
-/**
  * @brief 机械臂翻转舵机移动到指定角度(带限幅)
  * @param angle 目标角度
  */
@@ -75,18 +68,11 @@ void arm_flip_move_by_velocity(float angle, float velocity){
 }
 
 /**
- * @brief 机械臂翻转舵机回到初始角度
- */
-void arm_flip_move_to_init(void){
-    arm_flip_move_by_velocity(ARM_FLIP_INIT_ANGLE, 100);
-}
-
-/**
  * @brief 机械臂整体回到初始位
  */
 void arm_move_to_init(void){
-    arm_lift_move_to_init();
-    arm_flip_move_to_init();
+    arm_lift_move_by_velocity(ARM_LIFT_INIT_ANGLE, 200);
+    arm_flip_move_by_velocity(ARM_FLIP_INIT_ANGLE, 100);
 }
 
 /**
