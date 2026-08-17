@@ -12,6 +12,7 @@
 #include "log.h"
 #include <string.h>
 #include "cmsis_os2.h"
+#include "mission.h"
 
 /**
  * @brief 初始化树莓派通信
@@ -30,7 +31,7 @@ SENSOR_Color_t RPI_DetectColor(void) {
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
     osDelay(RPI_WAIT_TIME);
-    if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, 2000) != HAL_OK) {
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, MISSION_RPI_WAIT_TIME) != HAL_OK) {
         logWarning("receive timeout");
     }
 
@@ -55,7 +56,7 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
     osDelay(RPI_WAIT_TIME);
-    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, 2000) != HAL_OK) {
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, MISSION_RPI_WAIT_TIME) != HAL_OK) {
         logWarning("receive timeout");
         return false;
     }
@@ -75,7 +76,7 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     *err_x = (p[1] == 0) ? (int16_t)p[3] : -(int16_t)p[3];
     *err_y = (p[2] == 0) ? (int16_t)p[4] : -(int16_t)p[4];
 
-    RPI_Calibrate_IDE();
+    // RPI_Calibrate_IDE();
     return true;
 }
 

@@ -69,6 +69,9 @@ void mission_run(void *argument) {
         OPS_Zero();
         turntable_move_to_id(0);
 
+        int16_t err_x = 0, err_y = 0;
+        RPI_Calibrate(&err_x, &err_y);
+
         // // 出发点
         // Nav_GoTo_fromName("HOME");
         // if (!wait_tracker()) goto fail;
@@ -83,9 +86,6 @@ void mission_run(void *argument) {
         Nav_GoTo_fromName("QrCode_1");
         if (!wait_tracker()) goto fail;
 
-        int16_t err_x = 0, err_y = 0;
-        RPI_Calibrate(&err_x, &err_y);
-
         // 等待二维码识别
         if (!wait_qr()) goto fail;
 
@@ -96,6 +96,7 @@ void mission_run(void *argument) {
         if (!matl_pop()) goto fail;
 
         // 二维码点2（奖杯顺序）
+        MotionControl_SetPosition(0, 0, 130);
         Nav_GoTo_fromName("QrCode_2");
         if (!wait_tracker()) goto fail;
 
@@ -170,7 +171,7 @@ static bool matl_pop(void) {
 
         if (!Turntable_Pop((TurntablePop_t)i)) {
             logWarning("pop failed");
-            // return false;
+            return false;
         }
 
 #if MISSION_USE_RPI_CAL // 树莓派校准
@@ -204,13 +205,14 @@ static bool trop_grap(void) {
     TargetPoint_t *point = Map_GetPointByName("TROP_GRAP1");
     if (point == NULL) goto fail;
 
+    MotionControl_SetPosition(-70, 0, 0);
+    MotionControl_SetPosition(0, 0, -130);
+
     for(uint8_t i = 0; i < 3; i++) {
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) goto fail;
     }
 #endif
-
-    osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
     return true;
 
 fail:
@@ -242,6 +244,7 @@ static bool trop_pop(void) {
         if (!wait_tracker()) return false;
 
 #if MISSION_USE_RPI_CAL // 树莓派校准
+        osDelay(MISSION_TROP_WAIT);
         if (!RPI_Cal(Map_GetPoint(point->id + i))) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
@@ -257,12 +260,13 @@ static bool trop_pop(void) {
 
         if (!Turntable_Pop((TurntablePop_t)(i + 1))) {
             logWarning("pop failed");
-            // return false;
+            return false;
         }
 
         osDelay(MISSION_TROP_BACK_WAIT);
         pop_to_back();
-        MotionControl_SetPosition(0.0f, 8.0f, 0.0f);
+        if (i < 2) MotionControl_SetPosition(0.0f, MISSION_TROP_YOFFSET, 0.0f);
+        osDelay(1500);
     }
     return true;
 }
