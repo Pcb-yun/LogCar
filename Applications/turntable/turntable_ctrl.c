@@ -48,7 +48,7 @@ void turntable_move_to(float angle){
 /**
  * @brief 转盘模块移动到指定角度（基于当前位置走最短路径）
  * @param angle 角度值
- * @param interval 旋转间隔（度/秒）
+ * @param interval 运动时间，单位ms
  */
 void turntable_move_to_int(float angle, int interval){
     turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
@@ -77,7 +77,7 @@ void turntable_move_to_id(uint8_t id){
 /**
  * @brief 转盘模块移动到指定ID（基于当前位置走最短路径）
  * @param id ID值
- * @param interval 旋转间隔（度/秒）
+ * @param interval 运动时间，单位ms
  */
 void turntable_move_to_id_int(uint8_t id, int interval){
     if (id >= TURNTABLE_ID_MAX){
