@@ -3,7 +3,7 @@
 
 #define NAV_TRACK_DBG 0
 
-#define NAV_TRACK_FORWARD_SPEED 58.0f  // 前进速度 (cm/s)
+#define NAV_TRACK_FORWARD_SPEED 50.0f  // 前进速度 (cm/s)
 #define NAV_TRACK_KP 14.0f  // P系数（35导致err=1.5时纯P输出-52.5持续猛转甩头）
 #define NAV_TRACK_KI 0.0f  // I系数
 #define NAV_TRACK_KD 0.8f  // D系数（探头边界跳变时D会放大抖动，用小值）
@@ -16,7 +16,7 @@
  * 已知路径半径时，按运动学 v/R 计算稳态转向角速度，叠加到 PID 输出上，
  * PID 仅负责纠正小偏差，可大幅减小过冲。半径单位 cm，0=禁用前馈。
  * 方向由外部调用者通过 Nav_Track_SetCurve() 设置，不再自动检测。 */
-#define NAV_TRACK_PATH_RADIUS_CM  91.5f   // 默认半径（半圆直径185cm），可被 SetCurve 覆盖
+#define NAV_TRACK_PATH_RADIUS_CM  68.0f   // 默认半径（半圆直径185cm），可被 SetCurve 覆盖
 
 #define NAV_TRACK_SENSOR_NUM       8       // 灰度探头数量
 #define NAV_TRACK_UPDATE_MS        10      // 巡线控制周期 (ms)
