@@ -6,7 +6,7 @@
 #define NAV_TRACK_KP 14.0f  // P系数（35导致err=1.5时纯P输出-52.5持续猛转甩头）
 #define NAV_TRACK_KI 0.0f  // I系数
 #define NAV_TRACK_KD 0.8f  // D系数（探头边界跳变时D会放大抖动，用小值）
-#define NAV_TRACK_MAX_YAW_SPEED 170.0f  // 最大转向速度 (deg/s)（150太高，过弯摆头）
+#define NAV_TRACK_MAX_YAW_SPEED 260.0f  // 最大转向速度 (deg/s)（150太高，过弯摆头）
 #define NAV_TRACK_LINE_POLARITY_POSITIVE 0  // 线极性 (1:黑线输出1, 0:黑线输出0) ← 必须和模块实际一致
 #define NAV_TRACK_STEERING_DIR_LEFT 1  // 转向方向 (1:线偏右时右转, -1:反向)
 #define NAV_TRACK_RUN_TIME_MS 6000  // 巡线运行时间 (ms)（0表示无限循环）
