@@ -3,11 +3,11 @@
 
 #define ARM_ACTION_INTERVAL_MS 2000
 
-#define ARM_ACTION_STAGE1_DOWN_LIFT 45.0f       // 冠军放下升降角度
+#define ARM_ACTION_STAGE1_DOWN_LIFT 90.0f       // 冠军放下升降角度
 #define ARM_ACTION_STAGE1_DOWN_FLIP -171.0f     // 冠军放下翻转角度
-#define ARM_ACTION_STAGE2_DOWN_LIFT 118.0f      // 亚军放下升降角度
+#define ARM_ACTION_STAGE2_DOWN_LIFT 160.0f      // 亚军放下升降角度
 #define ARM_ACTION_STAGE2_DOWN_FLIP -170.0f     // 亚军放下翻转角度
-#define ARM_ACTION_UP_OFFSET 58.0f              // 提升角度偏移
+#define ARM_ACTION_UP_OFFSET 50.0f              // 提升角度偏移
 
 /**
  * @brief 机械臂模块提升舵机的参数
@@ -19,9 +19,8 @@
 
 #define ARM_LIFT_INIT_ANGLE 70.0f       // 初始角度
 
-#define ARM_LIFT_MIN_ANGLE 284.5f         // 最低角度
-#define ARM_LIFT_MID_ANGLE 236.5f         // 中间角度
-#define ARM_LIFT_MAX_ANGLE 117.8f       // 最高角度
+#define ARM_LIFT_MIN_ANGLE 225.5f         // 最低角度
+#define ARM_LIFT_MAX_ANGLE 36.0f       // 最高角度
 
 
 /**
@@ -35,6 +34,6 @@
 #define ARM_FLIP_INIT_ANGLE -82.0f        // 初始角度
 
 #define ARM_FLIP_MIN_ANGLE -82.0f         // 收回角度
-#define ARM_FLIP_MAX_ANGLE -169.0f       // 水平角度
+#define ARM_FLIP_MAX_ANGLE -171.0f       // 水平角度
 
 #endif
