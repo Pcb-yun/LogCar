@@ -49,6 +49,15 @@ NavTrackState_t Nav_Track_GetState(void);
 void Nav_Track_GetParams(NavTrackParams_t *params);
 void Nav_Track_SetParams(const NavTrackParams_t *params);
 
+/**
+ * @brief 设置弯道前馈（由外部调用者决定接下来路径形状）
+ * @param dir 1=右转半圆, -1=左转半圆, 0=直线（禁用前馈）
+ * @param radius_cm 弯道半径(cm)，<=0 则使用配置默认值
+ * @note 调用后立即生效，由外部按路径分段切换：
+ *       进入半圆前调 dir=±1，进入直线前调 dir=0
+ */
+void Nav_Track_SetCurve(int8_t dir, float radius_cm);
+
 void ntrack_time_shell(int argc, char *argv[]);
 bool Nav_Track_Start(void);
 
