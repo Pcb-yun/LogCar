@@ -134,6 +134,7 @@ static bool matl_grap(void) {
 #if MISSION_MATL_NAV // 灰度巡线
     Nav_GoTo_fromName("MATL_TRACK");
     if (!wait_tracker()) goto fail;
+    Nav_Track_SetCurve(1,91.5);
     if (!Nav_Track_Start()) goto fail;
     osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
     Nav_Track_Stop();
@@ -198,6 +199,7 @@ static bool trop_grap(void) {
 #if MISSION_TROP_NAV // 灰度巡线
     Nav_GoTo_fromName("TROP_TRACK");
     if (!wait_tracker()) goto fail;
+    Nav_Track_SetCurve(-1,91.5);
     if (!Nav_Track_Start()) goto fail;
     osEventFlagsWait(System_StatusHandle, TURNTABLE_CPLT, osFlagsWaitAll, osWaitForever);
     Nav_Track_Stop();

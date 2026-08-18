@@ -1,6 +1,7 @@
 #ifndef __NAV_TRACK_CFG_H__
 #define __NAV_TRACK_CFG_H__
 
+#define NAV_TRACK_DBG 0
 
 #define NAV_TRACK_FORWARD_SPEED 58.0f  // 前进速度 (cm/s)
 #define NAV_TRACK_KP 14.0f  // P系数（35导致err=1.5时纯P输出-52.5持续猛转甩头）

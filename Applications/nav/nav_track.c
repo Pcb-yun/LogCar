@@ -65,7 +65,6 @@ static const float k_sensor_weight[NAV_TRACK_SENSOR_NUM] = {
 /* 静态函数声明 */
 static bool compute_error(uint8_t digital_data, float *error);
 static float pid_compute(float error, float dt);
-static void ntrack_show_status(void);
 
 /**
  * @brief 根据数字量计算巡线偏差
@@ -384,6 +383,8 @@ void Nav_Track_Task(void *argument) {
     }
 }
 
+#if NAV_TRACK_DBG
+
 /**
  * @brief 显示巡线状态与参数
  */
@@ -418,7 +419,6 @@ static bool parse_float(const char *str, float *out) {
     return (endptr != str && *endptr == '\0');
 }
 
-/* Shell 子命令 */
 static void ntrack_start_shell(int argc, char *argv[]) {
     (void)argc; (void)argv;
     if (!Nav_Track_Start()) logWarning("Nav track start failed");
@@ -654,3 +654,5 @@ ShellCommand NavTrackGroup[] = {
 };
 SHELL_EXPORT_CMD_GROUP(SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN)|SHELL_CMD_DISABLE_RETURN,
                        ntrack, NavTrackGroup, Nav Track Tool Group);
+
+#endif
