@@ -30,8 +30,7 @@ SENSOR_Color_t RPI_DetectColor(void) {
     uint8_t color[1] = {0};
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    osDelay(RPI_WAIT_TIME);
-    if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, MISSION_RPI_WAIT_TIME) != HAL_OK) {
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&color, 1, MISSION_RPI_TIMEOUT) != HAL_OK) {
         logWarning("receive timeout");
     }
 
@@ -55,18 +54,19 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     uint8_t *p = NULL;
 
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    osDelay(RPI_WAIT_TIME);
-    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, MISSION_RPI_WAIT_TIME) != HAL_OK) {
+    osDelay(MISSION_RPI_WAIT_TIME);
+    if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, MISSION_RPI_TIMEOUT) != HAL_OK) {
         logWarning("receive timeout");
         return false;
     }
 
-    // 在字节流中定位帧头 0xAA，剩余字段需至少5字节
-    for (uint8_t i = 0; i + 5 <= 7; i++) {
+    // 从后向前定位帧头,确保后接完整数据
+    for (uint8_t i = 7 - 5; ; i--) {
         if (rsp[i] == RPI_FRAME_HEAD) {
             p = &rsp[i];
             break;
         }
+        if (i == 0) break;
     }
     if (p == NULL) {
         logWarning("frame head not found");
@@ -76,7 +76,7 @@ bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
     *err_x = (p[1] == 0) ? (int16_t)p[3] : -(int16_t)p[3];
     *err_y = (p[2] == 0) ? (int16_t)p[4] : -(int16_t)p[4];
 
-    // RPI_Calibrate_IDE();
+    RPI_Calibrate_IDE();
     return true;
 }
 

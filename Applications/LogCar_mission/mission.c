@@ -69,16 +69,15 @@ void mission_run(void *argument) {
         OPS_Zero();
         turntable_move_to_id(0);
 
-        int16_t err_x = 0, err_y = 0;
-        RPI_Calibrate(&err_x, &err_y);
-
         // // 出发点
         // Nav_GoTo_fromName("HOME");
         // if (!wait_tracker()) goto fail;
 
         // 出站避让点
-        Nav_GoTo_fromName("OA1");
-        if (!wait_tracker()) goto fail;
+        // Nav_GoTo_fromName("OA1");
+        // if (!wait_tracker()) goto fail;
+        MotionControl_SetPosition(0, -25, 0);
+        osDelay(800);
 
         arm_action(ARM_ACTION_PULL_DOWN);
 
@@ -96,7 +95,7 @@ void mission_run(void *argument) {
         if (!matl_pop()) goto fail;
 
         // 二维码点2（奖杯顺序）
-        MotionControl_SetPosition(0, 0, 130);
+        MotionControl_SetPosition(0, 0, 90);
         Nav_GoTo_fromName("QrCode_2");
         if (!wait_tracker()) goto fail;
 
@@ -208,7 +207,9 @@ static bool trop_grap(void) {
     if (point == NULL) goto fail;
 
     MotionControl_SetPosition(-70, 0, 0);
-    MotionControl_SetPosition(0, 0, -130);
+    osDelay(1000);
+    MotionControl_SetPosition(0, 0, -90);
+    osDelay(1000);
 
     for(uint8_t i = 0; i < 3; i++) {
         Nav_GoTo(point->id + i);

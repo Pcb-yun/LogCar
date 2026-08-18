@@ -26,7 +26,7 @@ void Kinematics_Inverse(float vx, float vy, float w, Wheel_t *wheels) {
 	float L = WHEEL_BASE_LENGTH / 2.0f;
 	float W = WHEEL_BASE_WIDTH / 2.0f;
 	float R = WHEEL_RADIUS;
-	float r = sqrtf(L * L + W * W);  // 旋转半径
+	float r = L + W;
 
 	wheels->fl = (vx - vy - r * omega) / R;  // 前左轮
 	wheels->fr = (vx + vy + r * omega) / R;  // 前右轮

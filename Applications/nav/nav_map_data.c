@@ -78,8 +78,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 3,
         .name = "MATL_TRACK",   // 物料巡线开始点
         .pose = {
-            .x = 59.17f,
-            .y = -12.16f,
+            .x = 29.96f,
+            .y = -10.65f,
             .yaw = 0.00f
         },
         .motion = {
@@ -431,7 +431,7 @@ static const TargetPoint_t g_map_points[] = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.0f,
             .yaw_threshold = 2.0f,
-            .timeout_ms = 15000
+            .timeout_ms = 10000
         }
     },
     {
@@ -452,7 +452,7 @@ static const TargetPoint_t g_map_points[] = {
             .check_mode = ARRIVE_CHECK_BOTH,
             .distance_threshold = 1.5f,
             .yaw_threshold = 2.0f,
-            .timeout_ms = 15000
+            .timeout_ms = 10000
         }
     },
     {
@@ -471,9 +471,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.8f,
+            .distance_threshold = 2.0f,
             .yaw_threshold = 3.0f,
-            .timeout_ms = 15000
+            .timeout_ms = 10000
         }
     },
     {
@@ -492,9 +492,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.8f,
+            .distance_threshold = 2.0f,
             .yaw_threshold = 3.0f,
-            .timeout_ms = 15000
+            .timeout_ms = 10000
         }
     },
     {
@@ -513,9 +513,9 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.8f,
+            .distance_threshold = 2.0f,
             .yaw_threshold = 3.0f,
-            .timeout_ms = 15000
+            .timeout_ms = 10000
         }
     },
     #if MISSION_USE_RPI_CAL // 使用树莓派校准
