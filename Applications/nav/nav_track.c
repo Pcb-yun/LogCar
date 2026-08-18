@@ -279,6 +279,7 @@ void Nav_Track_Task(void *argument) {
 
         /* 调试日志节流：每100ms打印一次，避免刷屏 */
         bool dbg_allow = (current_tick - last_dbg_tick) >= 100;
+        dbg_allow = false;
         if (dbg_allow) last_dbg_tick = current_tick;
 
         /* 运行时长检测 */

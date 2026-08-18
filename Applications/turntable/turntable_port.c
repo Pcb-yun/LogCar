@@ -156,7 +156,7 @@ bool Turntable_Pop(TurntablePop_t pop) {
 				uint8_t out_id = g_sto[i]->id;
 				logInfo("sto_idx=%d, id=%d, target_label=%s, order=%d",
 				           i, out_id, trop_str[target_label], g_port.order + 1);
-				turntable_move_to_id(out_id);
+                turntable_move_to_int(out_id, 500);
 				g_sto[i]->label = LABEL_NONE;
 				return true;
 			}
