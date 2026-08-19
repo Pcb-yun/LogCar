@@ -24,13 +24,13 @@ extern "C" {
 #define MISSION_RPI_TIMEOUT 2000 // 树莓派响应超时 ms
 
 #define MISSION_BACK_DIST 25.0f // 放置后回退的距离 cm
-#define MISSION_BACK_TIME 1000    // 放置后回退等待时间 ms
+#define MISSION_BACK_TIME 700    // 放置后回退等待时间 ms
 
 #define MISSION_POP_OFFSET 98.01f   // 转盘放点偏移校准 mm
 #define MISSION_QR_TIMEOUT 2000 // 二维码识别等待时间 ms
-#define MISSION_TROP_DOWN_WAIT 1000 // 奖杯下降等待时间 ms
+#define MISSION_TROP_DOWN_WAIT 700 // 奖杯下降等待时间 ms
 #define MISSION_TROP_BACK_WAIT 1000 // 奖杯放置转盘等待时间
-#define MISSION_TROP_WAIT 1000 // 等待转盘稳定
+#define MISSION_TROP_WAIT 500 // 等待转盘稳定
 #define MISSION_TROP_YOFFSET 28.0f // 高台y方向提前偏移
 
 void mission_set_running(bool running);

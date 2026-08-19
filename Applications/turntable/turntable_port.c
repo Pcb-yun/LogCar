@@ -156,7 +156,8 @@ bool Turntable_Pop(TurntablePop_t pop) {
 				uint8_t out_id = g_sto[i]->id;
 				logInfo("sto_idx=%d, id=%d, target_label=%s, order=%d",
 				           i, out_id, trop_str[target_label], g_port.order + 1);
-                turntable_move_to_int(out_id, 500);
+                turntable_move_to_id(out_id);
+                // turntable_move_to_int(out_id, 500);
 				g_sto[i]->label = LABEL_NONE;
 				return true;
 			}
@@ -173,7 +174,7 @@ bool Turntable_Pop(TurntablePop_t pop) {
  * @param order 映射表索引
  */
 void Turntable_SetOrder(uint8_t order) {
-    g_port.order = order;
+    g_port.order = order - 1;
 }
 
 /**
@@ -198,7 +199,7 @@ TurntableType_t Turntable_Port_GetType(void) {
  */
 static TropLabel_t set_trop(void) {
 	static int8_t count = 2;
-	TropLabel_t label = trop_order[g_port.order - 1][count];
+	TropLabel_t label = trop_order[g_port.order][count];
 	if (count <= 0) count = 2;
 	else count--;
 	return label;

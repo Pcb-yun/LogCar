@@ -63,6 +63,12 @@ void AD_Rotation_Task(void *argument){
 
         Show_About();
         osDelay(ABOUT_TIME);
+
+        if (find_image("GitHub", (const Image_t **)&image)) {
+            Media_t media = {MEDIA_TYPE_IMAGE, image};
+            osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
+        }
+        osDelay(GITHUB_TIME);
     }
 }
 

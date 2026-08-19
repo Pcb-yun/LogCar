@@ -22,6 +22,7 @@
 #include "nav_local.h"
 #include "rpi_sensor_port.h"
 #include "turntable_ctrl.h"
+#include <stdlib.h>
 
 
 static bool matl_grap(void);
@@ -66,6 +67,7 @@ void mission_run(void *argument) {
     for (;;) {
         osDelay(1);
         if (!mission_running) continue;
+        uint32_t start_time = osKernelGetTickCount();
         logInfo("Mission Start");
         OPS_Zero();
         turntable_move_to_id(0);
@@ -78,7 +80,7 @@ void mission_run(void *argument) {
         // Nav_GoTo_fromName("OA1");
         // if (!wait_tracker()) goto fail;
         MotionControl_SetPosition(0, -25, 0);
-        osDelay(800);
+        osDelay(500);
 
         arm_action(ARM_ACTION_PULL_DOWN);
 
@@ -112,14 +114,14 @@ void mission_run(void *argument) {
         // 回到home点
         if (!Home_Sweet_home()) goto fail;
 
-        Nav_Stop();
         mission_running = false;
+        logInfo("Mission Complete, cost: %d ms", osKernelGetTickCount() - start_time);
         continue;
 
     fail:
         Nav_Stop();
         mission_running = false;
-        logError("Mission Failed");
+        logError("Mission Failed, cost: %d ms", osKernelGetTickCount() - start_time);
     }
 }
 
@@ -165,8 +167,6 @@ static bool matl_pop(void) {
     if (point == NULL) return false;
 
     for(uint8_t i = 0; i < 5; i++) {
-        // Turntable_Pop((TurntablePop_t)i);
-        // turntable_move_to_close();
         Nav_GoTo(point->id + i);
         if (!wait_tracker()) return false;
 
@@ -206,11 +206,6 @@ static bool trop_grap(void) {
 #else // 地图定位
     TargetPoint_t *point = Map_GetPointByName("TROP_GRAP1");
     if (point == NULL) goto fail;
-
-    MotionControl_SetPosition(-70, 0, 0);
-    osDelay(1000);
-    MotionControl_SetPosition(0, 0, -90);
-    osDelay(1000);
 
     for(uint8_t i = 0; i < 3; i++) {
         Nav_GoTo(point->id + i);
@@ -269,8 +264,10 @@ static bool trop_pop(void) {
 
         osDelay(MISSION_TROP_BACK_WAIT);
         pop_to_back();
-        if (i < 2) MotionControl_SetPosition(0.0f, MISSION_TROP_YOFFSET, 0.0f);
-        osDelay(1500);
+        if (i < 2) {
+            MotionControl_SetPosition(0.0f, MISSION_TROP_YOFFSET, 0.0f);
+            osDelay(1000);
+        }
     }
     return true;
 }
@@ -334,14 +331,15 @@ static bool RPI_Cal(TargetPoint_t *point) {
  * @return 二维码识别状态
  */
 static bool wait_qr(void) {
-    uint8_t barcode[2];
+    uint8_t barcode[3];
     uint32_t start_tick = osKernelGetTickCount();
 
     while (1) {
         if (!mission_running) return false;
         if (Scan_GetLatestBarcode(barcode, sizeof(barcode))) {
-            Turntable_SetOrder(barcode[0] - 48);
-            logInfo("barcode: %d", barcode[0] - 48);
+            int order = atoi((const char *)barcode);
+            Turntable_SetOrder((uint8_t)order);
+            logInfo("barcode: %d", order);
             return true;
         }
         if (osKernelGetTickCount() - start_tick >= MISSION_QR_TIMEOUT) {

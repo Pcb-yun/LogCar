@@ -77,14 +77,16 @@ void turntable_move_to_id(uint8_t id){
 /**
  * @brief 转盘模块移动到指定ID（基于当前位置走最短路径）
  * @param id ID值
- * @param interval 运动时间，单位ms
+ * @param vel 运动速度，单位度/ms
  */
-void turntable_move_to_id_int(uint8_t id, int interval){
+void turntable_move_to_id_int(uint8_t id, int vel){
     if (id >= TURNTABLE_ID_MAX){
         logPrintln("turntable: id %u out of range", id);
         return;
     }
-    turntable_move_to_int(turntable_id[id], interval);
+
+    turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, turntable_id[id]);
+    Servo_MTurnByVelocity(TURNTABLE_SERVO_ID, turntable_angle_current, vel, 0, 0, 0);
 }
 
 /**
@@ -127,30 +129,26 @@ void turntable_move_to_next(uint8_t direction) {
  * @param argv 命令参数数组
  */
 static void turntable_Shell(int argc, char *argv[]){
-    if (argc != 2 && argc != 3){
-        logPrintln("Usage: turntable id <N> | id <N> <interval> | init | help");
-        return;
-    }
 
     if (strcmp(argv[1], "help") == 0){
         logPrintln("turntable: move the turntable to a specific angle or id");
-        logPrintln("  turntable id <N> | id <N> <interval> | init | help");
+        logPrintln("  turntable id <N> | id <N> <vel> | init | help");
         return;
     }else if (strcmp(argv[1], "id") == 0){
-        if (argc != 3){
-            logPrintln("Usage: turntable id <N>");
-            return;
-        }
+
         int val = atoi(argv[2]);
         if (val < 0 || val >= TURNTABLE_ID_MAX){
             logPrintln("turntable: invalid id");
             return;
         }
-        if (argc == 3){
+        if (argc == 4){
             int interval = atoi(argv[3]);
             turntable_move_to_id_int((uint8_t)val, interval);
-        }else{
+        }else if (argc == 3){
             turntable_move_to_id((uint8_t)val);
+        } else {
+            logPrintln("Usage: id <N> | id <N> <vel>");
+            return;
         }
         return;
     }else if (strcmp(argv[1], "close") == 0){

@@ -78,8 +78,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 3,
         .name = "MATL_TRACK",   // 物料巡线开始点
         .pose = {
-            .x = 29.96f,
-            .y = -10.65f,
+            .x = 58.34f,
+            .y = -13.01f,
             .yaw = 0.00f
         },
         .motion = {
@@ -544,8 +544,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 20,
         .name = "SECOND",     // 亚军
         .pose = {
-            .x = -27.61f,
-            .y = -159.81f,
+            .x = -18.57f,
+            .y = -165.52f,
             .yaw = -90.00f
         },
         .motion = {
@@ -565,8 +565,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 21,
         .name = "FIRST",     // 冠军
         .pose = {
-            .x = -0.22f,
-            .y = -158.42f,
+            .x = 7.71f,
+            .y = -162.99f,
             .yaw = -90.00f
         },
         .motion = {
@@ -586,8 +586,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 22,
         .name = "THRID",     // 季军
         .pose = {
-            .x = 26.90f,
-            .y = -157.32f,
+            .x = 34.79f,
+            .y = -162.82f,
             .yaw = -90.0f
         },
         .motion = {

@@ -40,6 +40,15 @@ static const Image_t Images[] = {
 		.background = 0,
 	},
 #endif
+#if IMG2C_GITHUB
+	{
+		.name = "GitHub",
+		.data = *github_data,
+		.width = GITHUB_WIDTH,
+		.height = GITHUB_HEIGHT,
+		.background = 0,
+	},
+#endif
     {
 		.name = "__EMPTY__",
 		.data = NULL,

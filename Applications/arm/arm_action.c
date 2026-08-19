@@ -23,12 +23,12 @@ void arm_action(arm_action_t action){
             arm_action_init();
             break;
         case ARM_ACTION_PULL_DOWN:
-            arm_lift_move_by_velocity(ARM_LIFT_MIN_ANGLE,200);
+            arm_lift_move_by_velocity(ARM_LIFT_MIN_ANGLE,100);
             arm_flip_move_to(ARM_FLIP_MAX_ANGLE);
             break;
         case ARM_ACTION_STAGE_1_PULL_UP:
             arm_lift_move_by_velocity(ARM_ACTION_STAGE1_DOWN_LIFT - ARM_ACTION_UP_OFFSET,200);
-            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_DOWN_FLIP,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_UP_FLIP,200);
             break;
         case ARM_ACTION_STAGE_1_PULL_DOWN:
             arm_lift_move_by_velocity(ARM_ACTION_STAGE1_DOWN_LIFT,200);

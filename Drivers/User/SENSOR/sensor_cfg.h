@@ -13,9 +13,9 @@
 #define FREQ_NSAMPLES  5            // 频率测量采样数
 
 // 默认白色平衡
-#define TCS230_WB_R 827
-#define TCS230_WB_G 805
-#define TCS230_WB_B 928
-#define TCS230_WB_C 2490
+#define TCS230_WB_R 706
+#define TCS230_WB_G 676
+#define TCS230_WB_B 775
+#define TCS230_WB_C 2098
 
 #endif /* __SENSOR_CFG_H__ */
