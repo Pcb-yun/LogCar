@@ -31,7 +31,7 @@ static bool trop_grap(void);
 static bool trop_pop(void);
 static bool Home_Sweet_home(void);
 static void pop_to_back(void);
-static bool RPI_Cal(TargetPoint_t *point);
+static bool RPI_Cal(TargetPoint_t *point, RPI_CalType_t type);
 static bool wait_qr(void);
 
 static bool mission_running = false;
@@ -67,6 +67,8 @@ void mission_run(void *argument) {
     for (;;) {
         osDelay(1);
         if (!mission_running) continue;
+        osEventFlagsClear(System_StatusHandle, TURNTABLE_CPLT);
+        osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
         uint32_t start_time = osKernelGetTickCount();
         logInfo("Mission Start");
         OPS_Zero();
@@ -99,6 +101,7 @@ void mission_run(void *argument) {
 
         // 二维码点2（奖杯顺序）
         MotionControl_SetPosition(0, 0, 90);
+        osDelay(600);
         Nav_GoTo_fromName("QrCode_2");
         if (!wait_tracker()) goto fail;
 
@@ -176,7 +179,7 @@ static bool matl_pop(void) {
         }
 
 #if MISSION_USE_RPI_CAL // 树莓派校准
-        if (!RPI_Cal(Map_GetPoint(point->id + i))) return false;
+        if (!RPI_Cal(Map_GetPoint(point->id + i), RPI_CAL_TYPE_MATL)) return false;
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
@@ -184,6 +187,8 @@ static bool matl_pop(void) {
 #endif
 
         pop_to_back();
+        if (i == 1) osDelay(200);
+        if (i == 3) osDelay(100);
     }
     return true;
 }
@@ -227,9 +232,6 @@ static bool trop_pop(void) {
     TargetPoint_t *point = Map_GetPointByName("SECOND");
     if (point == NULL) return false;
 
-    Nav_GoTo_fromName("OA2");
-    if (!wait_tracker()) return false;
-
     arm_action(ARM_ACTION_STAGE_2_PULL_UP);
 
     for (uint8_t i = 0; i < 3; i++) {
@@ -243,8 +245,13 @@ static bool trop_pop(void) {
         if (!wait_tracker()) return false;
 
 #if MISSION_USE_RPI_CAL // 树莓派校准
-        osDelay(MISSION_TROP_WAIT);
-        if (!RPI_Cal(Map_GetPoint(point->id + i))) return false;
+
+        switch (i) {
+            case 0: if (!RPI_Cal(Map_GetPoint(point->id + i), RPI_CAL_TYPE_TROP2)) return false; break;
+            case 1: if (!RPI_Cal(Map_GetPoint(point->id + i), RPI_CAL_TYPE_TROP1)) return false; break;
+            case 2: if (!RPI_Cal(Map_GetPoint(point->id + i), RPI_CAL_TYPE_TROP3)) return false; break;
+            default: break;
+        }
 #if MISSION_CAL2OPS // 将校准数据回写到码盘
 
 
@@ -266,7 +273,7 @@ static bool trop_pop(void) {
         pop_to_back();
         if (i < 2) {
             MotionControl_SetPosition(0.0f, MISSION_TROP_YOFFSET, 0.0f);
-            osDelay(1000);
+            osDelay(MISSION_TROP_NEXT_TIME);
         }
     }
     return true;
@@ -278,6 +285,7 @@ static bool trop_pop(void) {
  */
 static bool Home_Sweet_home(void) {
     arm_action(ARM_ACTION_INIT);
+    turntable_move_to_id(0);
     // Nav_GoTo_fromName("OA3");
     // if (!wait_tracker()) return false;
     Nav_GoTo_fromName("SWEET_HOME");
@@ -289,7 +297,7 @@ static bool Home_Sweet_home(void) {
  * @brief 放置后后退
  */
 static void pop_to_back(void) {
-    MotionControl_SetMotionParams(400.0f, 0.0f, 450.0f, 450.0f);
+    MotionControl_SetMotionParams(500.0f, 250.0f, 550.0f, 550.0f);
     MotionControl_SetPosition(-MISSION_BACK_DIST, 0.0f, 0.0f);
     osDelay(MISSION_BACK_TIME);
 }
@@ -297,11 +305,13 @@ static void pop_to_back(void) {
 /**
  * @brief 树莓派校准
  * @param point 校准点
+ * @param type 校准类型
  * @return 校准状态
  */
-static bool RPI_Cal(TargetPoint_t *point) {
+static bool RPI_Cal(TargetPoint_t *point, RPI_CalType_t type) {
+    uint32_t start_tick = osKernelGetTickCount();
     int16_t err_x, err_y;
-    if (!RPI_Calibrate(&err_x, &err_y)) return false;
+    if (!RPI_Calibrate(&err_x, &err_y, type)) return false;
     TargetPoint_t cal_pose;
     memcpy(&cal_pose, point, sizeof(TargetPoint_t));
 
@@ -314,12 +324,25 @@ static bool RPI_Cal(TargetPoint_t *point) {
     float offset_x = offset_cm * cosf(yaw_rad);
     float offset_y = offset_cm * sinf(yaw_rad);
 
+    if (strcmp(point->name, "FIRST") == 0) {
+        err_x += MISSION_TROP1_OFFSET_X;
+        err_y += MISSION_TROP1_OFFSET_Y;
+    } else if (strcmp(point->name, "SECOND") == 0) {
+        err_x += MISSION_TROP2_OFFSET_X;
+        err_y += MISSION_TROP2_OFFSET_Y;
+    } else if (strcmp(point->name, "THRID") == 0) {
+        err_x += MISSION_TROP3_OFFSET_X;
+        err_y += MISSION_TROP3_OFFSET_Y;
+    }
+
     // 当前位置 + 放点前向偏移 + 树莓派校准修正 = 实际放置位置
     cal_pose.pose.x = pose.pose.x + offset_x + (float)err_x / 10.0f;
     cal_pose.pose.y = pose.pose.y + offset_y + (float)err_y / 10.0f;
     cal_pose.pose.yaw = pose.pose.yaw;
 
-    logInfo("err_x: %d err_y: %d perr_x: %f perr_y: %f", err_x, err_y, cal_pose.pose.x  - pose.pose.x, cal_pose.pose.y - pose.pose.y);
+    logInfo("RPI Cal Time: %d ms\r\n"
+            "      err_x: %d err_y: %d perr_x: %f perr_y: %f",
+            osKernelGetTickCount() - start_tick, err_x, err_y, cal_pose.pose.x  - pose.pose.x, cal_pose.pose.y - pose.pose.y);
 
     Nav_GoToDirect(&cal_pose);
     if (!wait_tracker()) return false;

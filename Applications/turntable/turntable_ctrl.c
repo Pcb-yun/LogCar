@@ -41,8 +41,10 @@ static float turntable_calc_shortest_target(float current, float target) {
  * @param angle 角度值
  */
 void turntable_move_to(float angle){
+    float angle_t = turntable_angle_current;
     turntable_angle_current = turntable_calc_shortest_target(turntable_angle_current, angle);
     Servo_MTURN(TURNTABLE_SERVO_ID, turntable_angle_current, 0, 0);
+    if (fabsf(angle_t - turntable_angle_current) > 60) osDelay(200);
 }
 
 /**

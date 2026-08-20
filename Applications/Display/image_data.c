@@ -49,6 +49,15 @@ static const Image_t Images[] = {
 		.background = 0,
 	},
 #endif
+#if IMG2C_DEEPSEEK
+	{
+		.name = "DeepSeek",
+		.data = *deepseek_data,
+		.width = DEEPSEEK_WIDTH,
+		.height = DEEPSEEK_HEIGHT,
+		.background = 0,
+	},
+#endif
     {
 		.name = "__EMPTY__",
 		.data = NULL,

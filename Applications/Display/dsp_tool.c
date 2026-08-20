@@ -36,39 +36,37 @@ void AD_Rotation_Task(void *argument){
     extern osMessageQueueId_t Media_DataHandle;
     Image_t *image = NULL;
     Gif_t *gif = NULL;
+    Media_t media;
 
     for(;;) {
         if (find_image("Logo", (const Image_t **)&image)) {
-            Media_t media = {MEDIA_TYPE_IMAGE, image};
+            media.type = MEDIA_TYPE_IMAGE; media.data = image;
             osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
-        }
-        osDelay(LOGO_TIME);
+        } osDelay(LOGO_TIME);
 
         if (find_gif("Eevee1", (const Gif_t **)&gif)) {
-            Media_t media = {MEDIA_TYPE_GIF, gif};
+            media.type = MEDIA_TYPE_GIF; media.data = gif;
             osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
-        }
-        osDelay(GIF_TIME);
-        Media_stop();
+        } osDelay(GIF_TIME); Media_stop();
 
-        bat_show();
-        osDelay(BAT_TIME);
-        Media_stop();
+        bat_show(); osDelay(BAT_TIME); Media_stop();
 
         if (find_gif("Eevee2", (const Gif_t **)&gif)) {
-            Media_t media = {MEDIA_TYPE_GIF, gif};
+            media.type = MEDIA_TYPE_GIF; media.data = gif;
             osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
-        }
-        osDelay(GIF_TIME);
+        } osDelay(GIF_TIME);
 
-        Show_About();
-        osDelay(ABOUT_TIME);
+        Show_About(); osDelay(ABOUT_TIME);
 
         if (find_image("GitHub", (const Image_t **)&image)) {
-            Media_t media = {MEDIA_TYPE_IMAGE, image};
+            media.type = MEDIA_TYPE_IMAGE; media.data = image;
             osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
-        }
-        osDelay(GITHUB_TIME);
+        } osDelay(GITHUB_TIME);
+
+        if (find_image("DeepSeek", (const Image_t **)&image)) {
+            media.type = MEDIA_TYPE_IMAGE; media.data = image;
+            osMessageQueuePut(Media_DataHandle, &media, NULL, osWaitForever);
+        } osDelay(DEEPSEEK_TIME);
     }
 }
 

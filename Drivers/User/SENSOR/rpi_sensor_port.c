@@ -42,19 +42,27 @@ SENSOR_Color_t RPI_DetectColor(void) {
  * @brief 树莓派偏移校准
  * @param err_x x轴误差 mm
  * @param err_y y轴误差 mm
+ * @param type 校准类型
  * @return 校准状态
  */
-bool RPI_Calibrate(int16_t *err_x, int16_t *err_y) {
+bool RPI_Calibrate(int16_t *err_x, int16_t *err_y, RPI_CalType_t type) {
     if (err_x == NULL || err_y == NULL) {
         return false;
     }
 
-    uint8_t cmd = 0x0A;
+    uint8_t cmd;
     uint8_t rsp[7] = {0};
     uint8_t *p = NULL;
 
+    switch (type) {
+        case RPI_CAL_TYPE_MATL:
+        case RPI_CAL_TYPE_TROP3: cmd = 0x0A; break;
+        case RPI_CAL_TYPE_TROP1: cmd = 0x11; break;
+        case RPI_CAL_TYPE_TROP2: cmd = 0x10; break;
+        default: logWarning("invalid cal type: %d", type); return false;
+    }
+
     HAL_UART_Transmit(&huart2, &cmd, 1, 200);
-    osDelay(MISSION_RPI_WAIT_TIME);
     if (HAL_UART_Receive(&huart2, (uint8_t *)&rsp, 7, MISSION_RPI_TIMEOUT) != HAL_OK) {
         logWarning("receive timeout");
         return false;
@@ -109,7 +117,7 @@ void RPI_Shell(int argc, char *argv[]) {
         logPrintln("Color: %s", (c <= COLOR_BLUE) ? matl_str[c] : "Invalid");
     } else if(strcmp(argv[1], "cal") == 0) {
         int16_t err_x, err_y;
-        if(RPI_Calibrate(&err_x, &err_y)) {
+        if(RPI_Calibrate(&err_x, &err_y, RPI_CAL_TYPE_MATL)) {
             logPrintln("Calibrate: x: %d, y: %d", err_x, err_y);
         } else {
             logPrintln("Calibrate failed");

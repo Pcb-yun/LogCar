@@ -300,6 +300,12 @@ static float compute_yaw_speed(float yaw_error, float distance, float dt) {
     if (fabsf(yaw_error) > NAV_YAW_FEEDFORWARD_THRESH) {
         feedforward_yaw = (yaw_error > 0) ? NAV_ALIGN_YAW_MAX : -NAV_ALIGN_YAW_MAX;
         feedforward_yaw *= gain_factor;
+    } else if (fabsf(yaw_error) > NAV_YAW_DEADBAND) {
+        // thresh到deadband之间前馈线性衰减，避免阶跃导致的过冲
+        float ratio = (fabsf(yaw_error) - NAV_YAW_DEADBAND) /
+                      (NAV_YAW_FEEDFORWARD_THRESH - NAV_YAW_DEADBAND);
+        feedforward_yaw = (yaw_error > 0) ? NAV_ALIGN_YAW_MAX : -NAV_ALIGN_YAW_MAX;
+        feedforward_yaw *= gain_factor * ratio;
     }
 
     float feedback_yaw = pid_update(&g_nav_core->yaw_pid, yaw_error, dt);
@@ -837,6 +843,7 @@ void Nav_Task(void *argument) {
                 float final_distance = calculate_distance(current_pose, g_nav_core->cached_target->pose);
 
                 if (final_distance <= g_nav_core->cached_target->arrive.distance_threshold) {
+                    logInfo("Arrived at target");
                     g_nav_core->state = NAV_STATE_COMPLETE;
                     restore_motion_params();
                 } else {

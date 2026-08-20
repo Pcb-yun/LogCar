@@ -15,9 +15,15 @@
 extern "C" {
 #endif /* __cplusplus */
 
+typedef enum {
+    RPI_CAL_TYPE_MATL = 0,      // 物料
+    RPI_CAL_TYPE_TROP1,         // 冠军
+    RPI_CAL_TYPE_TROP2,         // 亚军
+    RPI_CAL_TYPE_TROP3          // 季军
+} RPI_CalType_t;
 
 SENSOR_Color_t RPI_DetectColor(void);
-bool RPI_Calibrate(int16_t *err_x, int16_t *err_y);
+bool RPI_Calibrate(int16_t *err_x, int16_t *err_y, RPI_CalType_t type);
 void RPI_Detect_IDE(void);
 void RPI_Calibrate_IDE(void);
 

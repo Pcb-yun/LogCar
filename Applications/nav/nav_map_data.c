@@ -69,8 +69,8 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 1.0f,
-            .yaw_threshold = 2.0f,
+            .distance_threshold = 2.0f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         }
     },
@@ -78,8 +78,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 3,
         .name = "MATL_TRACK",   // 物料巡线开始点
         .pose = {
-            .x = 58.34f,
-            .y = -13.01f,
+            .x = 32.25f,
+            .y = -12.31f,
             .yaw = 0.00f
         },
         .motion = {
@@ -90,8 +90,8 @@ static const TargetPoint_t g_map_points[] = {
         },
         .arrive = {
             .check_mode = ARRIVE_CHECK_BOTH,
-            .distance_threshold = 2.0f,
-            .yaw_threshold = 2.5f,
+            .distance_threshold = 2.5f,
+            .yaw_threshold = 3.0f,
             .timeout_ms = 10000
         }
     },
@@ -501,8 +501,8 @@ static const TargetPoint_t g_map_points[] = {
         .id = 18,
         .name = "TROP_GRAP3", // 奖杯抓取点3
         .pose = {
-            .x = -141.2f,
-            .y = -104.37f,
+            .x = -139.0f,
+            .y = -130.0f,
             .yaw = -90.0f
         },
         .motion = {

@@ -11,6 +11,7 @@
 #include "txwz.h"
 #include "logo.h"
 #include "GitHub.h"
+#include "DeepSeek.h"
 
 
 

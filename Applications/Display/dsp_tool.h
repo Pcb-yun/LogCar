@@ -23,6 +23,7 @@ typedef enum {
 #define LOGO_TIME 7000      // 启动logo显示时间
 #define ABOUT_TIME 3000     // 关于信息显示时间
 #define GITHUB_TIME 5000    // GitHub显示时间
+#define DEEPSEEK_TIME 5000  // DeepSeek显示时间
 
 
 

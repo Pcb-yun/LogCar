@@ -36,7 +36,7 @@ static const SENSOR_Color_t matl_order[16][5] = {
     /* 09 */ {COLOR_WHITE, COLOR_GREEN, COLOR_BLACK, COLOR_BLUE,  COLOR_RED},
     /* 10 */ {COLOR_BLACK, COLOR_RED,   COLOR_BLUE,  COLOR_GREEN, COLOR_WHITE},
     /* 11 */ {COLOR_RED,   COLOR_BLUE,  COLOR_GREEN, COLOR_BLACK, COLOR_WHITE},
-    /* 12 */ {COLOR_GREEN, COLOR_RED,   COLOR_BLACK, COLOR_WHITE, COLOR_BLUE},
+    /* 12 */ {COLOR_GREEN, COLOR_RED,   COLOR_BLACK, COLOR_BLUE, COLOR_WHITE},
     /* 13 */ {COLOR_WHITE, COLOR_RED,   COLOR_BLUE,  COLOR_GREEN, COLOR_BLACK},
     /* 14 */ {COLOR_RED,   COLOR_GREEN, COLOR_WHITE, COLOR_BLUE,  COLOR_BLACK},
     /* 15 */ {COLOR_BLUE,  COLOR_WHITE, COLOR_GREEN, COLOR_RED,   COLOR_BLACK},
@@ -156,8 +156,7 @@ bool Turntable_Pop(TurntablePop_t pop) {
 				uint8_t out_id = g_sto[i]->id;
 				logInfo("sto_idx=%d, id=%d, target_label=%s, order=%d",
 				           i, out_id, trop_str[target_label], g_port.order + 1);
-                turntable_move_to_id(out_id);
-                // turntable_move_to_int(out_id, 500);
+                turntable_move_to_id_int(out_id, 160);
 				g_sto[i]->label = LABEL_NONE;
 				return true;
 			}

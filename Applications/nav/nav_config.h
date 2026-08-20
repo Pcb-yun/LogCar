@@ -19,13 +19,13 @@
 
 #define NAV_YAW_PID_KP               1.8f    // yaw比例系数
 #define NAV_YAW_PID_KI               0.05f   // yaw积分系数
-#define NAV_YAW_PID_KD               0.3f    // yaw微分系数
+#define NAV_YAW_PID_KD               0.6f    // yaw微分系数（提高阻尼抑制过冲）
 #define NAV_YAW_PID_OUTPUT_LIMIT     150.0f  // yaw PID输出限制
 
 #define NAV_ALIGN_YAW_MAX            100.0f  // 对齐阶段最大偏航速度
-#define NAV_ALIGN_YAW_MIN            2.0f    // 对齐阶段最小偏航速度（deg/s），旋转启动值
+#define NAV_ALIGN_YAW_MIN            3.0f    // 对齐阶段最小偏航速度（deg/s），旋转启动值
 #define NAV_YAW_ACCEL_LIMIT          350.0f  // yaw加速度限制
-#define NAV_YAW_ZERO_CROSS_LOCK_MS   2       // yaw零交叉锁存持续时间(ms)
+#define NAV_YAW_ZERO_CROSS_LOCK_MS   8       // yaw零交叉锁存持续时间(ms)
 
 #define NAV_ALIGN_DIST               5.0f   // 进入对齐阶段距离（cm）
 #define NAV_ALIGN_XY_KP              1.2f    // 位置P增益（提高加快对齐速度）
@@ -42,9 +42,9 @@
 #define NAV_NEAR_TARGET_SPEED_LIMIT  4.5f    // 近目标速度限幅倍数，提高允许更大调整速度
 
 #define NAV_YAW_DEADBAND             1.0f    // yaw死区（deg）
-#define NAV_YAW_FEEDFORWARD_THRESH   5.0f    // yaw前馈触发阈值（deg）
-#define NAV_YAW_FEEDFORWARD_WEIGHT   0.7f    // yaw前馈权重
-#define NAV_YAW_FEEDBACK_WEIGHT      0.3f    // yaw反馈权重
+#define NAV_YAW_FEEDFORWARD_THRESH   4.0f    // yaw前馈触发阈值（deg）
+#define NAV_YAW_FEEDFORWARD_WEIGHT   0.4f    // yaw前馈权重（降低，减少开环过冲）
+#define NAV_YAW_FEEDBACK_WEIGHT      0.6f    // yaw反馈权重（提高，让PID D项参与制动）
 
 #define NAV_NEAR_TARGET_DEADBAND_RATIO  0.25f  // 近目标死区比例（相对于distance_threshold）
 #define NAV_NEAR_TARGET_STOP_RATIO      0.3f  // 近目标停止阈值比例
