@@ -86,6 +86,14 @@ void OPS_Update_Task(void *argument) {
     }
 }
 
+/**
+ * @brief 检查定位模块是否就绪
+ * @return true 如果就绪
+ * */
+bool OPS_Is_Ready(void) {
+    return (g_ops->timestamp != 0 || is_init);
+}
+
 #if OPS_CAL
 /**
  * @brief 校准定位模块

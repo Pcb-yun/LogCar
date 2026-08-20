@@ -22,6 +22,8 @@ extern "C" {
 #define MISSION_CAL2OPS 0       // 是否将校准数据回写码盘
 #define MISSION_RPI_TIMEOUT 2000 // 树莓派响应超时 ms
 
+#define MISSION_OPS_TIMEOUT 5000 // 等待码盘就绪超时
+
 #define MISSION_BACK_DIST 25.0f // 放置后回退的距离 cm
 #define MISSION_BACK_TIME 400    // 放置后回退等待时间 ms
 

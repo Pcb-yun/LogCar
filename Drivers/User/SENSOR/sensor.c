@@ -77,6 +77,7 @@ static SENSOR_Context_t s_ctx;
  * - 设置默认白色平衡参数
  */
 void TCS230_Init(void) {
+    MX_TIM4_Init();
     rgbc_wb.red = TCS230_WB_R;
     rgbc_wb.green = TCS230_WB_G;
     rgbc_wb.blue = TCS230_WB_B;

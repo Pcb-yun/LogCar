@@ -42,7 +42,7 @@ typedef struct {
 bool OPS_Init(void);
 bool OPS_Get(OPSData_t *pose);
 void OPS_Zero(void);
-
+bool OPS_Is_Ready(void);
 
 
 #define OPS_SET_HELP \

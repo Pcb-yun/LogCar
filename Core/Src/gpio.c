@@ -133,7 +133,7 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin : KEY_UP_Pin */
   GPIO_InitStruct.Pin = KEY_UP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(KEY_UP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA1 PA8 PA11 PA12

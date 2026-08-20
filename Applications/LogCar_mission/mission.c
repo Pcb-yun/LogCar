@@ -63,13 +63,25 @@ void mission_run(void *argument) {
     (void)argument;
 
     osEventFlagsWait(System_StatusHandle, SYS_INIT_COMPLETE, osFlagsNoClear, osWaitForever);
+    uint32_t tick;
 
     for (;;) {
         osDelay(1);
-        if (!mission_running) continue;
+        if (!mission_running)  {
+            if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET) {
+                arm_action(ARM_ACTION_INIT);
+                turntable_move_to_id(0);
+            }
+            continue;
+        }
         osEventFlagsClear(System_StatusHandle, TURNTABLE_CPLT);
         osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
-        uint32_t start_time = osKernelGetTickCount();
+        tick = osKernelGetTickCount() + MISSION_OPS_TIMEOUT;
+        while (1) {
+            if (OPS_Is_Ready()) break;
+            else if (osKernelGetTickCount() > tick) goto fail;
+        }
+        tick = osKernelGetTickCount();
         logInfo("Mission Start");
         OPS_Zero();
         turntable_move_to_id(0);
@@ -118,13 +130,13 @@ void mission_run(void *argument) {
         if (!Home_Sweet_home()) goto fail;
 
         mission_running = false;
-        logInfo("Mission Complete, cost: %d ms", osKernelGetTickCount() - start_time);
+        logInfo("Mission Complete, cost: %d ms", osKernelGetTickCount() - tick);
         continue;
 
     fail:
         Nav_Stop();
         mission_running = false;
-        logError("Mission Failed, cost: %d ms", osKernelGetTickCount() - start_time);
+        logError("Mission Failed, cost: %d ms", osKernelGetTickCount() - tick);
     }
 }
 
