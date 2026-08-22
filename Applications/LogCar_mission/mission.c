@@ -67,13 +67,7 @@ void mission_run(void *argument) {
 
     for (;;) {
         osDelay(1);
-        if (!mission_running)  {
-            if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET) {
-                arm_action(ARM_ACTION_INIT);
-                turntable_move_to_id(0);
-            }
-            continue;
-        }
+        if (!mission_running) continue;
         osEventFlagsClear(System_StatusHandle, TURNTABLE_CPLT);
         osEventFlagsClear(System_StatusHandle, TURNTABLE_RUN);
         tick = osKernelGetTickCount() + MISSION_OPS_TIMEOUT;

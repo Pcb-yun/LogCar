@@ -65,8 +65,6 @@ void Error_Handler(void);
 #define LED_Red_GPIO_Port GPIOF
 #define LED_IDLE_Pin GPIO_PIN_10
 #define LED_IDLE_GPIO_Port GPIOF
-#define KEY_UP_Pin GPIO_PIN_0
-#define KEY_UP_GPIO_Port GPIOA
 #define BATTERY_Pin GPIO_PIN_2
 #define BATTERY_GPIO_Port GPIOA
 #define START_Pin GPIO_PIN_3

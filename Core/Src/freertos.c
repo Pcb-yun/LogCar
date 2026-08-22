@@ -38,6 +38,7 @@
 #include "nav_track.h"
 #include "scan_driver.h"
 #include "show_media.h"
+#include "turntable_ctrl.h"
 
 /* USER CODE END Includes */
 
@@ -638,10 +639,13 @@ void Sys_Init_Task(void *argument)
   SHOW_DMESG(dmesg_ok, NULL);
 
 
-
   extern Shell shell;
   Shell_New_Convo(&shell);
   osEventFlagsSet(System_StatusHandle, SYS_INIT_COMPLETE);
+
+  // 重置后先恢复转盘
+  turntable_move_to_id(0);
+
 	vTaskDelete(NULL);
   /* USER CODE END Sys_Init_Task */
 }

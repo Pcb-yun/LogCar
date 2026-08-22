@@ -3,11 +3,11 @@
 
 #define ARM_ACTION_INTERVAL_MS 2000
 
-#define ARM_ACTION_STAGE1_DOWN_LIFT -278.0f       // 冠军放下升降角度
+#define ARM_ACTION_STAGE1_DOWN_LIFT 170.0f       // 冠军放下升降角度
 #define ARM_ACTION_STAGE1_DOWN_FLIP -171.0f     // 冠军放下翻转角度
 #define ARM_ACTION_STAGE1_UP_FLIP -165.0f       // 冠军提升翻转角度
 
-#define ARM_ACTION_STAGE2_DOWN_LIFT -215.0f      // 亚军放下升降角度
+#define ARM_ACTION_STAGE2_DOWN_LIFT 242.0f      // 亚军放下升降角度
 #define ARM_ACTION_STAGE2_DOWN_FLIP -171.0f     // 亚军放下翻转角度
 
 #define ARM_ACTION_UP_OFFSET 50.0f              // 提升角度偏移
@@ -20,10 +20,10 @@
 #define ARM_LIFT_ACC 0.0f              // 提升舵机加速度
 #define ARM_LIFT_DEC 0.0f              // 提升舵机减速度
 
-#define ARM_LIFT_INIT_ANGLE -226.0f       // 初始角度
+#define ARM_LIFT_INIT_ANGLE 170.0f       // 初始角度
 
-#define ARM_LIFT_MIN_ANGLE -125.0f         // 最低角度
-#define ARM_LIFT_MAX_ANGLE -326.0f       // 最高角度
+#define ARM_LIFT_MIN_ANGLE 300.0f         // 最低角度
+#define ARM_LIFT_MAX_ANGLE 114.0f       // 最高角度
 
 
 /**

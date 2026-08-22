@@ -32,7 +32,7 @@ void arm_action(arm_action_t action){
             break;
         case ARM_ACTION_STAGE_1_PULL_DOWN:
             arm_lift_move_by_velocity(ARM_ACTION_STAGE1_DOWN_LIFT,200);
-            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_DOWN_FLIP,200);
+            arm_flip_move_by_velocity(ARM_ACTION_STAGE1_DOWN_FLIP,100);
             break;
         case ARM_ACTION_STAGE_2_PULL_UP:
             arm_lift_move_by_velocity(ARM_ACTION_STAGE2_DOWN_LIFT - ARM_ACTION_UP_OFFSET,200);

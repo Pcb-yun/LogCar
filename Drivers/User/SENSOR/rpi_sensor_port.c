@@ -13,6 +13,7 @@
 #include <string.h>
 #include "cmsis_os2.h"
 #include "mission.h"
+#include <stdlib.h>
 
 /**
  * @brief 初始化树莓派通信
@@ -108,7 +109,7 @@ void RPI_Calibrate_IDE(void) {
  * @brief 树莓派测试命令
  */
 void RPI_Shell(int argc, char *argv[]) {
-    if(argc != 2) {
+    if(argc != 2 && argc != 3) {
         logPrintln(RPI_HELP); return;
     }
 
@@ -117,7 +118,12 @@ void RPI_Shell(int argc, char *argv[]) {
         logPrintln("Color: %s", (c <= COLOR_BLUE) ? matl_str[c] : "Invalid");
     } else if(strcmp(argv[1], "cal") == 0) {
         int16_t err_x, err_y;
-        if(RPI_Calibrate(&err_x, &err_y, RPI_CAL_TYPE_MATL)) {
+        uint8_t type = atoi(argv[2]);
+        if(type > 3) {
+            logPrintln("invalid cal type: %d", type); return;
+        }
+
+        if(RPI_Calibrate(&err_x, &err_y, (RPI_CalType_t)type)) {
             logPrintln("Calibrate: x: %d, y: %d", err_x, err_y);
         } else {
             logPrintln("Calibrate failed");

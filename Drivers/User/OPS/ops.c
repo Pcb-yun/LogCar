@@ -91,7 +91,7 @@ void OPS_Update_Task(void *argument) {
  * @return true 如果就绪
  * */
 bool OPS_Is_Ready(void) {
-    return (g_ops->timestamp != 0 || is_init);
+    return (g_ops->timestamp != 0);
 }
 
 #if OPS_CAL
