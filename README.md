@@ -45,7 +45,7 @@ LogCar_Code/
 
 | 部件   | 说明                        | 通信方式                           |
 | :--- | :------------------------ | :----------------------------- |
-| 主控   | STM32F407ZGTx（Cortex-M4F） | —                              |
+| 核心板  | STM32F407ZGT6 主控 [立创开源硬件](https://oshwhub.com/mikecrond/project_yaxznexk) | —     |
 | 底盘   | 麦克纳姆轮 × 4，全向移动            | ZDT-X42S 闭环步进电机，USART6（921600） |
 | 机械臂  | 舵机驱动                      | USART3（115200）                 |
 | 转盘   | 奖杯/物料转运机构                 | —                              |
@@ -148,7 +148,7 @@ git submodule update --init --recursive
 | 开发者                | 方向/角色               | 联系方式                                                                     |
 | :----------------- | :------------------ | :----------------------------------------------------------------------- |
 | Pcb-yun            | 电控 · 程序主体框架 / 电机驱动  | <pcbyinyun@163.com> · [GitHub](https://github.com/Pcb-yun)               |
-| MIKECROND          | 电控 · 导航 / 任务 / 升降转盘 | <3025780005@qq.com> · [GitHub](https://github.com/MIKECROND)             |
+| MIKECROND          | 电控 · 导航 / 任务 / 升降转盘；硬件 · 核心板绘制 / 焊接 | <3025780005@qq.com> · [GitHub](https://github.com/MIKECROND)             |
 | hhhhhhywbx-netizen | 视觉 · 视觉开发           | <hhhhhhywbx@gmail.com> · [GitHub](https://github.com/hhhhhhywbx-netizen) |
 | 欣投柚哈树              | 机械 · 机械设计           | <2450362413@qq.com>                                                      |
 
